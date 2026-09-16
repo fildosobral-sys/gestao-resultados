@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="pt-BR" class="auth-lock">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0879e8">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Resultados">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <title>Gestão de Resultados</title>
+  <style>
+    :root{--blue:#0879e8;--blue2:#5264e8;--navy:#102a43;--ink:#172033;--muted:#667085;--line:#dbe5f0;--danger:#b42335;--ok:#087a4b}
+    *{box-sizing:border-box}html,body{min-height:100%;margin:0}body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:radial-gradient(circle at 12% 0,#d9efff 0,transparent 34%),linear-gradient(160deg,#f6f9fd,#edf3fb)}
+    body:before{content:"";position:fixed;inset:0;pointer-events:none;background:linear-gradient(120deg,rgba(8,121,232,.05),rgba(114,87,217,.04))}
+    .shell{position:relative;min-height:100dvh;display:grid;grid-template-columns:minmax(0,1.08fr) minmax(420px,.92fr);align-items:stretch}
+    .intro{padding:clamp(28px,6vw,82px);display:flex;flex-direction:column;justify-content:space-between;min-height:100dvh;color:#fff;background:linear-gradient(145deg,#102a43 0,#124f78 55%,#0879e8 100%);overflow:hidden;position:relative}
+    .intro:after{content:"";position:absolute;width:520px;height:520px;border-radius:50%;right:-250px;top:-190px;background:rgba(255,255,255,.1)}
+    .brand{position:relative;z-index:1;display:flex;align-items:center;gap:13px}.brand-mark{width:52px;height:52px;border-radius:17px;display:grid;place-items:center;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);font-size:25px;font-weight:950}.brand strong{display:block;font-size:20px}.brand span{display:block;margin-top:2px;font-size:13px;opacity:.76}
+    .intro-copy{position:relative;z-index:1;max-width:700px}.intro-copy small{font-weight:900;letter-spacing:.12em;text-transform:uppercase;opacity:.72}.intro-copy h1{font-size:clamp(42px,6vw,76px);line-height:.98;letter-spacing:-.055em;margin:18px 0}.intro-copy p{max-width:620px;font-size:clamp(16px,2vw,20px);line-height:1.55;opacity:.86;margin:0}.trust{position:relative;z-index:1;display:flex;gap:10px;flex-wrap:wrap}.trust span{padding:8px 11px;border-radius:999px;background:rgba(255,255,255,.12);font-size:12px;font-weight:800}
+    .access{padding:clamp(20px,5vw,64px);display:grid;place-items:center}.card{width:min(100%,520px);background:rgba(255,255,255,.95);border:1px solid rgba(255,255,255,.72);border-radius:28px;box-shadow:0 28px 75px rgba(15,42,67,.18);padding:clamp(22px,4vw,38px);backdrop-filter:blur(16px)}
+    .card-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:22px}.card h2{margin:0 0 5px;font-size:27px;letter-spacing:-.025em}.card p{margin:0;color:var(--muted);line-height:1.5}.status-dot{width:13px;height:13px;border-radius:50%;background:#f0ad2d;box-shadow:0 0 0 6px #fff4d9;margin-top:7px}.status-dot.ok{background:#1aa66a;box-shadow:0 0 0 6px #e4f8ee}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{display:block}.field.wide{grid-column:1/-1}.field span{display:block;font-size:12px;font-weight:900;color:#405269;text-transform:uppercase;letter-spacing:.04em;margin:0 0 6px}.field input,.field select{width:100%;min-height:50px;padding:12px 14px;border:1px solid var(--line);border-radius:13px;background:#fff;color:var(--ink);outline:0;font:inherit;font-weight:750;text-transform:uppercase}.field input:focus,.field select:focus{border-color:var(--blue);box-shadow:0 0 0 4px rgba(8,121,232,.12)}
+    .message{display:none;margin:14px 0 0;padding:12px 13px;border-radius:12px;font-size:13px;font-weight:750;line-height:1.45}.message.show{display:block}.message.info{background:#edf6ff;color:#21527c}.message.error{background:#fff0f2;color:var(--danger)}.message.ok{background:#eaf8f1;color:var(--ok)}
+    .actions{display:flex;gap:10px;margin-top:18px}.actions button{min-height:50px;border:0;border-radius:13px;padding:12px 16px;font-weight:900;font-size:15px;cursor:pointer}.primary{flex:1;color:#fff;background:linear-gradient(135deg,var(--blue),var(--blue2));box-shadow:0 12px 25px rgba(8,121,232,.24)}.secondary{background:#edf2f8;color:#526175}.actions button:disabled{opacity:.62;cursor:wait}.privacy{margin-top:15px;text-align:center;color:#7a8798;font-size:12px;line-height:1.5}
+    .loading{display:none;align-items:center;gap:10px;padding:12px 0;color:#405269;font-weight:800}.loading.show{display:flex}.spinner{width:19px;height:19px;border:3px solid #dbe8f5;border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+    @media(max-width:900px){.shell{display:block}.intro{min-height:auto;padding:calc(22px + env(safe-area-inset-top)) 20px 30px}.intro-copy{margin:70px 0 35px}.intro-copy h1{font-size:46px}.access{padding:18px 12px calc(24px + env(safe-area-inset-bottom));margin-top:-15px}.card{border-radius:24px}.trust{display:none}}
+    @media(max-width:560px){.intro-copy{margin:48px 0 18px}.intro-copy h1{font-size:39px;margin:12px 0}.intro-copy p{font-size:15px}.grid{grid-template-columns:1fr}.field.wide{grid-column:auto}.card-head{margin-bottom:17px}.card{padding:20px 16px}.actions{position:sticky;bottom:0;background:linear-gradient(transparent,#fff 22%);padding-top:15px}.secondary{padding-inline:13px}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="intro" aria-label="Gestão de Resultados">
+      <div class="brand"><div class="brand-mark">R</div><div><strong>Gestão de Resultados</strong><span>FS Soluções</span></div></div>
+      <div class="intro-copy"><small>Central inteligente</small><h1>Resultados que orientam decisões.</h1><p>Metas, desempenho diário, projeções, vendedores e análises em uma plataforma única, segura e sincronizada.</p></div>
+      <div class="trust"><span>Sincronização em nuvem</span><span>Mobile e desktop</span><span>Acesso autorizado</span></div>
+    </section>
+    <section class="access">
+      <form class="card" id="accessForm" novalidate>
+        <div class="card-head"><div><h2>Acessar plataforma</h2><p>Use os mesmos dados autorizados no ecossistema FS.</p></div><span class="status-dot" id="statusDot" aria-hidden="true"></span></div>
+        <div class="loading" id="loading"><span class="spinner"></span><span>Validando seu acesso…</span></div>
+        <div class="grid" id="formGrid">
+          <label class="field"><span>Filial</span><input id="filial" autocomplete="organization" placeholder="FILIAL 28" required></label>
+          <label class="field"><span>Cargo ou função</span><input id="cargo" autocomplete="organization-title" placeholder="GERENTE" required></label>
+          <label class="field wide"><span>Nome completo</span><input id="nome" autocomplete="name" placeholder="SEU NOME COMPLETO" required></label>
+          <label class="field"><span>WhatsApp com DDD</span><input id="whatsapp" inputmode="numeric" autocomplete="tel" placeholder="88999999999" required></label>
+          <label class="field"><span>Tratamento</span><select id="genero"><option value="AUTOMATICO">Automático</option><option value="MASCULINO">Masculino</option><option value="FEMININO">Feminino</option></select></label>
+        </div>
+        <div class="message" id="message" role="status" aria-live="polite"></div>
+        <div class="actions"><button class="secondary" type="button" id="clearBtn">Limpar</button><button class="primary" type="submit" id="enterBtn">Entrar</button></div>
+        <div class="privacy">O acesso é validado na mesma base autorizada do ecossistema principal.</div>
+      </form>
+    </section>
+  </main>
+  <script src="./auth.js?v=1"></script>
+  <script src="./pwa-update.js?v=1"></script>
+</body>
+</html>
