@@ -445,6 +445,34 @@
     link.href = canvas.toDataURL('image/png'); link.download = filename;
     document.body.appendChild(link); link.click(); link.remove();
   }
+  async function exportQuickDashboard() {
+    try {
+      const scope=currentScope(),result=scope.result,goals=scope.goals,firstGoal=tierGoals(goals)[0].mercantile;
+      const sellers=scope.type==='seller'?1:configuredSellerCount(),days=Math.max(0,result.remaining),perDay=value=>days?value/days:0;
+      const salesGap=Math.max(0,firstGoal-result.revenue),servicesGap=Math.max(0,num(goals.servicesGoal)-result.services);
+      const conversion=result.nfs?result.warrantyQty/result.nfs:0;
+      const canvas=document.createElement('canvas');canvas.width=1080;canvas.height=1510;
+      const ctx=canvas.getContext('2d');ctx.fillStyle='#f4f7fc';ctx.fillRect(0,0,1080,1510);
+      imageHeader(ctx,'LEITURA RÁPIDA',`${db.branch||'Filial'} | ${monthLabel(db.month)} | Meta 1`,1080);
+      const section=(title,y,color)=>{ctx.fillStyle=color;ctx.font='900 28px Arial, sans-serif';ctx.fillText(title,70,y)};
+      section('VENDA MERCANTIL',330,'#174579');
+      drawCenteredCanvasMetric(ctx,60,365,465,155,'Falta no mês',brl.format(salesGap),false,`Meta: ${brl.format(firstGoal)}`);
+      drawCenteredCanvasMetric(ctx,555,365,465,155,'Necessário por dia',brl.format(perDay(salesGap)),true,`${days} dia(s) restante(s)`);
+      drawCenteredCanvasMetric(ctx,60,545,465,155,'Falta por vendedor',sellers?brl.format(salesGap/sellers):'Equipe não configurada',false,`${sellers||0} vendedor(es)`);
+      drawCenteredCanvasMetric(ctx,555,545,465,155,'Dia por vendedor',sellers?brl.format(perDay(salesGap)/sellers):'Equipe não configurada',true,'Missão diária individual');
+      section('SERVIÇOS',765,'#6246bd');
+      drawCenteredCanvasMetric(ctx,60,800,465,155,'Falta no mês',brl.format(servicesGap),false,`Meta: ${brl.format(num(goals.servicesGoal))}`);
+      drawCenteredCanvasMetric(ctx,555,800,465,155,'Necessário por dia',brl.format(perDay(servicesGap)),true,`${days} dia(s) restante(s)`);
+      drawCenteredCanvasMetric(ctx,60,980,465,155,'Falta por vendedor',sellers?brl.format(servicesGap/sellers):'Equipe não configurada',false,`${sellers||0} vendedor(es)`);
+      drawCenteredCanvasMetric(ctx,555,980,465,155,'Dia por vendedor',sellers?brl.format(perDay(servicesGap)/sellers):'Equipe não configurada',true,'Missão diária individual');
+      section('INDICADORES',1200,'#174579');
+      drawCenteredCanvasMetric(ctx,60,1235,465,145,'Eficiência',efficiencyPct.format(result.efficiency),result.efficiency>=num(db.efficiencyGoal),`Meta: ${efficiencyPct.format(num(db.efficiencyGoal))}`);
+      drawCenteredCanvasMetric(ctx,555,1235,465,145,'Taxa de conversão',result.nfs?efficiencyPct.format(conversion):'Não calculada',conversion>=.35,'Meta: 35,00%');
+      ctx.fillStyle='#718096';ctx.font='600 18px Arial, sans-serif';ctx.textAlign='center';ctx.fillText('FS Soluções • Gestão de Resultados • valores atualizados no momento da geração',540,1450);ctx.textAlign='left';
+      const safeBranch=String(db.branch||'filial').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').toLowerCase();
+      await shareOrDownloadImage(canvas,`leitura-rapida-${safeBranch}-${db.month}.png`,'Leitura rápida da Gestão de Resultados');
+    } catch(error) { alert(error.message||'Não foi possível gerar a leitura rápida.'); }
+  }
   function exportDailyGoalImage(key) {
     try {
       const data = dayData(key), metrics = dailyGoalMetrics(key, data);
@@ -533,18 +561,19 @@
     document.getElementById('servicesBar').style.width = `${clampRate(servicesRate)}%`;
     const sellerCount = scope.type === 'seller' ? 1 : configuredSellerCount();
     const plannedDays = Math.max(1, num(scope.type === 'seller' ? result.worked + result.remaining : db.businessDays));
+    const remainingDays = Math.max(0, num(result.remaining));
     const mercantileGap = Math.max(0, firstGoal - result.revenue);
     const servicesGap = Math.max(0, num(goalSource.servicesGoal) - result.services);
     const gapMetric = (label, value, note, type = 'mercantile') => `<div class="monthly-gap-metric ${type}"><span>${label}</span><strong class="${value ? 'negative' : 'positive'}">${brl.format(value)}</strong><small>${note}</small></div>`;
     document.getElementById('monthlyGapGrid').innerHTML = [
       gapMetric('Falta mercantil total', mercantileGap, `Meta 1: ${brl.format(firstGoal)}`),
-      gapMetric('Mercantil / dia da filial', mercantileGap / plannedDays, `${plannedDays} dia(s) planejado(s)`),
+      gapMetric('Mercantil / dia da filial', remainingDays ? mercantileGap / remainingDays : 0, `${remainingDays} dia(s) restante(s)`),
       gapMetric('Mercantil / vendedor', sellerCount ? mercantileGap / sellerCount : 0, sellerCount ? `${sellerCount} vendedor(es)` : 'Configure a equipe'),
-      gapMetric('Mercantil / dia / vendedor', sellerCount ? mercantileGap / plannedDays / sellerCount : 0, sellerCount ? `Divisão diária para ${sellerCount}` : 'Configure a equipe'),
+      gapMetric('Mercantil / dia / vendedor', sellerCount && remainingDays ? mercantileGap / remainingDays / sellerCount : 0, sellerCount ? `Divisão diária para ${sellerCount}` : 'Configure a equipe'),
       gapMetric('Falta serviços total', servicesGap, `Meta: ${brl.format(num(goalSource.servicesGoal))}`, 'services'),
-      gapMetric('Serviços / dia da filial', servicesGap / plannedDays, `${plannedDays} dia(s) planejado(s)`, 'services'),
+      gapMetric('Serviços / dia da filial', remainingDays ? servicesGap / remainingDays : 0, `${remainingDays} dia(s) restante(s)`, 'services'),
       gapMetric('Serviços / vendedor', sellerCount ? servicesGap / sellerCount : 0, sellerCount ? `${sellerCount} vendedor(es)` : 'Configure a equipe', 'services'),
-      gapMetric('Serviços / dia / vendedor', sellerCount ? servicesGap / plannedDays / sellerCount : 0, sellerCount ? `Divisão diária para ${sellerCount}` : 'Configure a equipe', 'services')
+      gapMetric('Serviços / dia / vendedor', sellerCount && remainingDays ? servicesGap / remainingDays / sellerCount : 0, sellerCount ? `Divisão diária para ${sellerCount}` : 'Configure a equipe', 'services')
     ].join('');
     const detailLayout = document.getElementById('overviewDetailLayout');
     const ecommercePanel = document.getElementById('ecommerceOverview');
@@ -572,7 +601,9 @@
       messages.push(`Eficiência: ${efficiencyPct.format(result.efficiency)} • meta: ${efficiencyPct.format(num(db.efficiencyGoal))}.`);
     }
     const issues = dailyIssues(); if (issues.length) messages.push(`${issues.length} pendência(s) precisam de revisão no lançamento diário.`);
-    document.getElementById('insights').innerHTML = messages.map((message, index) => `<div class="metric" style="margin-bottom:8px"><span>${index === 0 ? 'ATENÇÃO' : index === 1 ? 'STATUS' : 'ANÁLISE'}</span><strong>${esc(message)}</strong></div>`).join('');
+    const conversionTarget=.35,efficiencyTarget=num(db.efficiencyGoal),quickMetric=(label,value)=>`<div class="quick-metric"><span>${label}</span><strong>${value}</strong></div>`;
+    document.getElementById('insights').innerHTML=`<div class="quick-dashboard"><div class="quick-dashboard-head"><h3>Resumo da Meta 1</h3><button type="button" class="quick-share" id="quickShare">⇧ Compartilhar</button></div><section class="quick-group"><div class="quick-group-title">Venda mercantil</div><div class="quick-grid">${quickMetric('Falta no mês',brl.format(mercantileGap))}${quickMetric('Necessário/dia',brl.format(remainingDays?mercantileGap/remainingDays:0))}${quickMetric('Falta/vendedor',sellerCount?brl.format(mercantileGap/sellerCount):'—')}${quickMetric('Dia/vendedor',sellerCount&&remainingDays?brl.format(mercantileGap/remainingDays/sellerCount):'—')}</div></section><section class="quick-group services"><div class="quick-group-title">Serviços</div><div class="quick-grid">${quickMetric('Falta no mês',brl.format(servicesGap))}${quickMetric('Necessário/dia',brl.format(remainingDays?servicesGap/remainingDays:0))}${quickMetric('Falta/vendedor',sellerCount?brl.format(servicesGap/sellerCount):'—')}${quickMetric('Dia/vendedor',sellerCount&&remainingDays?brl.format(servicesGap/remainingDays/sellerCount):'—')}</div></section><div class="quick-statuses"><div class="quick-status ${result.efficiency<efficiencyTarget?'attention':''}"><span>Eficiência</span><strong>${efficiencyPct.format(result.efficiency)}</strong><small>Meta ${efficiencyPct.format(efficiencyTarget)}</small></div><div class="quick-status ${conversion<conversionTarget?'attention':''}"><span>Conversão</span><strong>${result.nfs?efficiencyPct.format(conversion):'—'}</strong><small>Meta 35,00%</small></div></div>${issues.length?`<div class="quick-alert">⚠ ${issues.length} pendência(s) no lançamento diário precisam de revisão.</div>`:''}</div>`;
+    document.getElementById('quickShare')?.addEventListener('click',exportQuickDashboard);
   }
 
   function moneyInput(field, value, key, disabled = false) {
