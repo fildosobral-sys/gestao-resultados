@@ -1,9 +1,0 @@
-V5 — PAINEL GERENCIAL DE VENDEDORES
-
-- Aba Vendedores permanece como lista limpa da equipe.
-- Cards mostram status, mercantil, serviços, conversão, eficiência e última atualização.
-- Ver vendedor abre painel modal sobre a lista, sem navegar para uma página gerencial separada.
-- Modal inclui Visão geral, Lançamentos, Semanal, Metas e Compilado.
-- Escape, clique no fundo ou botão Voltar/Equipe fecham o painel.
-- Layout responsivo: modal vira tela cheia no mobile.
-- Nuvem, Apps Script, planilha e endpoint preservados.
