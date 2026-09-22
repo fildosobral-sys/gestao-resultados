@@ -29,7 +29,7 @@
   }
   async function transfer(data) { const response = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ acao: 'transferirAcesso', filial: branch(data.filial), nome: upper(data.nome), cargo: role(data.cargo), whatsapp: digits(data.whatsapp), token: data.token || '', device_id: deviceId(), master_multi: role(data.cargo) === 'GERENTE' }) }); return await response.json(); }
   const conflict = json => { const code = upper(json?.codigo); const message = upper(json?.mensagem); return code === 'DEVICE_CONFLICT' || code === 'APARELHO_DIFERENTE' || message.includes('OUTRO APARELHO') || message.includes('OUTRO DISPOSITIVO'); };
-  function go() { $('statusDot').classList.add('ok'); setMessage('Acesso autorizado. Abrindo seus resultados…', 'ok'); setTimeout(() => location.replace('./resultados.html'), 280); }
+  function go() { $('statusDot').classList.add('ok'); setMessage('Acesso autorizado. Abrindo seus resultados…', 'ok'); const target = role(localStorage.getItem('fs_cargo')) === 'VENDEDOR' ? './vendedor.html' : './resultados.html'; setTimeout(() => location.replace(target), 280); }
   async function authorize(data, allowLocalFallback = false) {
     busy(true); setMessage('');
     try {

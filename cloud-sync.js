@@ -25,13 +25,56 @@
   };
   const same = (a, b) => JSON.stringify(a || null) === JSON.stringify(b || null);
 
+  const parseStamp = value => Date.parse(value || 0) || 0;
+  function sellerKey(seller, index = 0) {
+    if (seller?.id) return String(seller.id);
+    return String(seller?.name || `seller-${index}`).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
+  }
+  function mergeVaults(remote, local) {
+    if (!remote) return local;
+    if (!local) return remote;
+    const merged = JSON.parse(JSON.stringify(parseStamp(local?._cloudUpdatedAt) >= parseStamp(remote?._cloudUpdatedAt) ? local : remote));
+    merged.records = merged.records || {};
+    const keys = new Set([...Object.keys(remote.records || {}), ...Object.keys(local.records || {})]);
+    keys.forEach(key => {
+      const rr = remote.records?.[key], lr = local.records?.[key];
+      if (!rr) { merged.records[key] = JSON.parse(JSON.stringify(lr)); return; }
+      if (!lr) { merged.records[key] = JSON.parse(JSON.stringify(rr)); return; }
+      const base = parseStamp(lr.updatedAt) >= parseStamp(rr.updatedAt) ? lr : rr;
+      const out = JSON.parse(JSON.stringify(base));
+      const map = new Map();
+      (rr.sellers || []).forEach((seller, index) => map.set(sellerKey(seller,index), JSON.parse(JSON.stringify(seller))));
+      (lr.sellers || []).forEach((seller, index) => {
+        const k = sellerKey(seller,index), prior = map.get(k);
+        if (!prior || parseStamp(seller.updatedAt) >= parseStamp(prior.updatedAt)) map.set(k, JSON.parse(JSON.stringify(seller)));
+      });
+      out.sellers = [...map.values()];
+      merged.records[key] = out;
+    });
+    merged._cloudUpdatedAt = new Date().toISOString();
+    return merged;
+  }
+  function loadRemote() {
+    return new Promise((resolve, reject) => {
+      const callback = `__resultsMerge_${Date.now()}`;
+      const script = document.createElement('script');
+      const cleanup = () => { delete window[callback]; script.remove(); };
+      window[callback] = response => { cleanup(); response?.ok ? resolve(response.vault || null) : reject(new Error(response?.error || 'Falha')); };
+      script.onerror = () => { cleanup(); reject(new Error('Falha de conexão')); };
+      script.src = `${ENDPOINT}?action=load&token=${encodeURIComponent(TOKEN)}&callback=${callback}&_=${Date.now()}`;
+      document.head.appendChild(script);
+    });
+  }
+
   async function pushNow() {
     if (!enabled() || sending || !pending) return;
     sending = true;
-    const vault = pending;
+    let vault = pending;
     pending = null;
     status('↑ Sincronizando com a nuvem…', 'busy');
     try {
+      try { vault = mergeVaults(await loadRemote(), vault); } catch (_) { /* mantém a cópia local se a leitura remota falhar */ }
+      localStorage.setItem(STORE, JSON.stringify(vault));
       await fetch(ENDPOINT, {
         method: 'POST', mode: 'no-cors', cache: 'no-store',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
