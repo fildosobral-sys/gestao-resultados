@@ -133,6 +133,7 @@
   let activeScope = 'branch';
   let activeSellerProfileId = null;
   let openSellerIndex = null;
+  let sellerWorkspaceTab = 'overview';
   let printSellerOnlyId = null;
   let openDailyKey = null;
   let openWeeklyIndex = null;
@@ -940,7 +941,9 @@
     const branchMonthlyShare = mission.sellerCount ? num(db.mercantileGoal) / mission.sellerCount : 0;
     const branchDailyAverage = branchMonthlyShare / Math.max(1, num(db.businessDays) || metrics.plannedDays);
     const branchMercantileTarget = period === 'day' ? mission.branchMercantilePerSeller : period === 'month' ? branchMonthlyShare : branchDailyAverage * periodDays;
-    const branchServiceTarget = branchMercantileTarget * EFFICIENCY_TARGET;
+    const branchMonthlyServiceShare = mission.sellerCount ? num(db.servicesGoal) / mission.sellerCount : 0;
+    const branchServiceDailyAverage = branchMonthlyServiceShare / Math.max(1, num(db.businessDays) || metrics.plannedDays);
+    const branchServiceTarget = period === 'day' ? mission.branchServicePerSeller : period === 'month' ? branchMonthlyServiceShare : branchServiceDailyAverage * periodDays;
     const sales = num(seller.general), services = metrics.services, eligible = num(seller.eligible);
     const mercantileRate = mercantileTarget ? sales / mercantileTarget : 0, serviceRate = serviceTarget ? services / serviceTarget : 0;
     const branchMercantileRate = branchMercantileTarget ? sales / branchMercantileTarget : 0, branchServiceRate = branchServiceTarget ? services / branchServiceTarget : 0;
@@ -1094,10 +1097,14 @@
     const [year, month] = String(source.month || db.month).split('-').map(Number), calendarDays = new Date(year, month, 0).getDate();
     const services = num(seller.warranty) + num(seller.other) + num(seller.mixed);
     const sourceCount = num(source.sellerCount) || (source.sellers || []).length;
-    const individualGoal = num(seller.assignedGoal) || (sourceCount ? num(source.mercantileGoal) / sourceCount : 0), serviceGoal = num(seller.serviceGoal) || individualGoal * 0.07;
+    const individualGoal = num(seller.assignedGoal) || (sourceCount ? num(source.mercantileGoal) / sourceCount : 0), serviceGoal = num(seller.serviceGoal);
+    const dailyEntries = Object.values(seller.daily || {});
+    const hasDailyCommission = dailyEntries.some((day) => num(day.commissionMercantileRate) > 0);
     const mercantileRate = num(seller.commissionMercantileRate) / 100;
-    const serviceRate = (Object.prototype.hasOwnProperty.call(seller, 'commissionServiceRate') ? num(seller.commissionServiceRate) : 5) / 100;
-    const mercantileCommission = num(seller.general) * mercantileRate, serviceCommission = services * serviceRate;
+    const serviceRate = 0.05;
+    const mercantileCommission = hasDailyCommission ? dailyEntries.reduce((sum, day) => sum + num(day.general) * num(day.commissionMercantileRate) / 100, 0) : num(seller.general) * mercantileRate;
+    const effectiveMercantileRate = num(seller.general) ? mercantileCommission / num(seller.general) : mercantileRate;
+    const serviceCommission = services * serviceRate;
     const commissionSubtotal = mercantileCommission + serviceCommission;
     const plannedDays = num(seller.plannedDays) || num(source.businessDays);
     const automaticRestDays = Math.max(0, calendarDays - plannedDays);
@@ -1107,11 +1114,11 @@
     const dsr = currentDailyCommission * paidDays, total = commissionSubtotal + dsr;
     const projectedSubtotal = workedDays ? currentDailyCommission * plannedDays : 0;
     const projectedDsr = plannedDays ? projectedSubtotal / plannedDays * paidDays : 0, projectedTotal = projectedSubtotal + projectedDsr;
-    const targetMercantileCommission = individualGoal * mercantileRate;
+    const targetMercantileCommission = individualGoal * effectiveMercantileRate;
     const targetServiceCommission = serviceGoal * serviceRate;
     const targetSubtotal = targetMercantileCommission + targetServiceCommission;
     const targetPaid = plannedDays ? targetSubtotal / plannedDays * paidDays : 0, targetTotal = targetSubtotal + targetPaid;
-    return { services, serviceCommission, mercantileCommission, commissionSubtotal, plannedDays, automaticRestDays, restDays, justifiedDays, paidDays, dsr, total, projectedSubtotal, projectedDsr, projectedTotal, mercantileRate, serviceRate, targetMercantileCommission, targetServiceCommission, targetSubtotal, targetPaid, targetTotal };
+    return { services, serviceCommission, mercantileCommission, commissionSubtotal, plannedDays, automaticRestDays, restDays, justifiedDays, paidDays, dsr, total, projectedSubtotal, projectedDsr, projectedTotal, mercantileRate: effectiveMercantileRate, serviceRate, targetMercantileCommission, targetServiceCommission, targetSubtotal, targetPaid, targetTotal };
   }
   function sellerFinancialComparison(seller, period = sellerResultPeriod(seller)) {
     const financial = sellerFinancials(seller), isClosure = period === 'month';
@@ -1159,6 +1166,38 @@
     }).join('');
     panel.innerHTML = `<div class="section-title"><div><h2>Lançamentos diários do vendedor</h2><div class="hint">Dados recebidos pela sincronização do acesso individual. A visão do gestor é somente de acompanhamento.</div></div></div><div class="seller-summary"><div class="metric"><span>Mercantil acumulado</span><strong>${brl.format(total.general)}</strong></div><div class="metric"><span>Serviços acumulados</span><strong>${brl.format(total.services)}</strong></div><div class="metric"><span>Conversão</span><strong>${total.nfs?efficiencyPct.format(total.conversion):'—'}</strong></div><div class="metric"><span>Eficiência</span><strong>${total.eligible?efficiencyPct.format(total.efficiency):'—'}</strong></div></div><div class="table-wrap"><table><thead><tr><th>Dia</th><th>Status</th><th>Mercantil</th><th>Elegível</th><th>Serviços</th><th>Qtd. elegível</th><th>Garantias</th><th>Conversão</th><th>Eficiência</th></tr></thead><tbody>${rows || '<tr><td colspan="9" style="text-align:center">Nenhum lançamento diário recebido ainda.</td></tr>'}</tbody></table></div>`;
   }
+  function sellerWorkspaceWeeks(seller) {
+    const rows = Object.entries(seller.daily || {}).sort(([a],[b]) => a.localeCompare(b));
+    const groups = new Map();
+    rows.forEach(([key, day]) => { const d=new Date(`${key}T12:00:00`); d.setDate(d.getDate()-((d.getDay()+6)%7)); const wk=isoDate(d.getFullYear(),d.getMonth()+1,d.getDate()); if(!groups.has(wk))groups.set(wk,[]); groups.get(wk).push([key,day]); });
+    return [...groups.entries()].map(([key,items]) => { const tmp={daily:Object.fromEntries(items)}, a=sellerDailyAggregate(tmp); return {key,items,a}; });
+  }
+  function sellerWorkspacePeriodCard(label, a, mercGoal, serviceGoal) {
+    return `<div class="seller-workspace-card"><span>${label}</span><strong>${brl.format(a.general)}</strong><small>Serviços ${brl.format(a.services)} • Conv. ${a.nfs?efficiencyPct.format(a.conversion):'—'} • Efic. ${a.eligible?efficiencyPct.format(a.efficiency):'—'}</small></div>`;
+  }
+  function hasSellerDayValue(day){return !!day&&['general','eligible','warranty','other','mixed','nfs','warrantyQty'].some(f=>num(day[f])>0)}
+  function renderSellerWorkspace(seller) {
+    const host=document.getElementById('sellerWorkspace'); if(!host)return;
+    const total=sellerDailyAggregate(seller), metrics=sellerMetrics(seller), history=sellerProfileHistory(seller), days=Object.entries(seller.daily||{}).sort(([a],[b])=>b.localeCompare(a));
+    const ecommerce=num(seller.ecommerce), mercTotal=total.general+ecommerce, planned=Math.max(1,num(db.businessDays)||metrics.plannedDays||1), remaining=Math.max(0,planned-total.days), projMerc=total.days?total.general/total.days*planned+ecommerce:ecommerce, projServ=total.days?total.services/total.days*planned:0, avgMerc=total.days?mercTotal/total.days:0, avgServ=total.days?total.services/total.days:0, needMerc=remaining?Math.max(0,num(seller.assignedGoal)-mercTotal)/remaining:0, needServ=remaining?Math.max(0,num(seller.serviceGoal)-total.services)/remaining:0;
+    const todayKey=isoDate(today.getFullYear(), today.getMonth()+1, today.getDate()), todayData=seller.daily?.[todayKey]; const hasToday=todayData&&['general','eligible','warranty','other','mixed','nfs','warrantyQty'].some(f=>num(todayData[f])>0); const launchedDays=days.filter(([,d])=>d.status==='done'||hasSellerDayValue(d)).length, pendingDays=days.filter(([k,d])=>k<=todayKey&&d.status!=='off'&&d.status!=='medical'&&d.status!=='justified'&&d.status!=='done'&&!hasSellerDayValue(d)).length;
+    const tabs=[['overview','🏠 Visão geral'],['daily','📝 Lançamentos'],['weekly','📊 Semanal'],['goals','🎯 Metas'],['compiled','📈 Compilado']];
+    const mercRate=num(seller.assignedGoal)?mercTotal/num(seller.assignedGoal):0, servRate=num(seller.serviceGoal)?total.services/num(seller.serviceGoal):0;
+    const overview=`<div class="seller-status-row"><span class="seller-status-chip done">✅ ${launchedDays} dia(s) lançado(s)</span><span class="seller-status-chip ${pendingDays?'pending':'done'}">${pendingDays?'⚠️':'✅'} ${pendingDays} pendência(s)</span><span class="seller-status-chip">☁️ Sincronizado pela área do vendedor</span></div><div class="seller-workspace-grid">${[
+      ['💰 Mercantil',brl.format(mercTotal),num(seller.assignedGoal)?`${pct.format(mercRate)} da meta`:'Meta não cadastrada'],['🛡️ Serviços',brl.format(total.services),num(seller.serviceGoal)?`${pct.format(servRate)} da meta`:'Meta não cadastrada'],
+      ['🎯 Conversão',total.nfs?efficiencyPct.format(total.conversion):'—','Meta 35%'],['⚡ Eficiência',total.eligible?efficiencyPct.format(total.efficiency):'—','Meta 7%'],
+      ['📈 Projeção mercantil',brl.format(projMerc),num(seller.assignedGoal)?`${pct.format(projMerc/num(seller.assignedGoal))} projetado`:'—'],['📈 Projeção serviços',brl.format(projServ),num(seller.serviceGoal)?`${pct.format(projServ/num(seller.serviceGoal))} projetado`:'—'],
+      ['⚡ Média mercantil/dia',brl.format(avgMerc),`Necessário ${brl.format(needMerc)}/dia`],['⚡ Média serviços/dia',brl.format(avgServ),`Necessário ${brl.format(needServ)}/dia`],
+      ['📅 Dias trabalhados',String(total.days),`${remaining} restante(s) de ${planned}`],['🌐 E-commerce',brl.format(ecommerce),'Acumulado do mês'],
+      ['🕐 Última atualização',seller.updatedAt?new Date(seller.updatedAt).toLocaleString('pt-BR'):'—',hasToday?'Resultado de hoje recebido':'Sem lançamento hoje'],['💵 Comissão serviços','5,00%','Automática sobre serviços']
+    ].map(([l,v,n])=>`<div class="seller-workspace-card"><span>${l}</span><strong>${v}</strong><small>${n}</small></div>`).join('')}</div>`;
+    const daily=`<div class="seller-day-cards">${days.length?days.map(([key,day])=>{const services=num(day.warranty)+num(day.other)+num(day.mixed),conv=num(day.nfs)?num(day.warrantyQty)/num(day.nfs):0,eff=num(day.eligible)?services/num(day.eligible):0,mercComm=num(day.general)*num(day.commissionMercantileRate)/100,servComm=services*.05;const has=hasSellerDayValue(day);const st=day.status==='off'?'💤 Não trabalha':day.status==='medical'?'🩺 Atestado':day.status==='justified'?'📋 Justificada':day.status==='done'?'✅ Finalizado':has||day.status==='partial'?'🟡 Parcial':'⚠️ Pendente';return `<article class="seller-day-card"><div><span>DIA</span><strong>${new Date(`${key}T12:00:00`).toLocaleDateString('pt-BR')}</strong></div><div><span>STATUS</span><strong>${st}</strong></div><div><span>MERCANTIL</span><strong>${brl.format(num(day.general))}</strong></div><div><span>SERVIÇOS</span><strong>${brl.format(services)}</strong></div><div><span>CONVERSÃO</span><strong>${num(day.nfs)?efficiencyPct.format(conv):'—'}</strong></div><div><span>EFICIÊNCIA</span><strong>${num(day.eligible)?efficiencyPct.format(eff):'—'}</strong></div><div><span>COMISSÃO MERC.</span><strong>${brl.format(mercComm)}</strong><small>${num(day.commissionMercantileRate).toLocaleString('pt-BR')}%</small></div><div><span>COMISSÃO SERVIÇOS</span><strong>${brl.format(servComm)}</strong><small>5%</small></div></article>`}).join(''):'<div class="empty">Nenhum lançamento recebido deste vendedor.</div>'}</div>`;
+    const weeks=sellerWorkspaceWeeks(seller); const weekly=`<div class="seller-workspace-grid">${weeks.length?weeks.map((w,i)=>sellerWorkspacePeriodCard(`${i+1}ª semana`,w.a,0,0)).join(''):'<div class="empty">Sem resultados semanais ainda.</div>'}</div>`;
+    const goals=`<div class="seller-goal-pair"><div class="seller-goal-box"><span>💰 Meta mercantil mensal</span><h2>${brl.format(num(seller.assignedGoal))}</h2><div class="seller-progress"><i style="width:${Math.min(100,mercRate*100)}%"></i></div><b>${num(seller.assignedGoal)?pct.format(mercRate):'Não cadastrada'}</b><p>${num(seller.assignedGoal)?`Faltam ${brl.format(Math.max(0,num(seller.assignedGoal)-mercTotal))}`:'O vendedor ainda não cadastrou esta meta.'}</p></div><div class="seller-goal-box service"><span>🛡️ Meta de serviços mensal</span><h2>${brl.format(num(seller.serviceGoal))}</h2><div class="seller-progress"><i style="width:${Math.min(100,servRate*100)}%"></i></div><b>${num(seller.serviceGoal)?pct.format(servRate):'Não cadastrada'}</b><p>${num(seller.serviceGoal)?`Faltam ${brl.format(Math.max(0,num(seller.serviceGoal)-total.services))}`:'O vendedor ainda não cadastrou esta meta.'}</p></div></div><div class="seller-workspace-grid" style="margin-top:12px"><div class="seller-workspace-card"><span>🎯 Conversão</span><strong>35,00%</strong><small>Meta fixa</small></div><div class="seller-workspace-card"><span>⚡ Eficiência</span><strong>7,00%</strong><small>Meta fixa</small></div><div class="seller-workspace-card"><span>🛡️ Comissão serviços</span><strong>5,00%</strong><small>Automática</small></div><div class="seller-workspace-card"><span>📅 Dias da filial</span><strong>${planned}</strong><small>Definidos pela gestão</small></div></div>`;
+    const compiled=`<div class="seller-workspace-grid">${history.length?history.map((h)=>{const a=h.seller.daily?sellerDailyAggregate(h.seller):{general:num(h.seller.general),services:h.services,eligible:num(h.seller.eligible),nfs:num(h.seller.nfs),warrantyQty:num(h.seller.warrantyQty)};a.general+=num(h.seller.ecommerce);a.conversion=a.nfs?a.warrantyQty/a.nfs:0;a.efficiency=a.eligible?a.services/a.eligible:0;return sellerWorkspacePeriodCard(monthLabel(h.month),a,num(h.seller.assignedGoal),num(h.seller.serviceGoal))}).join(''):'<div class="empty">Ainda não há histórico de outras competências.</div>'}</div>`;
+    host.innerHTML=`<nav class="seller-workspace-tabs">${tabs.map(([id,label])=>`<button class="seller-workspace-tab ${sellerWorkspaceTab===id?'active':''}" data-seller-workspace-tab="${id}">${label}</button>`).join('')}</nav>${tabs.map(([id])=>`<section class="seller-workspace-view ${sellerWorkspaceTab===id?'active':''}" data-seller-workspace-view="${id}">${id==='overview'?overview:id==='daily'?daily:id==='weekly'?weekly:id==='goals'?goals:compiled}</section>`).join('')}`;
+    host.querySelectorAll('[data-seller-workspace-tab]').forEach(btn=>btn.addEventListener('click',()=>{sellerWorkspaceTab=btn.dataset.sellerWorkspaceTab;renderSellerWorkspace(seller);window.scrollTo({top:document.getElementById('sellerProfile').offsetTop-10,behavior:'smooth'});}));
+  }
   function renderSellerProfile() {
     if (!activeSellerProfileId) return;
     const seller = db.sellers.find((item, index) => sellerIdentity(item, index) === activeSellerProfileId);
@@ -1166,7 +1205,7 @@
     const metrics = sellerMetrics(seller), financial = sellerFinancials(seller), history = sellerProfileHistory(seller), period = sellerPeriodAnalysis(seller, selectedSellerMissionDate()), financialComparison = sellerFinancialComparison(seller, period.period);
     const expectedTotal = financial.targetTotal;
     document.getElementById('sellerProfileTitle').textContent = seller.name || 'Vendedor sem nome';
-    document.getElementById('sellerProfileSubtitle').textContent = `${db.branch || 'Filial não informada'} • ${monthLabel(db.month)} • ${financial.plannedDays} dias úteis + ${financial.restDays} descansos`;
+    document.getElementById('sellerProfileSubtitle').textContent = `${db.branch || 'Filial não informada'} • ${monthLabel(db.month)} • acompanhamento individual sincronizado`;
     document.getElementById('sellerProfileKpis').innerHTML = [
       ['Venda mercantil total', brl.format(num(seller.general))], ['Venda elegível (base eficiência)', brl.format(num(seller.eligible))], ['Meta mercantil', brl.format(metrics.individualGoal)], ['Meta mercantil por dia planejado', brl.format(metrics.targetDailyAverage)], ['Atingimento mercantil', pct.format(metrics.rate)],
       ['Falta mercantil', brl.format(metrics.missing)], ['Média mercantil/dia', brl.format(metrics.dailyAverage)], ['Projeção mercantil', brl.format(metrics.projection)], ['Necessário/dia', brl.format(metrics.neededPerDay)],
@@ -1187,6 +1226,7 @@
     document.getElementById('sellerProfileHistoryBody').innerHTML = history.length ? history.map(historyRow).join('') : '<tr><td colspan="9">Nenhum histórico disponível.</td></tr>';
     renderSellerDailyDetail(seller);
     document.getElementById('sellerProfileHistoryCards').innerHTML = history.length ? history.map((item) => `<article class="compiled-card"><header><strong>${esc(monthLabel(item.month))}</strong><span class="trend-badge stable">${pct2.format(item.financial.mercantileRate)}</span></header><div class="compiled-card-grid"><div class="metric"><span>VENDA</span><strong>${brl.format(num(item.seller.general))}</strong></div><div class="metric"><span>SERVIÇOS</span><strong>${brl.format(item.services)}</strong></div><div class="metric"><span>DSR</span><strong>${brl.format(item.financial.dsr)}</strong></div><div class="metric"><span>GANHO TOTAL</span><strong>${brl.format(item.financial.total)}</strong></div></div></article>`).join('') : '<div class="empty">Nenhum histórico disponível.</div>';
+    renderSellerWorkspace(seller);
   }
   function syncSellerRow(row) {
     if (!row) return null;
@@ -1200,72 +1240,46 @@
     seller.updatedAt = new Date().toISOString();
     return { index, seller };
   }
+  function sellerDailyStatus(seller) {
+    const [year, month] = String(db.month || '').split('-').map(Number);
+    const todayKey = isoDate(today.getFullYear(), today.getMonth() + 1, today.getDate());
+    const inMonth = todayKey.startsWith(`${db.month}-`);
+    const key = inMonth ? todayKey : `${db.month}-${String(Math.min(new Date(year, month, 0).getDate(), 1)).padStart(2,'0')}`;
+    const day = seller.daily?.[key];
+    const hasAny = day && ['general','eligible','warranty','other','mixed','nfs','warrantyQty'].some((field) => num(day[field]) > 0);
+    if (day?.status === 'done' || hasAny) return { label:'Atualizado hoje', cls:'ok' };
+    if (day?.status === 'off') return { label:'Não trabalha hoje', cls:'ok' };
+    return { label:'Pendente hoje', cls:'bad' };
+  }
   function renderSellers() {
-    const branch = calculate(), sellerSales = db.sellers.reduce((sum, seller) => sum + num(seller.general), 0);
-    const count = num(db.sellerCount) || db.sellers.length;
-    const individualGoal = count ? num(db.mercantileGoal) / count : 0;
-    const assignedTotal = db.sellers.reduce((sum, seller) => sum + sellerMetrics(seller).individualGoal, 0);
-    const difference = branch.general - sellerSales;
+    const branch = calculate();
+    const sellerSales = db.sellers.reduce((sum, seller) => sum + num(seller.general), 0);
+    const sellerServices = db.sellers.reduce((sum, seller) => sum + num(seller.warranty)+num(seller.other)+num(seller.mixed), 0);
+    const pending = db.sellers.filter((seller) => sellerDailyStatus(seller).cls === 'bad').length;
+    const updated = Math.max(0, db.sellers.length - pending);
+    const goalsHit=db.sellers.filter((seller)=>{const a=sellerDailyAggregate(seller),merc=a.general+num(seller.ecommerce),mg=num(seller.assignedGoal),sg=num(seller.serviceGoal);return (mg&&merc>=mg)||(sg&&a.services>=sg)}).length;
     document.getElementById('sellerSummary').innerHTML = [
-      ['Vendedores', db.sellers.length], ['Venda mercantil total informada', brl.format(sellerSales)],
-      ['Metas individuais', count ? brl.format(assignedTotal) : 'Não calculadas'], ['Venda geral da filial', brl.format(branch.general)]
+      ['👥 Vendedores', db.sellers.length], ['✅ Atualizados hoje', updated], ['⚠️ Pendentes hoje', pending], ['🏆 Metas batidas', goalsHit]
     ].map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`).join('');
     const list = document.getElementById('sellerList');
     renderSellerBackupPanel();
     if (!db.sellers.length) { list.innerHTML = '<div class="empty">Nenhum vendedor cadastrado. Toque em “+ Vendedor” para começar.</div>'; return; }
-    const reconciliation = `<div class="reconcile ${Math.abs(difference) < 0.01 ? 'ok' : 'warn'}">${Math.abs(difference) < 0.01 ? '✓ A soma dos vendedores confere com a venda geral da filial.' : `Diferença entre filial e vendedores: ${brl.format(difference)}.`}</div>`;
-    list.innerHTML = reconciliation + db.sellers.map((seller, index) => {
-      const metrics = sellerMetrics(seller), financial = sellerFinancials(seller);
-      const money = (field, label) => `<div class="seller-field"><label>${label}</label><input class="money-input" inputmode="decimal" data-f="${field}" value="${num(seller[field]) ? esc(brl.format(num(seller[field]))) : ''}"></div>`;
-      const isOpen = openSellerIndex === index;
-      const mercTrend = metrics.projectedGap <= 0 ? `Acima ${brl.format(Math.abs(metrics.projectedGap))}` : `Abaixo ${brl.format(metrics.projectedGap)}`;
-      const serviceTrend = metrics.serviceProjectedGap <= 0 ? `Acima ${brl.format(Math.abs(metrics.serviceProjectedGap))}` : `Abaixo ${brl.format(metrics.serviceProjectedGap)}`;
-      return `<article class="seller-row ${isOpen ? 'is-open' : ''}" data-i="${index}"><button class="seller-accordion-toggle" type="button" data-toggle-seller="${index}"><div class="seller-accordion-name"><strong>${esc(seller.name || `Vendedor ${index + 1}`)}</strong><span>${metrics.plannedDays} dias planejados • ${num(seller.days)} trabalhados • ${metrics.remainingDays} restantes</span></div><div class="seller-accordion-kpi"><span>Venda total</span><strong>${brl.format(num(seller.general))}</strong></div><div class="seller-accordion-kpi"><span>Serviços totais</span><strong>${brl.format(metrics.services)}</strong></div><span class="pill ${statusClass(metrics.rate)}">${pct.format(metrics.rate)}</span><span class="seller-accordion-chevron">⌄</span></button><div class="seller-card-content" ${isOpen ? '' : 'hidden'}><div class="seller-card-head"><input data-f="name" value="${esc(seller.name || '')}" placeholder="Nome do vendedor"><button class="btn danger small" data-remove="${index}">Excluir</button></div><div class="seller-fields">${money('assignedGoal', 'Meta mercantil mensal')}${money('serviceGoal', 'Meta de serviços mensal')}${money('general', 'Venda mercantil do período / acumulada')}${money('eligible', 'Venda elegível do período (base da eficiência)')}${money('warranty', 'Garantias do período')}${money('other', 'Outros serviços do período')}${money('mixed', 'Presta-mista do período')}<div class="seller-service-total"><span>SERVIÇOS TOTAIS AUTOMÁTICOS</span><strong>${brl.format(metrics.services)}</strong><small>Garantias + outros serviços + presta-mista • eficiência calculada separadamente com meta de 7%</small></div><div class="seller-field"><label>Notas fiscais do período</label><input inputmode="numeric" type="number" min="0" step="1" data-f="nfs" value="${num(seller.nfs) || ''}"></div><div class="seller-field"><label>Dias úteis planejados</label><input inputmode="numeric" type="number" min="1" max="31" step="1" data-f="plannedDays" value="${metrics.plannedDays || ''}"></div><div class="seller-field"><label>Dias já trabalhados / considerados</label><input inputmode="numeric" type="number" min="0" max="31" step="1" data-f="days" value="${num(seller.days) || ''}"></div><div class="seller-field"><label>Prazo do compromisso</label><input type="date" data-f="deadline" value="${esc(seller.deadline || '')}"></div><div class="seller-field wide"><label>Direcionamento da reunião</label><textarea data-f="notes" rows="2" placeholder="Pontos discutidos e direcionamento">${esc(seller.notes || '')}</textarea></div><div class="seller-field wide"><label>Compromisso do vendedor</label><textarea data-f="commitment" rows="2" placeholder="Ação, responsável e resultado esperado">${esc(seller.commitment || '')}</textarea></div></div><div class="seller-metrics"><div class="metric"><span>META MERCANTIL</span><strong>${count || num(seller.assignedGoal) ? brl.format(metrics.individualGoal) : '—'}</strong></div><div class="metric"><span>VENDA MERCANTIL TOTAL</span><strong>${brl.format(num(seller.general))}</strong></div><div class="metric"><span>VENDA ELEGÍVEL</span><strong>${brl.format(num(seller.eligible))}</strong></div><div class="metric"><span>SERVIÇOS TOTAIS</span><strong>${brl.format(metrics.services)}</strong></div><div class="metric"><span>META DE SERVIÇOS</span><strong>${brl.format(metrics.serviceGoal)}</strong></div><div class="metric"><span>ATINGIMENTO MERCANTIL</span><strong class="${statusClass(metrics.rate)}">${pct.format(metrics.rate)}</strong></div><div class="metric"><span>ATINGIMENTO SERVIÇOS</span><strong class="${statusClass(metrics.serviceRate)}">${pct.format(metrics.serviceRate)}</strong></div><div class="metric"><span>FALTA MERCANTIL</span><strong>${brl.format(metrics.missing)}</strong></div><div class="metric"><span>FALTA SERVIÇOS</span><strong>${brl.format(metrics.serviceMissing)}</strong></div><div class="metric"><span>PROJEÇÃO MERCANTIL</span><strong>${brl.format(metrics.projection)}</strong><small>${mercTrend}</small></div><div class="metric"><span>PROJEÇÃO SERVIÇOS</span><strong>${brl.format(metrics.serviceProjection)}</strong><small>${serviceTrend}</small></div><div class="metric"><span>MÉDIA MERCANTIL/DIA</span><strong>${brl.format(metrics.dailyAverage)}</strong></div><div class="metric"><span>MÉDIA SERVIÇOS/DIA</span><strong>${brl.format(metrics.serviceDailyAverage)}</strong></div><div class="metric"><span>NECESSÁRIO MERCANTIL/DIA</span><strong>${brl.format(metrics.neededPerDay)}</strong></div><div class="metric"><span>NECESSÁRIO SERVIÇOS/DIA</span><strong>${brl.format(metrics.serviceNeededPerDay)}</strong></div><div class="metric"><span>DIAS RESTANTES</span><strong>${metrics.remainingDays}</strong></div><div class="metric"><span>EFICIÊNCIA • META 7%</span><strong>${metrics.hasEligible ? efficiencyPct.format(metrics.efficiency) : 'Não calculada'}</strong><small>${metrics.hasEligible ? 'Serviços ÷ elegível' : 'Informe venda elegível'}</small></div><div class="metric"><span>CONVERSÃO • META 35%</span><strong>${num(seller.general) ? efficiencyPct.format(num(seller.eligible) / num(seller.general)) : 'Não calculada'}</strong><small>Elegível ÷ mercantil total</small></div></div></div></article>`;
+    list.innerHTML = db.sellers.map((seller, index) => {
+      const metrics = sellerMetrics(seller), daily = sellerDailyAggregate(seller), status = sellerDailyStatus(seller);
+      const commission = sellerFinancials(seller);
+      return `<article class="seller-directory-card" data-i="${index}">
+        <div class="seller-person"><strong>${esc(seller.name || `Vendedor ${index + 1}`)}</strong><span>${metrics.plannedDays} dias planejados • ${daily.days} lançados • ${metrics.remainingDays} restantes</span></div>
+        <div class="seller-mini-kpi"><span>Mercantil</span><strong>${brl.format(daily.general+num(seller.ecommerce))}</strong></div>
+        <div class="seller-mini-kpi"><span>Serviços</span><strong>${brl.format(daily.services)}</strong></div>
+        <div class="seller-mini-kpi"><span>Conversão</span><strong>${daily.nfs ? efficiencyPct.format(daily.conversion) : '—'}</strong></div>
+        <div class="seller-mini-kpi"><span>Eficiência</span><strong>${daily.eligible ? efficiencyPct.format(daily.efficiency) : '—'}</strong></div>
+        <div><span class="seller-pending ${status.cls}">${status.label}</span><small style="display:block;color:#7a8797;margin-top:4px;font-size:9px">${seller.updatedAt?'Atualizado '+new Date(seller.updatedAt).toLocaleString('pt-BR'):'Sem atualização'}</small></div>
+        <button type="button" class="btn primary small seller-open-btn" data-open-seller="${index}">Ver vendedor</button>
+      </article>`;
     }).join('');
-    list.querySelectorAll('.seller-row').forEach((row) => {
-      const index = Number(row.dataset.i), seller = db.sellers[index], head = row.querySelector('.seller-card-head'), fields = row.querySelector('.seller-fields');
-      const financial = sellerFinancials(seller);
-      const legacyNfsField = fields.querySelector('[data-f="nfs"]')?.closest('.seller-field');
-      if (legacyNfsField?.querySelector('label')) legacyNfsField.querySelector('label').textContent = 'Quantidade elegível do período';
-      const invoiceField = document.createElement('div'); invoiceField.className = 'seller-field';
-      invoiceField.innerHTML = `<label>Notas fiscais do período</label><input inputmode="numeric" type="number" min="0" step="1" data-f="invoiceCount" value="${num(seller.invoiceCount) || ''}">`;
-      legacyNfsField?.insertAdjacentElement('beforebegin', invoiceField);
-      const warrantyValueField = fields.querySelector('[data-f="warranty"]')?.closest('.seller-field');
-      const warrantyQtyField = document.createElement('div'); warrantyQtyField.className = 'seller-field';
-      warrantyQtyField.innerHTML = `<label>Quantidade de garantias vendidas</label><input inputmode="numeric" type="number" min="0" step="1" data-f="warrantyQty" value="${num(seller.warrantyQty) || ''}">`;
-      warrantyValueField?.insertAdjacentElement('afterend', warrantyQtyField);
-      const conversionMetric = row.querySelector('.seller-card-content > .seller-metrics .metric:last-child');
-      if (conversionMetric) conversionMetric.innerHTML = `<span>CONVERSÃO • META 35%</span><strong>${num(seller.nfs) ? efficiencyPct.format(num(seller.warrantyQty) / num(seller.nfs)) : 'Não calculada'}</strong><small>${num(seller.warrantyQty)} garantia(s) ÷ ${num(seller.nfs)} elegível(is)</small>`;
-      const openButton = document.createElement('button'); openButton.type = 'button'; openButton.className = 'btn primary small seller-open'; openButton.dataset.openSeller = index; openButton.textContent = 'Abrir resultado completo'; head.insertBefore(openButton, head.querySelector('[data-remove]'));
-      const extra = document.createElement('div'); extra.className = 'seller-finance-extra';
-      extra.innerHTML = `<div class="seller-field"><label>Comissão mercantil (%)</label><input inputmode="decimal" type="number" min="0" max="100" step="0.01" data-f="commissionMercantileRate" value="${num(seller.commissionMercantileRate) || ''}" placeholder="Ex.: 1,5"></div><div class="seller-field"><label>Comissão sobre serviços (%)</label><input inputmode="decimal" type="number" min="0" max="100" step="0.01" data-f="commissionServiceRate" value="${Object.prototype.hasOwnProperty.call(seller, 'commissionServiceRate') ? num(seller.commissionServiceRate) : 5}"></div><div class="seller-field"><label>Dias de repouso remunerado</label><input inputmode="numeric" type="number" min="0" max="31" step="1" data-f="restDays" value="${financial.restDays}"></div><div class="seller-field"><label>Dias justificados / atestado</label><input inputmode="numeric" type="number" min="0" max="31" step="1" data-f="justifiedDays" value="${num(seller.justifiedDays) || ''}"></div>`;
-      extra.style.display = 'contents'; fields.insertBefore(extra, fields.querySelector('.wide'));
-      const periodBlock = document.createElement('section'); periodBlock.className = 'seller-period-block';
-      periodBlock.innerHTML = `<h4>Período dos resultados informados</h4><p>Use “Meta do mês” no início da competência, sem percentual diário. Use “Meta do dia” para compartilhar a missão calculada pelo percentual informado pela empresa.</p><div class="seller-period-grid"><div class="seller-field"><label>Tipo de compartilhamento</label><select data-f="resultPeriod"><option value="goalMonth">Meta do mês, sem resultado</option><option value="none">Meta do dia, sem resultado</option><option value="day">Resultado do dia</option><option value="week">Resultado da semana</option><option value="fortnight">Resultado da quinzena</option><option value="accumulated">Acumulado até o momento</option><option value="month">Fechamento do mês</option><option value="custom">Período personalizado</option></select></div><div class="seller-field"><label>Data inicial</label><input type="date" data-f="resultStart" value="${esc(seller.resultStart || '')}"></div><div class="seller-field"><label>Data final</label><input type="date" data-f="resultEnd" value="${esc(seller.resultEnd || '')}"></div></div><div class="seller-fixed-targets"><span>Eficiência de serviços: 7%</span><span>Taxa de conversão: 35%</span><span>Conversão: elegível ÷ mercantil total</span></div>`;
-      periodBlock.querySelector('.seller-fixed-targets').innerHTML = '<span>Eficiência de serviços: 7%</span><span>Meta de conversão: 35%</span><span>Conversão: quantidade de garantias ÷ quantidade elegível</span>';
-      fields.insertBefore(periodBlock, fields.querySelector('.wide'));
-      periodBlock.querySelector('[data-f="resultPeriod"]').value = sellerResultPeriod(seller);
-      const financeSummary = document.createElement('div'), rowFinancial = sellerFinancials(seller);
-      financeSummary.className = 'seller-metrics seller-finance-summary';
-      const rowFinancialComparison = sellerFinancialComparison(seller);
-      financeSummary.innerHTML = `<div class="metric"><span>COMISSÃO MERCANTIL</span><strong>${pct2.format(rowFinancial.mercantileRate)}</strong></div><div class="metric"><span>COMISSÃO SERVIÇOS</span><strong>${pct2.format(rowFinancial.serviceRate)}</strong></div><div class="metric"><span>${rowFinancialComparison.currentLabel.toUpperCase()}</span><strong>${brl.format(rowFinancialComparison.current)}</strong></div><div class="metric"><span>GANHO SE BATER AS METAS</span><strong>${brl.format(rowFinancial.targetTotal)}</strong><small>Inclui repousos e atestados</small></div><div class="metric"><span>${rowFinancialComparison.gapLabel.toUpperCase()}</span><strong>${brl.format(Math.abs(rowFinancialComparison.gap))}</strong><small>${rowFinancialComparison.gapNote}</small></div>`;
-      row.querySelector('.seller-card-content').appendChild(financeSummary);
-    });
-    list.querySelectorAll('[data-toggle-seller]').forEach((button) => button.addEventListener('click', () => {
-      const index = Number(button.dataset.toggleSeller); openSellerIndex = openSellerIndex === index ? null : index; renderSellers();
-    }));
-    list.querySelectorAll('.money-input').forEach(bindMoneyBehavior);
-    list.querySelectorAll('[data-f]').forEach((element) => element.addEventListener('change', (event) => {
-      const field = event.target.dataset.f; syncSellerRow(event.target.closest('[data-i]'));
-      persist(); renderSellers(); renderScopeSelector(); renderCompiled(); if (field === 'name') renderGoalsHistory(); if (activeScope !== 'branch') renderOverview();
-    }));
-    list.querySelectorAll('[data-remove]').forEach((button) => button.addEventListener('click', () => {
-      if (confirm('Excluir este vendedor da competência atual?')) { db.sellers.splice(Number(button.dataset.remove), 1); openSellerIndex = null; activeScope = 'branch'; persist(); renderSellers(); renderScopeSelector(); renderOverview(); }
-    }));
     list.querySelectorAll('[data-open-seller]').forEach((button) => button.addEventListener('click', () => {
-      const synced = syncSellerRow(button.closest('[data-i]')); if (!synced) return; persist(false);
-      const { seller, index } = synced;
-      activeSellerProfileId = sellerIdentity(seller, index); activeScope = `seller:${index}`;
+      const index = Number(button.dataset.openSeller), seller = db.sellers[index]; if (!seller) return;
+      activeSellerProfileId = sellerIdentity(seller, index); activeScope = `seller:${index}`; sellerWorkspaceTab='overview';
       renderSellerProfile(); renderScopeSelector(); showView('sellerProfile');
     }));
   }

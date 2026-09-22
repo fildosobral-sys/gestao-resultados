@@ -1,0 +1,13 @@
+ATUALIZAÇÃO V3 — PAINEL DO VENDEDOR
+
+1. Aba Vendedores do gestor simplificada para uma lista objetiva.
+2. Cada vendedor abre em um painel individual com: Visão geral, Lançamentos diários, Semanal, Metas e Compilado.
+3. Pendências diárias ficam visíveis ao gestor.
+4. Área legada detalhada permanece internamente para compatibilidade, mas não é exibida.
+5. Aplicativo do vendedor recebeu navegação mobile compacta.
+6. Vendedor informa Meta Mercantil, Meta de Serviços e Dias úteis planejados.
+7. Conversão permanece em 35% e Eficiência em 7%.
+8. No lançamento diário, vendedor informa o percentual de comissão mercantil do dia.
+9. Comissão sobre serviços é fixa em 5% do total de serviços.
+10. Comissões e projeção financeira passam a ser calculadas com base nos lançamentos diários.
+11. Nenhuma alteração foi feita no endpoint, planilha ou Apps Script.

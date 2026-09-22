@@ -1,0 +1,14 @@
+V4 — APP DO VENDEDOR / PAINEL ORGANIZADO
+
+- Aba Vendedores da gestão permanece como diretório limpo da equipe.
+- Ao abrir um vendedor: Visão geral, Lançamentos, Semanal, Metas e Compilado.
+- Área individual removida de Meta 1/2/3 e Lucro Bruto.
+- Vendedor cadastra somente Meta Mercantil e Meta de Serviços.
+- Conversão fixa 35%; Eficiência fixa 7%.
+- Dias úteis e distribuição diária vêm da gestão; vendedor não edita percentual do dia.
+- Lançamento diário permite Parcial, Finalizado, Não trabalha, Atestado e Justificada.
+- Comissão mercantil é informada no dia; serviços usam 5% automático.
+- E-commerce é informado como acumulado mensal, não diariamente.
+- Visão inicial reorganizada com ritmo, média/dia, necessário/dia, projeções, ganhos e pendências.
+- Experiência mobile tratada como aplicativo, com navegação inferior e cards compactos.
+- Nuvem, endpoint, planilha e Apps Script não foram alterados.
