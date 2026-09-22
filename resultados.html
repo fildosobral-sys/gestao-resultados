@@ -254,6 +254,42 @@ body.seller-modal-open{overflow:hidden}
 
 <style id="seller-manager-polish-v8">.seller-card-footer{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid #edf1f6;padding-top:11px;margin-top:2px}.seller-card-status{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.seller-card-status small{color:#728197;font-size:10px}.seller-directory-actions{display:flex;gap:7px;align-items:center}.seller-directory-actions .btn{min-width:108px}.seller-overview-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:4px 0 16px}.seller-overview-strip>div{background:#f7f9fc;border:1px solid #e2e9f2;border-radius:14px;padding:11px}.seller-overview-strip span{display:block;font-size:9px;font-weight:900;color:#6c7c90}.seller-overview-strip strong{display:block;font-size:19px;margin-top:4px}.seller-overview-strip small{display:block;color:#718096;margin-top:3px}.seller-overview-strip .attention{background:#fff8e8;border-color:#f1dda8}.seller-overview-strip .ok{background:#eefaf4;border-color:#c8ead8}.seller-block-title{font-size:14px;margin:15px 0 9px;color:#31485f}.seller-finance-dashboard{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.seller-finance-main{grid-column:1/-1;background:linear-gradient(135deg,#0b5f92,#0879e8 62%,#6049e8);color:#fff;border-radius:17px;padding:16px}.seller-finance-main span,.seller-finance-item span{display:block;font-size:9px;font-weight:900}.seller-finance-main strong{display:block;font-size:29px;margin-top:5px}.seller-finance-main small{display:block;margin-top:5px;opacity:.9}.seller-finance-item{background:#f7f9fc;border:1px solid #e1e8f1;border-radius:15px;padding:12px}.seller-finance-item strong{display:block;font-size:18px;margin-top:4px}.seller-finance-item small{display:block;color:#718096;margin-top:4px}.compiled-finance{margin-bottom:12px}#sellerProfile .profile-head{gap:10px}#sellerProfile .profile-title h2{margin-bottom:3px}#sellerProfile .profile-title p{margin:0;line-height:1.3}.seller-workspace-tabs{margin-top:8px}@media(max-width:760px){.seller-card-footer{display:block}.seller-card-status{justify-content:space-between;margin-bottom:9px}.seller-directory-actions{display:grid;grid-template-columns:1.5fr 1fr 1fr;width:100%}.seller-directory-actions .btn{min-width:0;width:100%;padding:10px 6px;font-size:11px}.seller-overview-strip{grid-template-columns:1fr 1fr}.seller-overview-strip>div:last-child{grid-column:1/-1}.seller-finance-dashboard{grid-template-columns:1fr 1fr}.seller-finance-main{padding:14px}.seller-finance-main strong{font-size:24px}#sellerProfile .profile-head{padding-bottom:10px!important}.seller-workspace-tabs{top:96px!important}}
 </style>
+
+<style id="seller-manager-polish-v10">
+  .updated-short{display:none}
+  .seller-card-footer{align-items:center}
+  .seller-card-status{min-width:0}
+  .seller-directory-actions .btn{display:inline-flex;align-items:center;justify-content:center;gap:5px}
+  #sellerProfile .profile-head{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px}
+  #sellerProfile .profile-title{min-width:0}
+  #sellerProfile .profile-title h2{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #sellerProfile .profile-title p{white-space:normal}
+  @media(max-width:760px){
+    .seller-card-footer{display:flex!important;flex-direction:row;align-items:center;justify-content:space-between;gap:7px;margin-top:8px;padding-top:9px}
+    .seller-card-status{display:flex;align-items:center;gap:6px;flex:1 1 auto;min-width:0;margin:0!important;flex-wrap:nowrap!important}
+    .seller-card-status .seller-pending{font-size:10px;padding:5px 7px;white-space:nowrap}
+    .seller-card-status small{font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .updated-full{display:none}.updated-short{display:inline}
+    .seller-directory-actions{display:flex!important;grid-template-columns:none!important;width:auto!important;gap:5px;flex:0 0 auto}
+    .seller-directory-actions .btn{width:auto!important;min-width:0!important;height:36px;padding:7px 9px!important;border-radius:10px;font-size:10px!important;line-height:1}
+    .seller-directory-actions .seller-open-btn{grid-column:auto!important;min-width:54px!important}
+    .seller-directory-actions .action-label{display:none}
+    .seller-directory-actions .action-icon{font-size:15px;line-height:1}
+    #sellerProfile .profile-head{grid-template-columns:auto minmax(0,1fr) auto!important;gap:8px!important;padding:8px 10px 10px!important;align-items:center}
+    #sellerProfileBack{width:42px;height:42px;padding:0!important;font-size:0;border-radius:13px}
+    #sellerProfileBack:before{content:'←';font-size:21px;font-weight:900}
+    #sellerProfile .profile-title h2{font-size:20px;line-height:1.1;margin:0}
+    #sellerProfile .profile-title p{font-size:10px;line-height:1.25;margin-top:3px}
+    #sellerProfilePrint{width:42px;height:42px;padding:0!important;font-size:0;border-radius:13px}
+    #sellerProfilePrint:before{content:'📥';font-size:18px}
+    .seller-workspace-tabs{margin-top:6px!important}
+  }
+  @media(max-width:390px){
+    .seller-card-status .seller-pending{max-width:86px;overflow:hidden;text-overflow:ellipsis}
+    .seller-directory-actions .btn{height:34px;padding:6px 7px!important}
+    .seller-directory-actions .action-icon{font-size:14px}
+  }
+</style>
 </head>
 <body>
 <main class="app">
@@ -536,7 +572,7 @@ body.seller-modal-open{overflow:hidden}
 })();
 </script>
 <script src="cloud-sync.js?v=1"></script>
-<script src="resultados-v24.js?v=90"></script>
+<script src="resultados-v24.js?v=100"></script>
 
 <script id="results-meeting-backup-v25-js">
 (() => {
