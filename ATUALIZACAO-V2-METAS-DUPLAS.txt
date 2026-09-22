@@ -1,0 +1,15 @@
+ATUALIZAÇÃO V2 — METAS DUPLAS DO VENDEDOR
+
+Implementado:
+- Mesmo percentual diário definido pela gestão passa a ser usado automaticamente no painel do vendedor.
+- Mercantil com duas referências: Minha Meta e Referência da Filial.
+- Serviços com duas referências: Minha Meta e Referência da Filial.
+- Meta diária individual = meta mensal individual x percentual do dia.
+- Referência diária da filial = meta mensal da filial x percentual do dia / quantidade de vendedores.
+- Serviços da filial agora usam a meta mensal de serviços da filial, e não 7% da meta mercantil.
+- Conversão permanece como indicador de acompanhamento com meta fixa de 35%.
+- Eficiência permanece como indicador de acompanhamento com meta fixa de 7%.
+- Visão geral do vendedor mostra as duas referências lado a lado para Mercantil e Serviços.
+- Lançamento diário mostra percentual da filial e quatro referências do dia.
+- Imagem individual atualizada mostra Mercantil, Serviços, Conversão, Eficiência e projeções.
+- Sincronização, endpoint, planilha e Apps Script não foram alterados.

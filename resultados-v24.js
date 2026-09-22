@@ -307,7 +307,7 @@
   function dailyGoalMetrics(key, source = dayData(key)) {
     const percent = num(source.goalPercent);
     const branchGoal = num(db.mercantileGoal) * percent / 100;
-    const serviceGoal = branchGoal * 0.07;
+    const serviceGoal = num(db.servicesGoal) * percent / 100;
     const namedSellers = db.sellers.map((seller) => String(seller.name || '').trim()).filter(Boolean);
     const sellerCount = Math.max(Math.round(num(db.sellerCount)), namedSellers.length);
     const sellerNames = namedSellers.slice(0, sellerCount);
@@ -339,7 +339,7 @@
   function renderDailyGoalSummary(metrics) {
     document.getElementById('dailyGoalSummary').innerHTML = `
       <div class="daily-goal-metric highlight"><span>META DA FILIAL NO DIA</span><strong>${brl.format(metrics.branchGoal)}</strong></div>
-      <div class="daily-goal-metric"><span>META DE SERVIÇOS/GARANTIA (7%)</span><strong>${brl.format(metrics.serviceGoal)}</strong></div>
+      <div class="daily-goal-metric"><span>META DE SERVIÇOS DO DIA</span><strong>${brl.format(metrics.serviceGoal)}</strong></div>
       <div class="daily-goal-metric"><span>META POR VENDEDOR</span><strong>${metrics.sellerCount ? brl.format(metrics.perSeller) : 'Cadastre a equipe'}</strong></div>
       <div class="daily-goal-metric"><span>SERVIÇOS/GARANTIA POR VENDEDOR</span><strong>${metrics.sellerCount ? brl.format(metrics.servicePerSeller) : 'Cadastre a equipe'}</strong></div>`;
     document.getElementById('dailyGoalTeam').innerHTML = metrics.sellerCount
@@ -486,7 +486,7 @@
       const heading = (text, y) => {ctx.fillStyle='#102a43'; ctx.font='900 31px Arial, sans-serif'; ctx.fillText(text,64,y);};
       heading('Missão do dia', 325);
       drawCanvasMetric(ctx,64,350,460,140,'Meta mercantil',brl.format(metrics.branchGoal),true,`${metrics.percent.toLocaleString('pt-BR')}% da meta mensal`);
-      drawCanvasMetric(ctx,556,350,460,140,'Meta de serviços',brl.format(metrics.serviceGoal),false,'7% da meta mercantil do dia');
+      drawCanvasMetric(ctx,556,350,460,140,'Meta de serviços',brl.format(metrics.serviceGoal),false,'Percentual diário aplicado à meta mensal de serviços');
       drawCanvasMetric(ctx,64,510,460,105,'Meta de eficiência','7,00%');
       drawCanvasMetric(ctx,556,510,460,105,'Meta de conversão','35,00%');
       heading('Média por vendedor', 668);
@@ -638,7 +638,7 @@
       const disabled = data.status === 'off', reached = dayReachedPrimaryGoal(data);
       const dailyGoal = dailyGoalMetrics(key, data), isOpen = openDailyKey === key;
       const numberField = (field, label) => `<div class="day-card-field"><label>${label}</label><input data-f="${field}" inputmode="numeric" type="number" min="0" step="1" value="${num(data[field]) || ''}" ${disabled ? 'disabled' : ''}></div>`;
-      return `<article class="day-card ${isOpen ? 'is-open' : ''} ${disabled ? 'day-off' : ''} ${key === todayKey ? 'today-row' : ''} ${reached ? 'goal-hit' : ''}" data-date="${key}"><div class="day-card-head"><button class="day-card-toggle" type="button" aria-expanded="${isOpen}" aria-controls="day-content-${key}"><div class="day-card-title"><strong>${date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}</strong><span>${date.toLocaleDateString('pt-BR', { weekday: 'long' })}</span>${reached ? '<span class="goal-hit-badge">Meta dia atingida ✓</span>' : ''}</div><span class="day-card-chevron" aria-hidden="true">⌄</span></button>${statusSelect(data)}</div><div class="day-card-content" id="day-content-${key}" ${isOpen ? '' : 'hidden'}><div class="day-goal-strip"><div><label>Percentual do dia (%)</label><input data-f="goalPercent" type="number" min="0" max="100" step="0.01" inputmode="decimal" value="${dailyGoal.percent || ''}" placeholder="Ex.: 3,51"></div><div class="day-goal-mini"><span>META FILIAL</span><strong>${brl.format(dailyGoal.branchGoal)}</strong></div><div class="day-goal-mini"><span>SERVIÇOS 7%</span><strong>${brl.format(dailyGoal.serviceGoal)}</strong></div><div class="day-goal-mini"><span>POR VENDEDOR</span><strong>${dailyGoal.sellerCount ? brl.format(dailyGoal.perSeller) : '—'}</strong></div><button class="btn small day-goal-export" data-daily-export="${key}" ${dailyGoal.percent ? '' : 'disabled'}>Baixar imagem HD</button></div><div class="day-card-grid"><div class="day-card-field"><label>Venda mercantil</label>${moneyInput('general', num(data.general), key, disabled)}</div><div class="day-card-field"><label>Venda elegível</label>${moneyInput('eligible', num(data.eligible), key, disabled)}</div>${numberField('invoiceCount', 'NFs')}${numberField('nfs', 'Quantidade elegível')}<div class="day-card-field"><label>Garantia (R$)</label>${moneyInput('warranty', num(data.warranty), key, disabled)}</div><div class="day-card-field"><label>Outros serviços</label>${moneyInput('other', num(data.other), key, disabled)}</div><div class="day-card-field"><label>Presta-mista</label>${moneyInput('mixed', num(data.mixed), key, disabled)}</div>${numberField('warrantyQty', 'Quantidade de garantias')}</div><div class="day-card-results"><div><span>TICKET MÉDIO</span><strong>${brl.format(ticket)}</strong></div><div><span>SERVIÇOS</span><strong>${brl.format(services)}</strong></div><div><span>CONVERSÃO</span><strong>${num(data.nfs) ? efficiencyPct.format(conversion) : '—'}</strong></div><div><span>EFICIÊNCIA</span><strong class="${statusClass(efficiency / 0.07)}">${efficiencyPct.format(efficiency)}</strong></div></div></div></article>`;
+      return `<article class="day-card ${isOpen ? 'is-open' : ''} ${disabled ? 'day-off' : ''} ${key === todayKey ? 'today-row' : ''} ${reached ? 'goal-hit' : ''}" data-date="${key}"><div class="day-card-head"><button class="day-card-toggle" type="button" aria-expanded="${isOpen}" aria-controls="day-content-${key}"><div class="day-card-title"><strong>${date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}</strong><span>${date.toLocaleDateString('pt-BR', { weekday: 'long' })}</span>${reached ? '<span class="goal-hit-badge">Meta dia atingida ✓</span>' : ''}</div><span class="day-card-chevron" aria-hidden="true">⌄</span></button>${statusSelect(data)}</div><div class="day-card-content" id="day-content-${key}" ${isOpen ? '' : 'hidden'}><div class="day-goal-strip"><div><label>Percentual do dia (%)</label><input data-f="goalPercent" type="number" min="0" max="100" step="0.01" inputmode="decimal" value="${dailyGoal.percent || ''}" placeholder="Ex.: 3,51"></div><div class="day-goal-mini"><span>META FILIAL</span><strong>${brl.format(dailyGoal.branchGoal)}</strong></div><div class="day-goal-mini"><span>SERVIÇOS DO DIA</span><strong>${brl.format(dailyGoal.serviceGoal)}</strong></div><div class="day-goal-mini"><span>POR VENDEDOR</span><strong>${dailyGoal.sellerCount ? brl.format(dailyGoal.perSeller) : '—'}</strong></div><button class="btn small day-goal-export" data-daily-export="${key}" ${dailyGoal.percent ? '' : 'disabled'}>Baixar imagem HD</button></div><div class="day-card-grid"><div class="day-card-field"><label>Venda mercantil</label>${moneyInput('general', num(data.general), key, disabled)}</div><div class="day-card-field"><label>Venda elegível</label>${moneyInput('eligible', num(data.eligible), key, disabled)}</div>${numberField('invoiceCount', 'NFs')}${numberField('nfs', 'Quantidade elegível')}<div class="day-card-field"><label>Garantia (R$)</label>${moneyInput('warranty', num(data.warranty), key, disabled)}</div><div class="day-card-field"><label>Outros serviços</label>${moneyInput('other', num(data.other), key, disabled)}</div><div class="day-card-field"><label>Presta-mista</label>${moneyInput('mixed', num(data.mixed), key, disabled)}</div>${numberField('warrantyQty', 'Quantidade de garantias')}</div><div class="day-card-results"><div><span>TICKET MÉDIO</span><strong>${brl.format(ticket)}</strong></div><div><span>SERVIÇOS</span><strong>${brl.format(services)}</strong></div><div><span>CONVERSÃO</span><strong>${num(data.nfs) ? efficiencyPct.format(conversion) : '—'}</strong></div><div><span>EFICIÊNCIA</span><strong class="${statusClass(efficiency / 0.07)}">${efficiencyPct.format(efficiency)}</strong></div></div></div></article>`;
     }).join('');
     bindDailyInputs(document.getElementById('dailyBody'));
     bindDailyInputs(document.getElementById('dailyCards'));
@@ -746,7 +746,7 @@
       const monthResult = calculate();
       result.grossProfit = monthResult.general ? monthResult.grossProfit * result.general / monthResult.general : 0;
       const grossAvailable = hasCompleteGrossProfit(items);
-      const serviceTarget = targetContext.useDaily ? num(db.mercantileGoal) * targetContext.share * 0.07 : num(db.servicesGoal) * targetContext.plannedShare;
+      const serviceTarget = targetContext.useDaily ? num(db.servicesGoal) * targetContext.share : num(db.servicesGoal) * targetContext.plannedShare;
       const serviceRate = serviceTarget ? result.services / serviceTarget : 0;
       const primaryTarget = weeklyTierTarget(tierGoals()[0], targetContext, weeks).mercantile;
       const plannedDays = items.filter((item) => item.data.status !== 'off').length;
@@ -809,7 +809,7 @@
     const services = num(seller.warranty) + num(seller.other) + num(seller.mixed);
     const count = num(db.sellerCount) || db.sellers.length;
     const individualGoal = num(seller.assignedGoal) || (count ? num(db.mercantileGoal) / count : 0);
-    const serviceGoal = num(seller.serviceGoal) || individualGoal * 0.07;
+    const serviceGoal = num(seller.serviceGoal);
     const rate = individualGoal ? num(seller.general) / individualGoal : 0;
     const serviceRate = serviceGoal ? services / serviceGoal : 0;
     const ticket = num(seller.invoiceCount) ? num(seller.general) / num(seller.invoiceCount) : 0;
@@ -921,7 +921,7 @@
   function sellerMissionMetrics(seller, key) {
     const metrics = sellerMetrics(seller), percent = num(dayData(key).goalPercent), branchMission = dailyGoalMetrics(key);
     const mercantileGoal = metrics.individualGoal * percent / 100;
-    const serviceGoal = num(seller.serviceGoal) * percent / 100 || mercantileGoal * 0.07;
+    const serviceGoal = num(seller.serviceGoal) * percent / 100;
     return { key, percent, mercantileGoal, serviceGoal, branchMercantilePerSeller: branchMission.perSeller, branchServicePerSeller: branchMission.servicePerSeller, sellerCount: branchMission.sellerCount, metrics };
   }
   const EFFICIENCY_TARGET = 0.07, CONVERSION_TARGET = 0.35;
@@ -965,7 +965,7 @@
     const suggested = suggestedMissionTone(seller, key), tone = selectedMissionTone(seller, key), message = missionMessage(seller, key, tone);
     const isMonthlyGoal = analysis.period === 'goalMonth';
     const summaryItems = isMonthlyGoal ? [
-      ['Meta mercantil mensal', brl.format(mission.metrics.individualGoal)], ['Meta mensal de serviços (7%)', brl.format(mission.metrics.serviceGoal)],
+      ['Meta mercantil mensal', brl.format(mission.metrics.individualGoal)], ['Meta mensal de serviços', brl.format(mission.metrics.serviceGoal)],
       ['Média mercantil por dia', brl.format(mission.metrics.targetDailyAverage)], ['Média de serviços por dia', brl.format(mission.metrics.serviceTargetDailyAverage)],
       ['Eficiência de serviços', '7,00%'], ['Taxa de conversão', '35,00%'],
       ['Ganho se bater as metas', brl.format(financial.targetTotal)], [financialComparison.currentLabel, brl.format(financialComparison.current)], [financialComparison.gapLabel, brl.format(Math.abs(financialComparison.gap))]
@@ -1001,7 +1001,7 @@
     ctx.fillStyle = '#6b4ce6'; roundedCanvasRect(ctx, 76, 331, 9, 36, 5); ctx.fill();
     ctx.fillStyle = '#102a43'; ctx.font = '900 30px Arial, sans-serif'; ctx.fillText('META INDIVIDUAL DO VENDEDOR', 102, 359);
     drawCanvasMetric(ctx, 64, 390, 460, 125, 'Meta mercantil mensal', brl.format(metrics.individualGoal), true);
-    drawCanvasMetric(ctx, 556, 390, 460, 125, 'Meta mensal de serviços (7%)', brl.format(metrics.serviceGoal));
+    drawCanvasMetric(ctx, 556, 390, 460, 125, 'Meta mensal de serviços', brl.format(metrics.serviceGoal));
     drawCanvasMetric(ctx, 64, 535, 460, 125, 'Média mercantil por dia', brl.format(metrics.targetDailyAverage), true, `Meta mensal ÷ ${metrics.plannedDays} dias planejados`);
     drawCanvasMetric(ctx, 556, 535, 460, 125, 'Média de serviços por dia', brl.format(metrics.serviceTargetDailyAverage), false, `Meta de serviços ÷ ${metrics.plannedDays} dias planejados`);
     drawCanvasMetric(ctx, 64, 680, 460, 105, 'Eficiência de serviços', '7,00%');
@@ -1412,7 +1412,7 @@
         const plannedShare = monthWorkingDays ? working.length / monthWorkingDays : 1 / Math.max(1, weekCount);
         const appliedShare = useDaily ? share : plannedShare;
         const target = num(basis?.mercantileGoal) * appliedShare;
-        const serviceTarget = useDaily ? num(basis?.mercantileGoal) * share * 0.07 : num(basis?.servicesGoal) * plannedShare;
+        const serviceTarget = useDaily ? num(basis?.servicesGoal) * share : num(basis?.servicesGoal) * plannedShare;
         const monthStats = recordAggregate(calendar, record);
         const grossProfit = monthStats.sales ? recordGrossProfit(record) * stats.sales / monthStats.sales : 0;
         const grossTarget = num(basis?.grossProfitGoal) * appliedShare;
