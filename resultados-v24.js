@@ -1251,6 +1251,40 @@
     if (day?.status === 'off') return { label:'Não trabalha hoje', cls:'ok' };
     return { label:'Pendente hoje', cls:'bad' };
   }
+  let sellerEditIndex = -1;
+  function openSellerEditor(index) {
+    const seller = db.sellers[index]; if (!seller) return;
+    sellerEditIndex = index;
+    const layer = document.getElementById('sellerEditLayer');
+    document.getElementById('sellerEditName').value = seller.name || '';
+    document.getElementById('sellerEditGoal').value = num(seller.assignedGoal) || '';
+    document.getElementById('sellerEditServiceGoal').value = num(seller.serviceGoal) || '';
+    layer.classList.add('open'); layer.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden';
+    setTimeout(()=>document.getElementById('sellerEditName')?.focus(),30);
+  }
+  function closeSellerEditor() {
+    sellerEditIndex = -1; const layer = document.getElementById('sellerEditLayer'); if (!layer) return;
+    layer.classList.remove('open'); layer.setAttribute('aria-hidden','true'); if(!document.body.classList.contains('seller-modal-open'))document.body.style.overflow='';
+  }
+  function saveSellerEditor() {
+    if (sellerEditIndex < 0) return;
+    const seller = db.sellers[sellerEditIndex]; if (!seller) return closeSellerEditor();
+    const name = String(document.getElementById('sellerEditName').value || '').trim();
+    if (!name) { alert('Informe o nome do vendedor.'); return; }
+    seller.name = name;
+    seller.assignedGoal = num(document.getElementById('sellerEditGoal').value);
+    seller.serviceGoal = num(document.getElementById('sellerEditServiceGoal').value);
+    seller.updatedAt = new Date().toISOString();
+    persist(); closeSellerEditor(); renderAll(); showView('sellers');
+  }
+  function deleteSellerFromManager(index) {
+    const seller = db.sellers[index]; if (!seller) return;
+    const name = seller.name || `Vendedor ${index + 1}`;
+    const warning = `Excluir ${name} da Gestão de Resultados?\n\nIsso remove o cadastro operacional e os dados deste vendedor desta competência no aparelho/nuvem da Gestão. O acesso/login, se existir, deve ser removido separadamente em Administração de acessos.`;
+    if (!confirm(warning)) return;
+    db.sellers.splice(index, 1); activeSellerProfileId = null; activeScope = 'branch';
+    persist(); renderAll(); showView('sellers');
+  }
   function renderSellers() {
     const branch = calculate();
     const sellerSales = db.sellers.reduce((sum, seller) => sum + num(seller.general), 0);
@@ -1274,7 +1308,11 @@
         <div class="seller-mini-kpi"><span>Conversão</span><strong>${daily.nfs ? efficiencyPct.format(daily.conversion) : '—'}</strong></div>
         <div class="seller-mini-kpi"><span>Eficiência</span><strong>${daily.eligible ? efficiencyPct.format(daily.efficiency) : '—'}</strong></div>
         <div><span class="seller-pending ${status.cls}">${status.label}</span><small style="display:block;color:#7a8797;margin-top:4px;font-size:9px">${seller.updatedAt?'Atualizado '+new Date(seller.updatedAt).toLocaleString('pt-BR'):'Sem atualização'}</small></div>
-        <button type="button" class="btn primary small seller-open-btn" data-open-seller="${index}">Ver vendedor</button>
+        <div class="seller-directory-actions">
+          <button type="button" class="btn primary small seller-open-btn" data-open-seller="${index}">Ver vendedor</button>
+          <button type="button" class="btn secondary small seller-edit-btn" data-edit-seller="${index}">Editar</button>
+          <button type="button" class="btn danger small seller-delete-btn" data-delete-seller="${index}">Excluir</button>
+        </div>
       </article>`;
     }).join('');
     list.querySelectorAll('[data-open-seller]').forEach((button) => button.addEventListener('click', () => {
@@ -1284,6 +1322,8 @@
       document.body.classList.add('seller-modal-open');
       const modal=document.getElementById('sellerProfile'); if(modal){ modal.classList.add('seller-modal-active'); modal.setAttribute('aria-hidden','false'); }
     }));
+    list.querySelectorAll('[data-edit-seller]').forEach((button) => button.addEventListener('click', () => openSellerEditor(Number(button.dataset.editSeller))));
+    list.querySelectorAll('[data-delete-seller]').forEach((button) => button.addEventListener('click', () => deleteSellerFromManager(Number(button.dataset.deleteSeller))));
   }
 
   const sellerResultFields = ['general', 'eligible', 'warranty', 'warrantyQty', 'other', 'mixed', 'nfs', 'invoiceCount', 'days', 'justifiedDays'];
@@ -1876,8 +1916,20 @@
     activeScope='branch'; activeSellerProfileId=null; renderScopeSelector(); renderSellers();
   }
   document.getElementById('sellerProfileBack').addEventListener('click', closeSellerManagerModal);
+  window.ResultsInternalBack = function(){
+    if (document.body.classList.contains('seller-modal-open')) { closeSellerManagerModal(); return; }
+    const active = document.querySelector('.view.active');
+    if (active && active.id !== 'overview') { activeScope='branch'; showView('overview'); renderScopeSelector(); return; }
+    window.scrollTo({top:0,behavior:'smooth'});
+  };
+  const topBack=document.getElementById('resultsInternalBack'); if(topBack) topBack.addEventListener('click',()=>window.ResultsInternalBack());
+  const sellerEditLayer=document.getElementById('sellerEditLayer');
+  document.getElementById('sellerEditClose')?.addEventListener('click',closeSellerEditor);
+  document.getElementById('sellerEditCancel')?.addEventListener('click',closeSellerEditor);
+  document.getElementById('sellerEditSave')?.addEventListener('click',saveSellerEditor);
+  sellerEditLayer?.addEventListener('click',(event)=>{if(event.target===sellerEditLayer)closeSellerEditor();});
   document.getElementById('sellerProfile')?.addEventListener('click',(event)=>{ if(event.target?.id==='sellerProfile') closeSellerManagerModal(); });
-  document.addEventListener('keydown',(event)=>{ if(event.key==='Escape'&&document.body.classList.contains('seller-modal-open')) closeSellerManagerModal(); });
+  document.addEventListener('keydown',(event)=>{ if(event.key!=='Escape')return; if(document.getElementById('sellerEditLayer')?.classList.contains('open')){closeSellerEditor();return;} if(document.body.classList.contains('seller-modal-open')) closeSellerManagerModal(); });
   document.getElementById('sellerMissionDate').addEventListener('change', () => {
     const seller = db.sellers.find((item, index) => sellerIdentity(item, index) === activeSellerProfileId); if (seller) renderSellerMission(seller);
   });
@@ -1910,6 +1962,12 @@
     });
     persist(); renderAll(); showView('sellers');
   });
+  const currentRole = String(localStorage.getItem('fs_cargo')||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'_');
+  if (currentRole === 'CONSULTOR') {
+    document.body.classList.add('fs-consultor-readonly');
+    const context=document.querySelector('.context');
+    if(context){const notice=document.createElement('div');notice.className='readonly-banner';notice.style.gridColumn='1/-1';notice.textContent='👁️ Acesso de consultor: acompanhamento em modo somente leitura.';context.appendChild(notice);}
+  }
   document.getElementById('addSeller').addEventListener('click', () => {
     const nextIndex = db.sellers.length;
     db.sellers.push({ id: `seller-${Date.now()}-${nextIndex + 1}`, name: '', assignedGoal: 0, plannedDays: num(db.businessDays), commissionMercantileRate: 0, commissionServiceRate: 5, general: 0, eligible: 0, warranty: 0, warrantyQty: 0, other: 0, mixed: 0, nfs: 0, invoiceCount: 0, days: 0, justifiedDays: 0, notes: '', commitment: '', deadline: '', updatedAt: new Date().toISOString() });
