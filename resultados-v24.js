@@ -1280,7 +1280,9 @@
     list.querySelectorAll('[data-open-seller]').forEach((button) => button.addEventListener('click', () => {
       const index = Number(button.dataset.openSeller), seller = db.sellers[index]; if (!seller) return;
       activeSellerProfileId = sellerIdentity(seller, index); activeScope = `seller:${index}`; sellerWorkspaceTab='overview';
-      renderSellerProfile(); renderScopeSelector(); showView('sellerProfile');
+      renderSellerProfile(); renderScopeSelector();
+      document.body.classList.add('seller-modal-open');
+      const modal=document.getElementById('sellerProfile'); if(modal){ modal.classList.add('seller-modal-active'); modal.setAttribute('aria-hidden','false'); }
     }));
   }
 
@@ -1821,7 +1823,9 @@
     activeScope = event.target.value;
     if (activeScope.startsWith('seller:')) {
       const index = Number(activeScope.split(':')[1]), seller = db.sellers[index];
-      activeSellerProfileId = seller ? sellerIdentity(seller, index) : null; renderSellerProfile(); showView('sellerProfile');
+      activeSellerProfileId = seller ? sellerIdentity(seller, index) : null; renderSellerProfile();
+      document.body.classList.add('seller-modal-open');
+      const modal=document.getElementById('sellerProfile'); if(modal){ modal.classList.add('seller-modal-active'); modal.setAttribute('aria-hidden','false'); }
     } else { activeSellerProfileId = null; renderOverview(); showView('overview'); }
     renderPrint();
   });
@@ -1866,7 +1870,14 @@
     persist(false); renderCompiled();
   }));
   document.getElementById('refreshCompiled').addEventListener('click', renderCompiled);
-  document.getElementById('sellerProfileBack').addEventListener('click', () => showView('sellers'));
+  function closeSellerManagerModal(){
+    document.body.classList.remove('seller-modal-open');
+    const modal=document.getElementById('sellerProfile'); if(modal){ modal.classList.remove('seller-modal-active'); modal.setAttribute('aria-hidden','true'); }
+    activeScope='branch'; activeSellerProfileId=null; renderScopeSelector(); renderSellers();
+  }
+  document.getElementById('sellerProfileBack').addEventListener('click', closeSellerManagerModal);
+  document.getElementById('sellerProfile')?.addEventListener('click',(event)=>{ if(event.target?.id==='sellerProfile') closeSellerManagerModal(); });
+  document.addEventListener('keydown',(event)=>{ if(event.key==='Escape'&&document.body.classList.contains('seller-modal-open')) closeSellerManagerModal(); });
   document.getElementById('sellerMissionDate').addEventListener('change', () => {
     const seller = db.sellers.find((item, index) => sellerIdentity(item, index) === activeSellerProfileId); if (seller) renderSellerMission(seller);
   });
