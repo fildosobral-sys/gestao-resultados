@@ -102,26 +102,26 @@ function renderHome(){
   }
   if(distNote){distNote.innerHTML='';distNote.hidden=true;}
   const cards=[
-    ['💰 Mercantil no mês',brl.format(mercTotal),mg?`${pct.format(mercRate)} da meta`:'Cadastre sua meta','strong-card'],
-    ['🛡️ Serviços no mês',brl.format(a.services),sg?`${pct.format(servRate)} da meta`:'Cadastre sua meta','strong-card'],
-    ['🎯 Conversão',a.nfs?pct.format(a.conversion):'—','Meta 35,00%',a.conversion>=.35?'good':a.nfs?'attention':''],
-    ['⚡ Eficiência',a.eligible?pct.format(a.efficiency):'—','Meta 7,00%',a.efficiency>=.07?'good':a.eligible?'attention':''],
-    ['📈 Projeção mercantil',brl.format(projMerc),mg?progressText(projMerc,mg):'Meta não definida',projMerc>=mg&&mg?'good':''],
-    ['📈 Projeção serviços',brl.format(projServ),sg?progressText(projServ,sg):'Meta não definida',projServ>=sg&&sg?'good':''],
-    ['⚡ Média mercantil/dia',brl.format(avgMerc),`Necessário ${brl.format(needMerc)}/dia`,'' ],
-    ['⚡ Média serviços/dia',brl.format(avgServ),`Necessário ${brl.format(needServ)}/dia`,'' ],
-    ['📅 Dias considerados',String(worked),`${remaining} restante(s) de ${planned}`,'' ],
-    ['🌐 E-commerce',brl.format(ecom),'Acumulado da competência','']
+    ['💰 Mercantil no mês',brl.format(mercTotal),mg?`${pct.format(mercRate)} da meta`:'Cadastre sua meta','strong-card','note-footer note-emphasis note-blue'],
+    ['🛡️ Serviços no mês',brl.format(a.services),sg?`${pct.format(servRate)} da meta`:'Cadastre sua meta','strong-card','note-footer note-emphasis note-purple'],
+    ['🎯 Conversão',a.nfs?pct.format(a.conversion):'—','Meta 35,00%',a.conversion>=.35?'good':a.nfs?'attention':'','note-footer note-emphasis note-red'],
+    ['⚡ Eficiência',a.eligible?pct.format(a.efficiency):'—','Meta 7,00%',a.efficiency>=.07?'good':a.eligible?'attention':'','note-footer note-emphasis note-green'],
+    ['📈 Projeção mercantil',brl.format(projMerc),mg?progressText(projMerc,mg):'Meta não definida',projMerc>=mg&&mg?'good':'','note-footer note-emphasis '+(projMerc>=mg&&mg?'note-green':'note-gold')],
+    ['📈 Projeção serviços',brl.format(projServ),sg?progressText(projServ,sg):'Meta não definida',projServ>=sg&&sg?'good':'','note-footer note-emphasis '+(projServ>=sg&&sg?'note-green':'note-gold')],
+    ['⚡ Média mercantil/dia',brl.format(avgMerc),`Necessário ${brl.format(needMerc)}/dia`,'','note-footer note-gold' ],
+    ['⚡ Média serviços/dia',brl.format(avgServ),`Necessário ${brl.format(needServ)}/dia`,'','note-footer note-gold' ],
+    ['📅 Dias considerados',String(worked),`${remaining} restante(s) de ${planned}`,'','note-footer' ],
+    ['🌐 E-commerce',brl.format(ecom),'Acumulado da competência','','note-footer']
   ];
-  document.getElementById('homeMetrics').innerHTML=cards.map(x=>`<div class="metric ${x[3]||''}"><span>${x[0]}</span><strong>${x[1]}</strong><small>${x[2]}</small></div>`).join('');
+  document.getElementById('homeMetrics').innerHTML=cards.map(x=>`<div class="metric ${x[3]||''}"><span>${x[0]}</span><strong>${x[1]}</strong><small class="${x[4]||''}">${x[2]}</small></div>`).join('');
   const finance=document.getElementById('financeMetrics'); if(finance) finance.innerHTML=`<div class="finance-hero"><span>🚀 PROJEÇÃO DE GANHO TOTAL</span><strong>${brl.format(fin.projectedTotal)}</strong><small>Comissões projetadas + DSR estimado</small></div>${[
-    ['💵 Comissão mercantil atual',brl.format(a.mercCommission+ecomCommission),ecomCommission?'Diário + e-commerce':'Valor informado nos lançamentos'],
-    ['🛡️ Comissão serviços atual',brl.format(a.serviceCommission),'Valor informado nos lançamentos'],
-    ['🧾 Subtotal comissões',brl.format(fin.currentSubtotal),'Mercantil + serviços'],
-    ['🛏️ DSR projetado',brl.format(fin.projectedDsr),`${fin.sundays} domingo(s) + ${fin.justified} ausência(s) considerada(s)`],
-    ['📊 Projeção das comissões',brl.format(fin.projectedSubtotal),`${fin.worked} dia(s) considerados de ${fin.planned}`],
-    ['🏆 Ganho se bater as metas',brl.format(fin.targetTotal),'Potencial com as metas cadastradas']
-  ].map(x=>`<div class="metric"><span>${x[0]}</span><strong>${x[1]}</strong><small>${x[2]}</small></div>`).join('')}`;
+    ['💵 Comissão mercantil atual',brl.format(a.mercCommission+ecomCommission),ecomCommission?'Diário + e-commerce':'Valor informado nos lançamentos','note-footer'],
+    ['🛡️ Comissão serviços atual',brl.format(a.serviceCommission),'Valor informado nos lançamentos','note-footer'],
+    ['🧾 Subtotal comissões',brl.format(fin.currentSubtotal),'Mercantil + serviços','note-footer'],
+    ['🛏️ DSR projetado',brl.format(fin.projectedDsr),`${fin.sundays} domingo(s) + ${fin.justified} ausência(s) considerada(s)`,'note-footer'],
+    ['📊 Projeção das comissões',brl.format(fin.projectedSubtotal),`${fin.worked} dia(s) considerados de ${fin.planned}`,'note-footer'],
+    ['🏆 Ganho se bater as metas',brl.format(fin.targetTotal),'Potencial com as metas cadastradas','note-footer']
+  ].map(x=>`<div class="metric"><span>${x[0]}</span><strong>${x[1]}</strong><small class="${x[3]||''}">${x[2]}</small></div>`).join('')}`;
   document.getElementById('sellerEcommerce').value=moneyField(ecom); const ec=document.getElementById('sellerEcommerceCommission');if(ec)ec.value=moneyField(ecomCommission); const md=document.getElementById('managedDays'); if(md)md.textContent=planned;
   let msg='📝 Lance seu resultado de hoje para acompanhar sua evolução.';const mercI=m.individualMerc&&num(d.general)>=m.individualMerc,mercB=m.branchMerc&&num(d.general)>=m.branchMerc,servI=m.individualServices&&todayServices>=m.individualServices,servB=m.branchServices&&todayServices>=m.branchServices;
   if(mercI&&servI)msg='🏆 Dupla meta individual do dia batida! Parabéns pelo resultado. Continue ampliando!';
