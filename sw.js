@@ -1,4 +1,4 @@
-const CACHE='fs-resultados-v16';
+const CACHE='fs-resultados-v17-goals-projection-support';
 const FILES=['./','./index.html','./resultados.html','./vendedor.html','./vendedor.js','./auth.js','./access-guard.js','./cloud-sync.js','./resultados-v24.js','./portal-context.js','./mobile-polish-v11.css','./mobile-polish-v11.js','./access-admin-v1.css','./access-admin-v1.js','./home-transition.js','./pwa-update.js','./manifest.webmanifest','./favicon.svg','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>Promise.allSettled(FILES.map(file=>cache.add(new Request(file,{cache:'reload'}))))).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('gestao-resultados-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
