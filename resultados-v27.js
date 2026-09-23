@@ -1913,7 +1913,7 @@
       const monthPending = Math.max(0, metrics.plannedDays - launchedCount);
       const syncLabel = seller.updatedAt ? new Date(seller.updatedAt).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) : '—';
       return `<article class="seller-directory-card status-${severity.tone}" data-i="${index}">
-        <div class="seller-card-head tone-${severity.tone}"><span class="seller-card-rank">#${orderIndex + 1}</span><div class="seller-card-head-copy"><strong>${esc(seller.name || `Vendedor ${index + 1}`)}</strong><small>${severity.label} • ${severity.note}</small></div></div>
+        <div class="seller-card-head tone-${severity.tone}"><span class="seller-card-rank">#${orderIndex + 1}</span><span class="seller-card-avatar">${seller.profilePhoto?`<img src="${esc(seller.profilePhoto)}" alt="Foto de ${esc(seller.name||'vendedor')}">`:esc((seller.name||'V').charAt(0).toUpperCase())}</span><div class="seller-card-head-copy"><strong>${esc(seller.name || `Vendedor ${index + 1}`)}</strong><small>${severity.label} • ${severity.note}</small></div></div>
         <div class="seller-person"><strong>${esc(seller.name || `Vendedor ${index + 1}`)}</strong><span>${metrics.plannedDays} dias planejados • ${launchedCount} lançados • ${Math.max(0, metrics.plannedDays - launchedCount)} sem lançamento</span></div>
         <div class="seller-mini-kpi"><span>Mercantil</span><strong>${brl.format(daily.general + num(seller.ecommerce))}</strong></div>
         <div class="seller-mini-kpi"><span>Serviços</span><strong>${brl.format(daily.services)}</strong></div>
