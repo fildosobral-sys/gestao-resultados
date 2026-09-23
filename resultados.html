@@ -369,6 +369,54 @@ body.seller-modal-open{overflow:hidden}
 .seller-compiled-cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}.seller-compiled-cols>div{padding:12px;border-radius:15px;background:#f7f9fc}.seller-compiled-cols small,.seller-compiled-cols span{display:block;color:#7b8799;font-size:11px}.seller-compiled-cols strong{display:block;margin:4px 0;color:#172f49;font-size:19px}.seller-compiled-foot{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}.seller-compiled-foot>div{padding:15px;border-radius:18px;background:#eef5ff}.seller-compiled-foot span,.seller-compiled-foot small{display:block;font-size:11px;color:#748296}.seller-compiled-foot strong{display:block;margin:4px 0;font-size:20px;color:#17314b}
 @media(max-width:720px){.seller-workspace-tabs-bottom{left:0;right:0}.seller-workspace-tabs-bottom .seller-workspace-tab{font-size:12px;padding:0 11px!important}.seller-day-mission-strip{grid-template-columns:1fr 1fr}.seller-workspace-card small{font-size:10px}.seller-compiled-cols,.seller-compiled-foot{grid-template-columns:1fr 1fr}}
 </style>
+
+<style id="results-v41-adjusts">
+/* v41 — vendedores + dashboard filial */
+.seller-head-actions{display:grid!important;grid-template-columns:repeat(2,minmax(150px,1fr));gap:10px;align-items:stretch;width:min(100%,360px)}
+.seller-head-actions .btn{width:100%;min-height:92px;border-radius:20px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:14px;font-weight:900;line-height:1.15;padding:14px 12px;white-space:normal}
+.seller-head-actions #teamDashboardBtn{background:#edf2ff;border-color:#dce4ff;color:#3e56b5}
+.seller-head-actions #addSeller{background:linear-gradient(135deg,#0b7ae8,#5f48e8);border-color:transparent;color:#fff}
+.seller-directory-card{position:relative;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:10px!important;align-items:stretch!important;padding:14px!important}
+.seller-directory-card .seller-card-head{grid-column:1/-1;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:16px;border:1px solid transparent}
+.seller-card-rank{flex:0 0 34px;width:34px;height:34px;border-radius:12px;display:grid;place-items:center;font-size:11px;font-weight:900;background:rgba(255,255,255,.72);color:#20314a}
+.seller-card-head-copy{min-width:0;display:flex;flex-direction:column}
+.seller-card-head-copy strong{font-size:16px;line-height:1.05;color:#17324d}
+.seller-card-head-copy small{margin-top:3px;color:#5e7188;font-size:11px;font-weight:700}
+.seller-directory-card .seller-person{grid-column:1/-1}
+.seller-directory-card .seller-card-footer{grid-column:1/-1;display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:end!important;gap:12px!important;padding-top:10px;border-top:1px solid #e6edf5}
+.seller-directory-card.status-good{border-color:#ccebdc!important;background:linear-gradient(180deg,#ffffff 0%,#f5fcf8 100%)!important}
+.seller-directory-card.status-warn{border-color:#f0ddb0!important;background:linear-gradient(180deg,#ffffff 0%,#fffbf1 100%)!important}
+.seller-directory-card.status-bad{border-color:#f1c6ce!important;background:linear-gradient(180deg,#ffffff 0%,#fff7f8 100%)!important}
+.seller-directory-card.status-good .seller-card-head{background:#effaf3;border-color:#d7ece0}
+.seller-directory-card.status-warn .seller-card-head{background:#fff8e8;border-color:#f0ddb0}
+.seller-directory-card.status-bad .seller-card-head{background:#fff1f3;border-color:#f1c6ce}
+.seller-pending.good{background:#e8f7ef!important;color:#0b7a49!important}
+.seller-pending.warn{background:#fff5d8!important;color:#8a6500!important}
+.seller-pending.bad{background:#ffe8ec!important;color:#b42335!important}
+.seller-overdue{background:#eff4ff;color:#345f9b}
+.seller-overdue.tone-good{background:#eaf8f0;color:#0b7a49}
+.seller-overdue.tone-warn{background:#fff5dc;color:#8a6500}
+.seller-overdue.tone-bad{background:#ffe8ec;color:#b42335}
+.seller-directory-actions{display:grid!important;grid-template-columns:repeat(3,40px);gap:7px!important;justify-content:end}
+.seller-directory-actions .btn{width:40px!important;height:40px!important;padding:0!important;border-radius:13px!important}
+.seller-directory-actions .action-icon{font-size:16px}
+.seller-directory-actions .action-label{display:none!important}
+.branch-dashboard-root:empty{display:none}
+.branch-theme-merc .dashboard-section-head,#seller-dash-merc .dashboard-section-head{background:#eef7ff;border:1px solid #d9e8ff;border-radius:15px;padding:12px 14px}
+.branch-theme-services .dashboard-section-head,#seller-dash-services .dashboard-section-head{background:#eefaf2;border:1px solid #d7ebdc;border-radius:15px;padding:12px 14px}
+#seller-dash-conversion .dashboard-section-head{background:#fff5f8;border:1px solid #f2dbe3;border-radius:15px;padding:12px 14px}
+#seller-dash-efficiency .dashboard-section-head{background:#fffbed;border:1px solid #f1e3b4;border-radius:15px;padding:12px 14px}
+#seller-dash-ticket .dashboard-section-head{background:#f4fbff;border:1px solid #d8e9f2;border-radius:15px;padding:12px 14px}
+.branch-theme-merc .dashboard-section-head h3,.branch-theme-merc .dashboard-section-total,#seller-dash-merc .dashboard-section-head h3,#seller-dash-merc .dashboard-section-total{color:#1d4f86}
+.branch-theme-services .dashboard-section-head h3,.branch-theme-services .dashboard-section-total,#seller-dash-services .dashboard-section-head h3,#seller-dash-services .dashboard-section-total{color:#176c45}
+#seller-dash-conversion .dashboard-section-head h3,#seller-dash-conversion .dashboard-section-total{color:#b63255}
+#seller-dash-efficiency .dashboard-section-head h3,#seller-dash-efficiency .dashboard-section-total{color:#8b6500}
+#seller-dash-ticket .dashboard-section-head h3,#seller-dash-ticket .dashboard-section-total{color:#285f87}
+@media(max-width:900px){.seller-directory-card{grid-template-columns:1fr 1fr!important}.seller-head-actions{width:100%;max-width:none}}
+@media(max-width:620px){.seller-head-actions{grid-template-columns:1fr 1fr!important;width:100%}.seller-head-actions .btn{min-height:86px;font-size:13px}.seller-directory-card{grid-template-columns:1fr 1fr!important;padding:12px!important}.seller-directory-card .seller-card-footer{grid-template-columns:1fr!important}.seller-directory-actions{justify-content:start}.seller-card-head-copy strong{font-size:15px}.seller-card-head-copy small{font-size:10px}}
+@media(max-width:390px){.seller-head-actions{grid-template-columns:1fr!important}.seller-directory-card .seller-card-head{padding:10px}.seller-card-rank{width:30px;height:30px;flex-basis:30px}}
+</style>
+
 </head>
 <body>
 <main class="app">
@@ -389,6 +437,7 @@ body.seller-modal-open{overflow:hidden}
     <button class="tab" data-view="daily">Lançamento diário</button>
     <button class="tab" data-view="weekly">Resultado semanal</button>
     <button class="tab" data-view="sellers">Vendedores</button>
+    <button class="tab" data-view="branchDashboard">Dashboard</button>
     <button class="tab" data-view="settings">Configuração</button>
     <button class="tab" data-view="goalsHistory">Metas</button>
     <button class="tab" data-view="compiled">Compilado</button>
@@ -463,6 +512,19 @@ body.seller-modal-open{overflow:hidden}
       <div class="backup-result" id="sellerBackupResult"></div><div id="meetingTeamPanel" class="meeting-team-panel"></div>
     </article>
   </section>
+
+  <section class="view" id="branchDashboard">
+    <article class="panel">
+      <div class="section-title">
+        <div>
+          <h2>Dashboard da filial</h2>
+          <div class="hint">Mesmo padrão do dashboard individual do vendedor, agora consolidado na visão do gestor. Esta aba considera o resultado total da filial e não exibe o bloco de ganhos.</div>
+        </div>
+      </div>
+      <div id="branchDashboardRoot" class="branch-dashboard-root" data-period="month" data-compare="none"></div>
+    </article>
+  </section>
+
   <div class="seller-edit-layer" id="sellerEditLayer" aria-hidden="true">
     <article class="seller-edit-card" role="dialog" aria-modal="true" aria-labelledby="sellerEditTitle">
       <div class="seller-edit-head"><h3 id="sellerEditTitle">Editar vendedor</h3><button class="seller-edit-close" id="sellerEditClose" type="button" aria-label="Fechar">×</button></div>
