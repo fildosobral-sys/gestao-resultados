@@ -296,6 +296,25 @@ body.seller-modal-open{overflow:hidden}
 @media(max-width:760px){.seller-head-actions{width:100%;display:grid;grid-template-columns:1fr auto}.seller-card-footer{grid-template-columns:minmax(0,1fr) auto!important;gap:6px!important}.seller-card-status{gap:5px!important}.seller-card-status .seller-pending{font-size:9px;padding:6px 7px}.seller-card-status small{font-size:9px;max-width:95px}.seller-directory-actions{gap:4px!important}.seller-directory-actions .btn{width:37px!important;height:37px!important;padding:0!important}.seller-directory-actions .action-label{display:none!important}.seller-directory-actions .action-icon{font-size:15px}.dashboard-controls{grid-template-columns:1fr 1fr}.dashboard-controls>div:last-child{grid-column:1/-1}.dashboard-kpis{grid-template-columns:1fr 1fr}.dashboard-chart-grid{grid-template-columns:1fr}.dashboard-pie-wrap{grid-template-columns:120px 1fr}.dashboard-pie{width:118px;height:118px}.team-seller-bar{grid-template-columns:90px 1fr auto}.seller-person strong{font-size:18px!important}}
 @media(max-width:390px){.seller-card-status small{display:none}.seller-head-actions{grid-template-columns:1fr}.seller-head-actions .btn{width:100%}.dashboard-controls{grid-template-columns:1fr}.dashboard-controls>div:last-child{grid-column:auto}}
 </style>
+
+<style id="seller-dashboard-v13">
+#resultsInternalBack{display:none!important}
+.seller-person strong{font-size:21px!important;font-weight:900!important;color:#102a43!important;letter-spacing:-.02em}
+.seller-card-footer{grid-column:1/-1!important;display:grid!important;grid-template-columns:auto minmax(70px,1fr) auto auto auto!important;align-items:center!important;gap:8px!important;border-top:1px solid #e9eef5!important;padding-top:10px!important;margin-top:4px!important}
+.seller-card-status{display:contents!important}.seller-card-status .seller-pending{justify-self:start;margin:0!important}.seller-card-status small{display:block!important;max-width:none!important;white-space:nowrap!important;color:#728197;font-size:10px}.seller-card-status .updated-full{display:none!important}.seller-card-status .updated-short{display:inline!important}
+.seller-directory-actions{display:contents!important}.seller-directory-actions .btn{width:40px!important;height:38px!important;min-width:0!important;padding:0!important;border-radius:11px!important;display:inline-flex!important;align-items:center;justify-content:center}.seller-directory-actions .action-label{display:none!important}.seller-directory-actions .action-icon{font-size:16px!important}
+.team-dashboard-host{display:none!important}
+.team-dashboard-layer{position:fixed;inset:0;z-index:9999;background:rgba(12,31,54,.42);backdrop-filter:blur(12px);padding:18px;display:none;overflow:auto}.team-dashboard-layer.open{display:block}.team-dashboard-modal{max-width:1240px;margin:0 auto;background:#f5f8fc;border:1px solid rgba(255,255,255,.7);border-radius:28px;box-shadow:0 30px 80px rgba(15,42,67,.28);overflow:hidden}.team-dashboard-modal>header{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;gap:14px;align-items:center;padding:18px 20px;background:linear-gradient(135deg,#0879e8,#6049e8);color:#fff}.team-dashboard-modal header small{font-weight:900;opacity:.8}.team-dashboard-modal header h2{margin:2px 0 0;font-size:25px}.team-dashboard-modal header p{margin:3px 0 0;opacity:.85}.team-dashboard-modal-content{padding:16px}
+.dashboard-section,.team-metric-section{background:#fff;border:1px solid #dfe7f1;border-radius:20px;padding:14px;margin-top:12px;box-shadow:0 6px 18px rgba(15,42,67,.035)}.dashboard-section-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:10px}.dashboard-section-head h3{margin:0;font-size:18px}.dashboard-section-head p{margin:3px 0 0;color:#718096;font-size:11px}.dashboard-section-total{font-size:21px;font-weight:900;color:#102a43;white-space:nowrap}.dashboard-overview-note,.dashboard-year-note{padding:10px 12px;border-radius:12px;background:#eef6ff;color:#2767a8;font-size:11px;font-weight:800;margin-bottom:10px}.dashboard-report-actions .btn{width:100%;min-height:42px}.team-dashboard-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.team-dashboard-summary>div{background:#fff;border:1px solid #dfe7f1;border-radius:15px;padding:12px}.team-dashboard-summary span{display:block;font-size:9px;font-weight:900;color:#718096;text-transform:uppercase}.team-dashboard-summary strong{display:block;font-size:22px;margin-top:4px}.team-metric-section .team-seller-bar{grid-template-columns:28px minmax(105px,1fr) 3fr auto}.team-seller-bar .rank{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:#eef4ff;color:#2f67c8;font-size:10px;font-weight:900}
+@media(max-width:760px){
+ .seller-directory-card{padding:13px!important;gap:8px!important}.seller-person strong{font-size:20px!important}.seller-person span{font-size:11px!important}
+ .seller-card-footer{grid-template-columns:auto minmax(52px,1fr) 40px 40px 40px!important;gap:6px!important}.seller-card-status .seller-pending{font-size:9px!important;padding:6px 8px!important}.seller-card-status small{font-size:9px!important}.seller-directory-actions .btn{width:40px!important;height:38px!important}
+ .team-dashboard-layer{padding:0}.team-dashboard-modal{min-height:100%;border-radius:0}.team-dashboard-modal>header{padding:14px 15px}.team-dashboard-modal header h2{font-size:21px}.team-dashboard-modal header p{font-size:11px}.team-dashboard-modal-content{padding:10px}
+ .dashboard-controls{grid-template-columns:1fr 1fr!important}.dashboard-controls>div:last-child{grid-column:1/-1}.dashboard-section-head{align-items:flex-start}.dashboard-section-total{font-size:18px}.dashboard-kpis{grid-template-columns:1fr 1fr!important}.dashboard-chart-grid{grid-template-columns:1fr!important}.team-dashboard-summary{grid-template-columns:repeat(3,1fr)}.team-metric-section .team-seller-bar{grid-template-columns:24px 78px 1fr auto;gap:6px}.team-seller-bar b{font-size:10px}.team-seller-bar strong{font-size:10px}.team-dashboard-modal>header .btn{padding:9px 10px;font-size:10px}
+}
+@media(max-width:390px){.seller-card-footer{grid-template-columns:auto 1fr 36px 36px 36px!important}.seller-directory-actions .btn{width:36px!important;height:36px!important}.seller-card-status small{font-size:8px!important}.team-dashboard-summary{grid-template-columns:1fr 1fr}.team-dashboard-summary>div:last-child{grid-column:1/-1}}
+</style>
+
 </head>
 <body>
 <main class="app">
@@ -578,7 +597,7 @@ body.seller-modal-open{overflow:hidden}
 })();
 </script>
 <script src="cloud-sync.js?v=1"></script>
-<script src="resultados-v24.js?v=100"></script>
+<script src="resultados-v24.js?v=130"></script>
 
 <script id="results-meeting-backup-v25-js">
 (() => {
