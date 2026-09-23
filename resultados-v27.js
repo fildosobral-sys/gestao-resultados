@@ -1749,7 +1749,7 @@
       branch: String(db.branch || ''),
       month: String(db.month || '')
     });
-    location.href = `./vendedor.html?${params.toString()}`;
+    params.set('viewVersion','33'); location.href = `./vendedor.html?${params.toString()}&v=33`;
   }
 
   function renderSellers() {
