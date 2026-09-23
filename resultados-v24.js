@@ -57,7 +57,7 @@
     warrantyGoal: 81200, warrantyWeekly: 13300,
     ecommerce: 0, grossProfitActual: 0, returns: 0, sellerCount: 0,
     auditOwner: '', auditSource: '', auditNote: '', configAudit: [],
-    daily: {}, sellers: [], updatedAt: new Date().toISOString()
+    daily: {}, sellers: [], deletedSellers: {}, updatedAt: new Date().toISOString()
   });
   const normalizeRecord = (raw = {}) => {
     const legacyGoal = Array.isArray(raw.goals) ? num(raw.goals[0]) : 0;
@@ -83,6 +83,7 @@
         commissionServiceRate: Object.prototype.hasOwnProperty.call(seller, 'commissionServiceRate') ? num(seller.commissionServiceRate) : 5,
         updatedAt: seller.updatedAt || raw.updatedAt || new Date(0).toISOString()
       })) : [],
+      deletedSellers: raw.deletedSellers && typeof raw.deletedSellers === 'object' ? raw.deletedSellers : {},
       configAudit: Array.isArray(raw.configAudit) ? raw.configAudit : []
     };
   };
@@ -1618,6 +1619,9 @@
     const name = seller.name || `Vendedor ${index + 1}`;
     const warning = `Excluir ${name} da Gestão de Resultados?\n\nIsso remove o cadastro operacional e os dados deste vendedor desta competência no aparelho/nuvem da Gestão. O acesso/login, se existir, deve ser removido separadamente em Administração de acessos.`;
     if (!confirm(warning)) return;
+    const id = sellerIdentity(seller, index);
+    db.deletedSellers = db.deletedSellers && typeof db.deletedSellers === 'object' ? db.deletedSellers : {};
+    db.deletedSellers[id] = { id, name, deletedAt: new Date().toISOString() };
     db.sellers.splice(index, 1); activeSellerProfileId = null; activeScope = 'branch';
     persist(); renderAll(); showView('sellers');
   }
@@ -1627,15 +1631,27 @@
     activeSellerProfileId = sellerIdentity(seller, index);
     activeScope = `seller:${index}`;
     sellerWorkspaceTab = 'overview';
-    renderSellerProfile();
-    renderScopeSelector();
     document.body.classList.add('seller-modal-open');
     const modal = document.getElementById('sellerProfile');
     if (modal) {
       modal.classList.add('seller-modal-active');
       modal.classList.add('active');
       modal.setAttribute('aria-hidden','false');
-      modal.style.display = 'flex';
+      modal.style.setProperty('display','flex','important');
+    }
+    try {
+      renderSellerProfile();
+      renderScopeSelector();
+    } catch (error) {
+      console.error('Falha ao abrir vendedor:', error);
+      const title = document.getElementById('sellerProfileTitle');
+      const subtitle = document.getElementById('sellerProfileSubtitle');
+      if (title) title.textContent = seller.name || `Vendedor ${index + 1}`;
+      if (subtitle) subtitle.textContent = `${db.branch || 'Filial não informada'} • ${monthLabel(db.month)} • acompanhamento individual`;
+      const host = document.getElementById('sellerWorkspace');
+      if (host) host.innerHTML = '<div class="empty">Não foi possível carregar um bloco do painel. Feche e abra novamente; seus dados permanecem salvos.</div>';
+    }
+    if (modal) {
       const article = modal.querySelector('article.panel');
       if (article) article.scrollTo({ top: 0, behavior: 'auto' });
     }
@@ -1674,6 +1690,15 @@
     }));
     list.querySelectorAll('[data-edit-seller]').forEach((button) => button.addEventListener('click', () => openSellerEditor(Number(button.dataset.editSeller))));
     list.querySelectorAll('[data-delete-seller]').forEach((button) => button.addEventListener('click', () => deleteSellerFromManager(Number(button.dataset.deleteSeller))));
+    if (!document.documentElement.dataset.sellerEyeDelegationV22) {
+      document.documentElement.dataset.sellerEyeDelegationV22 = '1';
+      document.addEventListener('click', (event) => {
+        const button = event.target.closest?.('[data-open-seller]');
+        if (!button) return;
+        event.preventDefault(); event.stopPropagation();
+        openSellerManagerProfile(Number(button.dataset.openSeller));
+      }, true);
+    }
     const teamBtn=document.getElementById('teamDashboardBtn'); if(teamBtn&&!teamBtn.dataset.bound){teamBtn.dataset.bound='1';teamBtn.addEventListener('click',openTeamDashboard);}
     const oldHost=document.getElementById('teamDashboardHost');if(oldHost)oldHost.hidden=true;
   }

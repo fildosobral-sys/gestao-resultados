@@ -42,12 +42,25 @@
       if (!lr) { merged.records[key] = JSON.parse(JSON.stringify(rr)); return; }
       const base = parseStamp(lr.updatedAt) >= parseStamp(rr.updatedAt) ? lr : rr;
       const out = JSON.parse(JSON.stringify(base));
+      const deleted = {};
+      const absorbDeleted = source => {
+        Object.entries(source?.deletedSellers || {}).forEach(([id, tomb]) => {
+          const prior = deleted[id];
+          if (!prior || parseStamp(tomb?.deletedAt) >= parseStamp(prior?.deletedAt)) deleted[id] = JSON.parse(JSON.stringify(tomb));
+        });
+      };
+      absorbDeleted(rr); absorbDeleted(lr);
       const map = new Map();
       (rr.sellers || []).forEach((seller, index) => map.set(sellerKey(seller,index), JSON.parse(JSON.stringify(seller))));
       (lr.sellers || []).forEach((seller, index) => {
         const k = sellerKey(seller,index), prior = map.get(k);
         if (!prior || parseStamp(seller.updatedAt) >= parseStamp(prior.updatedAt)) map.set(k, JSON.parse(JSON.stringify(seller)));
       });
+      for (const [id, seller] of [...map.entries()]) {
+        const tomb = deleted[id];
+        if (tomb && parseStamp(tomb.deletedAt) >= parseStamp(seller?.updatedAt)) map.delete(id);
+      }
+      out.deletedSellers = deleted;
       out.sellers = [...map.values()];
       merged.records[key] = out;
     });
@@ -115,10 +128,16 @@
           return;
         }
         if (same(remote, local)) { status('✓ Sincronizado com a nuvem'); return; }
-        if (newestStamp(local) > newestStamp(remote)) { queue(local); return; }
-        localStorage.setItem(STORE, JSON.stringify(remote));
-        status('↓ Novos dados recebidos; atualizando…', 'busy');
-        setTimeout(() => location.reload(), 350);
+        const reconciled = mergeVaults(remote, local);
+        const localJson = JSON.stringify(local || null), reconciledJson = JSON.stringify(reconciled || null);
+        localStorage.setItem(STORE, reconciledJson);
+        if (localJson !== reconciledJson) {
+          pending = reconciled;
+          clearTimeout(timer);
+          timer = setTimeout(pushNow, 300);
+        }
+        status('↓ Dados reconciliados com a nuvem; atualizando…', 'busy');
+        setTimeout(() => location.reload(), 450);
       } catch (error) {
         status('⚠ Salvo neste aparelho; sem conexão com a nuvem', 'error');
       } finally { cleanup(); }
