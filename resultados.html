@@ -125,6 +125,16 @@
   .day-card-toggle{display:flex;align-items:center;gap:9px;min-width:0;flex:1;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer;padding:0}.day-card-toggle .day-card-title{flex:1;min-width:0}.day-card-chevron{width:30px;height:30px;display:grid;place-items:center;border-radius:999px;background:#edf4ff;color:#0879e8;font-size:18px;font-weight:900;transition:transform .2s ease}.day-card.is-open .day-card-chevron{transform:rotate(180deg)}
   .seller-mission-panel{display:grid;grid-template-columns:minmax(180px,.45fr) 1fr auto;gap:12px;align-items:end;margin:12px 0 18px;padding:14px;border:1px solid #cfe0f7;border-radius:16px;background:linear-gradient(135deg,#eef7ff,#f6f2ff)}.seller-mission-panel>.field{background:#fff;border:1px solid #dce7f4;border-radius:12px;padding:9px 11px}.seller-mission-panel input{width:100%;border:0;outline:0;background:transparent;font-weight:900}.seller-mission-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.seller-mission-summary .metric{background:#fff}.seller-mission-summary .metric:first-child{background:#e3f2ff}.seller-mission-panel .btn{white-space:nowrap}.seller-motivation{grid-column:1/-1;padding:14px;border-radius:15px;background:#fff;border:1px solid #dce7f4}.seller-motivation-head{display:flex;justify-content:space-between;gap:10px;align-items:center}.seller-motivation-head strong{font-size:14px}.seller-motivation-head span{font-size:10px;color:var(--muted);font-weight:800}.seller-tone-actions{display:flex;gap:8px;margin:10px 0}.tone-btn{flex:1;border:2px solid transparent;border-radius:12px;padding:10px 12px;font-weight:900;background:#f3f5f9;color:#526175}.tone-btn.positive{background:#eaf8f1;color:#087a4b!important}.tone-btn.support{background:#fff0f2;color:#b3263b}.tone-btn.active{border-color:currentColor;box-shadow:0 7px 16px rgba(15,42,67,.1)}.seller-motivation-preview{padding:12px 14px;border-radius:12px;background:#f5f8fd;color:#29415f;font-size:13px;line-height:1.5}.week-motivation{margin-top:10px;padding:12px 14px;border-radius:13px;background:linear-gradient(135deg,#edf7ff,#f3efff);color:#29415f;font-size:13px;line-height:1.5;border-left:4px solid var(--blue)}
   @media(max-width:760px){.daily-goal-planner{padding:13px}.daily-goal-head{display:block}.daily-goal-head .pill{display:inline-flex;margin-top:8px}.daily-goal-controls{grid-template-columns:1fr 1fr}.day-goal-strip{grid-template-columns:1fr 1fr}.day-goal-strip .day-goal-export{grid-column:1/-1;width:100%}.daily-goal-metric strong{font-size:13px}.day-card{padding:0!important;overflow:hidden}.day-card-head{padding:12px 13px;cursor:pointer}.day-card-head select{flex:0 0 auto;max-width:145px}.day-card-content{padding:0 13px 13px;border-top:1px solid #edf1f6}.day-card-content[hidden]{display:none!important}.day-card:not(.is-open) .day-card-head{min-height:62px}.day-card:not(.is-open).today-row{box-shadow:inset 4px 0 0 #e6a700,0 7px 18px rgba(15,42,67,.05)}.day-card:not(.is-open).goal-hit{box-shadow:inset 4px 0 0 #18a66a,0 7px 18px rgba(15,42,67,.05)}.seller-mission-panel{grid-template-columns:1fr}.seller-mission-summary{grid-template-columns:1fr 1fr}.seller-mission-panel .btn{width:100%}.seller-tone-actions{flex-direction:column}.seller-motivation-head{align-items:flex-start;flex-direction:column}}
+  .monthly-goal-program{margin:12px 0 0;padding:12px;border:1px solid #d7e4f4;border-radius:16px;background:rgba(255,255,255,.72)}
+  .monthly-goal-program summary{cursor:pointer;font-weight:900;color:var(--navy);list-style:none}
+  .monthly-goal-program summary::-webkit-details-marker{display:none}
+  .monthly-goal-program p{margin:8px 0 10px;color:var(--muted);font-size:13px;line-height:1.45}
+  .monthly-goal-grid{display:grid;grid-template-columns:repeat(7,minmax(84px,1fr));gap:8px;margin:10px 0 12px}
+  .monthly-goal-day{display:flex;gap:5px;align-items:center;padding:7px;border:1px solid #dce6f2;border-radius:12px;background:#fff}
+  .monthly-goal-day span{font-size:11px;font-weight:900;color:#526175;min-width:24px}
+  .monthly-goal-day input{width:100%;min-width:0;border:0;background:#f5f8fc;border-radius:8px;padding:7px;font-weight:900;color:#102a43}
+  @media(max-width:760px){.monthly-goal-grid{grid-template-columns:repeat(3,1fr)}.monthly-goal-day{padding:6px}.monthly-goal-program .btn{width:100%}}
+
 </style>
 
 <style id="results-seller-accordion-v33">
@@ -394,6 +404,13 @@ body.seller-modal-open{overflow:hidden}
         </div>
         <div class="daily-goal-summary" id="dailyGoalSummary"></div>
         <div class="daily-goal-team" id="dailyGoalTeam"></div>
+        <details class="monthly-goal-program" id="monthlyGoalProgram">
+          <summary>📅 Programar percentuais do mês inteiro</summary>
+          <p>Cadastre de uma vez os percentuais enviados pela diretoria. Cada percentual fica gravado na sua data e é usado automaticamente pela filial e pelos vendedores.</p>
+          <div class="monthly-goal-grid" id="monthlyGoalGrid"></div>
+          <button class="btn primary" id="saveMonthlyGoalProgram" type="button">💾 Salvar programação do mês</button>
+          <div class="hint" id="monthlyGoalStatus"></div>
+        </details>
         <div class="seller-motivation-preview" id="dailyGoalMotivation"></div>
       </section>
       <div class="monthly-entry-stack">
