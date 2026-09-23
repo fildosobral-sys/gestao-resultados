@@ -419,6 +419,81 @@
     ctx.font = '600 25px Arial, sans-serif'; ctx.fillText(subtitle, textX, 198); ctx.textAlign = 'left';
   }
 
+  function sellerDayStatusLabel(day) {
+    if (day?.status === 'done') return '✅ Finalizado';
+    if (day?.status === 'partial') return '🟡 Parcial';
+    if (day?.status === 'off') return '💤 Não trabalha';
+    if (day?.status === 'medical') return '🩺 Atestado';
+    if (day?.status === 'justified') return '📋 Justificada';
+    return '⚠️ Pendente';
+  }
+  function sellerDayHighlight(day, mercRate, servRate) {
+    const happy = mercRate >= 1 && servRate >= 1;
+    const medium = mercRate >= .8 || servRate >= .8;
+    if (happy) return { badge: '🏆 META BATIDA', title: 'Parabéns! Resultado acima da meta.', message: 'Você entregou um excelente resultado e mostrou força comercial. Continue firme e use esse desempenho para inspirar a equipe.' };
+    if (medium) return { badge: '👏 BOA PARCIAL', title: 'Bom caminho, siga acelerando.', message: 'O resultado mostra evolução e potencial. Continue no foco porque ainda dá tempo de transformar a parcial em meta batida.' };
+    return { badge: '💪 VAMOS PRA CIMA', title: 'Hoje foi preparação para amanhã ser ainda melhor.', message: 'Nem todo dia fecha no ponto ideal, mas consistência se constrói no processo. Amanhã é uma nova oportunidade para virar o jogo.' };
+  }
+  async function managerDownloadSellerDayImage(seller, key) {
+    if (!seller || !key) return;
+    const day = seller.daily?.[key] || emptyDay(key), mission = sellerMissionMetrics(seller, key);
+    const services = num(day.warranty) + num(day.other) + num(day.mixed);
+    const ticket = num(day.invoiceCount) ? num(day.general) / num(day.invoiceCount) : 0;
+    const conversion = num(day.nfs) ? num(day.warrantyQty) / num(day.nfs) : 0;
+    const efficiency = num(day.eligible) ? services / num(day.eligible) : 0;
+    const mercCommission = Object.prototype.hasOwnProperty.call(day,'commissionMercantile') ? num(day.commissionMercantile) : num(day.general) * num(day.commissionMercantileRate) / 100;
+    const serviceCommission = Object.prototype.hasOwnProperty.call(day,'commissionService') ? num(day.commissionService) : services * .05;
+    const totalCommission = mercCommission + serviceCommission;
+    const mercRate = mission.mercantileGoal ? num(day.general) / mission.mercantileGoal : 0;
+    const servRate = mission.serviceGoal ? services / mission.serviceGoal : 0;
+    const highlight = sellerDayHighlight(day, mercRate, servRate);
+    const date = new Date(`${key}T12:00:00`);
+    const todayIso = isoDate(today.getFullYear(), today.getMonth() + 1, today.getDate());
+    const canvas = document.createElement('canvas');
+    canvas.width = 1080; canvas.height = 1560;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#f4f7fb'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    imageHeader(ctx, 'MEU RESULTADO DO DIA', `${seller.name || 'Vendedor'} • ${db.branch || 'Filial'} • ${date.toLocaleDateString('pt-BR',{weekday:'long', day:'2-digit', month:'long', year:'numeric'})}`, canvas.width, false);
+    const badgeW = 280;
+    const grad = ctx.createLinearGradient(0,0,badgeW,0); grad.addColorStop(0,'#0b83e6'); grad.addColorStop(1,'#694ce7');
+    ctx.fillStyle = grad; roundedCanvasRect(ctx, 54, 290, badgeW, 56, 22); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = '900 22px Arial, sans-serif'; ctx.fillText(highlight.badge, 80, 326);
+    const card = (x,y,w,h,label,value,note,bg='#ffffff') => {
+      ctx.fillStyle = bg; roundedCanvasRect(ctx, x, y, w, h, 24); ctx.fill();
+      ctx.strokeStyle = '#e1e7f0'; ctx.lineWidth = 1; roundedCanvasRect(ctx, x, y, w, h, 24); ctx.stroke();
+      ctx.fillStyle = '#6a7b90'; ctx.font = '800 17px Arial, sans-serif'; ctx.fillText(label, x+20, y+32);
+      ctx.fillStyle = '#102a43'; ctx.font = '900 28px Arial, sans-serif'; ctx.fillText(value, x+20, y+77);
+      ctx.fillStyle = '#77859a'; ctx.font = '600 15px Arial, sans-serif'; writeWrappedText(ctx, note, x+20, y+108, w-40, 2, 20);
+    };
+    card(54, 378, 305, 142, 'VENDA MERCANTIL', brl.format(num(day.general)), mission.percent ? `Minha meta ${brl.format(mission.mercantileGoal)}` : 'Meta diária aguardando distribuição', '#eef6ff');
+    card(387, 378, 305, 142, 'SERVIÇOS', brl.format(services), mission.percent ? `Minha meta ${brl.format(mission.serviceGoal)}` : 'Meta diária aguardando distribuição', '#f7f2ff');
+    card(720, 378, 305, 142, 'COMISSÕES', brl.format(totalCommission), 'Mercantil + serviços', '#eefaf4');
+    card(54, 546, 305, 142, 'REFERÊNCIA FILIAL', brl.format(mission.branchMercantilePerSeller), mission.percent ? `${mission.percent.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}% do dia` : 'Sem percentual do dia', '#ffffff');
+    card(387, 546, 305, 142, 'CONVERSÃO', num(day.nfs) ? efficiencyPct.format(conversion) : '—', 'Meta 35,00%', '#ffffff');
+    card(720, 546, 305, 142, 'EFICIÊNCIA', num(day.eligible) ? efficiencyPct.format(efficiency) : '—', 'Meta 7,00%', '#ffffff');
+    card(54, 714, 305, 142, 'TICKET MÉDIO', ticket ? brl.format(ticket) : '—', `${num(day.invoiceCount)} nota(s) fiscal(is)`, '#ffffff');
+    card(387, 714, 305, 142, 'QTD. ELEGÍVEL', String(num(day.nfs)), `${num(day.warrantyQty)} garantia(s)`, '#ffffff');
+    card(720, 714, 305, 142, 'STATUS', sellerDayStatusLabel(day), key === todayIso ? 'Resultado do dia atual' : 'Resultado referente à data selecionada', '#ffffff');
+    ctx.fillStyle = '#ffffff'; roundedCanvasRect(ctx, 54, 900, 972, 265, 26); ctx.fill();
+    ctx.strokeStyle = '#e1e7f0'; roundedCanvasRect(ctx, 54, 900, 972, 265, 26); ctx.stroke();
+    ctx.fillStyle = '#0879e8'; ctx.font = '900 29px Arial, sans-serif'; ctx.fillText('LEITURA DO DIA', 86, 952);
+    const lines = [
+      `Status atual: ${sellerDayStatusLabel(day)}`,
+      mission.percent ? `Mercantil: ${num(day.general) >= mission.mercantileGoal ? 'acima' : 'abaixo'} da sua meta diária.` : 'Meta mercantil ainda não distribuída.',
+      mission.percent ? `Serviços: ${services >= mission.serviceGoal ? 'acima' : 'abaixo'} da sua meta diária.` : 'Meta de serviços ainda não distribuída.',
+      `Mensagem: ${highlight.title}`
+    ];
+    ctx.fillStyle = '#102a43'; ctx.font = '700 21px Arial, sans-serif';
+    lines.forEach((line, i) => writeWrappedText(ctx, line, 86, 1010 + i*42, 900, 2, 22));
+    ctx.fillStyle = '#eef6ff'; roundedCanvasRect(ctx, 54, 1200, 972, 230, 26); ctx.fill();
+    ctx.fillStyle = '#0d2b45'; ctx.font = '900 24px Arial, sans-serif'; ctx.fillText(highlight.title, 86, 1250);
+    ctx.font = '700 21px Arial, sans-serif'; writeWrappedText(ctx, highlight.message, 86, 1295, 900, 4, 28);
+    ctx.fillStyle = '#7b8798'; ctx.font = '600 16px Arial, sans-serif';
+    ctx.fillText(`Atualizado em ${new Date().toLocaleString('pt-BR')} • Gestão de Resultados`, 54, 1495);
+    const safe = String(seller.name || 'vendedor').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').toLowerCase();
+    await shareOrDownloadImage(canvas, `resultado-dia-${key}-${safe}.png`, `Resultado do dia - ${seller.name || 'Vendedor'}`);
+  }
+
   // Daily mission targets are independent of the configurable monthly efficiency target.
   function dailyAchievement(data, metrics) {
     const services = metrics.actualServices, eligible = num(data.eligible), quantity = num(data.nfs);
@@ -481,6 +556,7 @@
       const data = dayData(key), metrics = dailyGoalMetrics(key, data);
       if (!metrics.percent) { alert('Informe o percentual da meta deste dia antes de baixar.'); return; }
       const date = new Date(`${key}T12:00:00`);
+    const todayIso = isoDate(today.getFullYear(), today.getMonth() + 1, today.getDate());
       const canvas = document.createElement('canvas'); canvas.width = 1080; canvas.height = 1900;
       const ctx = canvas.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 1080, 1900);
       imageHeader(ctx, 'META DO DIA - FILIAL', `${db.branch || 'Filial não informada'} | ${date.toLocaleDateString('pt-BR')}`, 1080);
@@ -1255,6 +1331,7 @@
     const days = Array.from({length:lastDay}, (_,i) => {
       const key = `${year}-${String(month).padStart(2,'0')}-${String(i+1).padStart(2,'0')}`;
       const date = new Date(`${key}T12:00:00`);
+    const todayIso = isoDate(today.getFullYear(), today.getMonth() + 1, today.getDate());
       const managed = db.daily?.[key] || {};
       const data = { status: managed.status === 'off' ? 'off' : 'pending', ...(seller.daily?.[key] || {}) };
       return { key, date, data, goalPercent:num(managed.goalPercent) };
@@ -1409,7 +1486,7 @@
       ['Média comissão serviços',pct2.format(financial.serviceRate),`${financial.commissionHistorySamples||1} competência(s) considerada(s)`],
       ['Ganho se bater as metas',brl.format(financial.targetTotal),'Potencial financeiro pelas metas cadastradas']
     ].map(([l,v,n])=>`<div class="seller-finance-item"><span>${l}</span><strong>${v}</strong><small>${n}</small></div>`).join('')}</div>`;
-    const daily=`<div class="seller-day-cards">${days.length?days.map(([key,day])=>{const services=num(day.warranty)+num(day.other)+num(day.mixed),conv=num(day.nfs)?num(day.warrantyQty)/num(day.nfs):0,eff=num(day.eligible)?services/num(day.eligible):0,mercComm=Object.prototype.hasOwnProperty.call(day,'commissionMercantile')?num(day.commissionMercantile):num(day.general)*num(day.commissionMercantileRate)/100,servComm=Object.prototype.hasOwnProperty.call(day,'commissionService')?num(day.commissionService):services*.05;const has=hasSellerDayValue(day);const st=day.status==='off'?'💤 Não trabalha':day.status==='medical'?'🩺 Atestado':day.status==='justified'?'📋 Justificada':day.status==='done'?'✅ Finalizado':has||day.status==='partial'?'🟡 Parcial':'⚠️ Pendente';return `<article class="seller-day-card seller-day-accordion" data-seller-day="${key}"><button type="button" class="seller-day-head" data-seller-day-toggle="${key}" aria-expanded="false"><div><span>DIA</span><strong>${new Date(`${key}T12:00:00`).toLocaleDateString('pt-BR',{day:'2-digit',month:'long'})}</strong></div><div class="seller-day-status"><span>STATUS</span><strong>${st}</strong></div><span class="seller-day-chevron">⌄</span></button><div class="seller-day-detail" hidden>${[
+    const daily=`<div class="seller-day-cards">${days.length?days.map(([key,day])=>{const services=num(day.warranty)+num(day.other)+num(day.mixed),conv=num(day.nfs)?num(day.warrantyQty)/num(day.nfs):0,eff=num(day.eligible)?services/num(day.eligible):0,mercComm=Object.prototype.hasOwnProperty.call(day,'commissionMercantile')?num(day.commissionMercantile):num(day.general)*num(day.commissionMercantileRate)/100,servComm=Object.prototype.hasOwnProperty.call(day,'commissionService')?num(day.commissionService):services*.05;const has=hasSellerDayValue(day);const st=day.status==='off'?'💤 Não trabalha':day.status==='medical'?'🩺 Atestado':day.status==='justified'?'📋 Justificada':day.status==='done'?'✅ Finalizado':has||day.status==='partial'?'🟡 Parcial':'⚠️ Pendente';return `<article class="seller-day-card seller-day-accordion" data-seller-day="${key}"><button type="button" class="seller-day-head" data-seller-day-toggle="${key}" aria-expanded="false"><div><span>DIA</span><strong>${new Date(`${key}T12:00:00`).toLocaleDateString('pt-BR',{day:'2-digit',month:'long'})}</strong></div><div class="seller-day-status"><span>STATUS</span><strong>${st}</strong></div><span class="seller-day-chevron">⌄</span></button><div class="seller-day-detail" hidden><div class="seller-day-actions" style="display:flex;justify-content:flex-end;margin:0 0 10px"><button type="button" class="btn small" data-seller-day-image="${key}">📲 Imagem do dia</button></div>${[
 ['MERCANTIL',brl.format(num(day.general))],['VENDA ELEGÍVEL',brl.format(num(day.eligible))],['SERVIÇOS',brl.format(services)],['NOTAS FISCAIS',String(num(day.invoiceCount))],['QTD. ELEGÍVEL',String(num(day.nfs))],['QTD. GARANTIAS',String(num(day.warrantyQty))],['CONVERSÃO',num(day.nfs)?efficiencyPct.format(conv):'—'],['EFICIÊNCIA',num(day.eligible)?efficiencyPct.format(eff):'—'],['COMISSÃO MERC.',brl.format(mercComm)],['COMISSÃO SERVIÇOS',brl.format(servComm)],['TOTAL COMISSÕES',brl.format(mercComm+servComm)]
 ].map(([l,v])=>`<div><span>${l}</span><strong>${v}</strong></div>`).join('')}</div></article>`}).join(''):'<div class="empty">Nenhum lançamento recebido deste vendedor.</div>'}</div>`;
     const weeks=sellerWorkspaceWeeks(seller); const weekly=`<div class="seller-week-list">${weeks.length?weeks.map(sellerWorkspaceWeekCard).join(''):'<div class="empty">Sem resultados semanais ainda.</div>'}</div>`;
@@ -1418,6 +1495,7 @@
     const dashboard='<div class="seller-dashboard-target" data-period="month" data-metric="merc" data-compare="prev"></div>'; host.innerHTML=`<nav class="seller-workspace-tabs">${tabs.map(([id,label])=>`<button class="seller-workspace-tab ${sellerWorkspaceTab===id?'active':''}" data-seller-workspace-tab="${id}">${label}</button>`).join('')}</nav>${tabs.map(([id])=>`<section class="seller-workspace-view ${sellerWorkspaceTab===id?'active':''}" data-seller-workspace-view="${id}">${id==='overview'?overview:id==='daily'?daily:id==='weekly'?weekly:id==='goals'?goals:id==='dashboard'?dashboard:compiled}</section>`).join('')}`; const dashRoot=host.querySelector('.seller-dashboard-target'); if(dashRoot)mountSellerDashboard(seller,dashRoot);
     host.querySelectorAll('[data-seller-workspace-tab]').forEach(btn=>btn.addEventListener('click',()=>{sellerWorkspaceTab=btn.dataset.sellerWorkspaceTab;renderSellerWorkspace(seller);const modal=document.querySelector('#sellerProfile>article');if(modal)modal.scrollTo({top:0,behavior:'smooth'});}));
     host.querySelectorAll('[data-seller-day-toggle]').forEach(btn=>btn.addEventListener('click',()=>{const card=btn.closest('.seller-day-accordion'),detail=card?.querySelector('.seller-day-detail'),open=btn.getAttribute('aria-expanded')==='true';btn.setAttribute('aria-expanded',String(!open));if(detail)detail.hidden=open;card?.classList.toggle('open',!open);}));
+    host.querySelectorAll('[data-seller-day-image]').forEach(btn=>btn.addEventListener('click',()=>managerDownloadSellerDayImage(seller, btn.dataset.sellerDayImage)));
   }
   function renderSellerProfile() {
     if (!activeSellerProfileId) return;
@@ -1507,6 +1585,25 @@
     db.sellers.splice(index, 1); activeSellerProfileId = null; activeScope = 'branch';
     persist(); renderAll(); showView('sellers');
   }
+
+  function openSellerManagerProfile(index) {
+    const seller = db.sellers[index]; if (!seller) return;
+    activeSellerProfileId = sellerIdentity(seller, index);
+    activeScope = `seller:${index}`;
+    sellerWorkspaceTab = 'overview';
+    renderSellerProfile();
+    renderScopeSelector();
+    document.body.classList.add('seller-modal-open');
+    const modal = document.getElementById('sellerProfile');
+    if (modal) {
+      modal.classList.add('seller-modal-active');
+      modal.classList.add('active');
+      modal.setAttribute('aria-hidden','false');
+      modal.style.display = 'flex';
+      const article = modal.querySelector('article.panel');
+      if (article) article.scrollTo({ top: 0, behavior: 'auto' });
+    }
+  }
   function renderSellers() {
     const branch = calculate();
     const sellerSales = db.sellers.reduce((sum, seller) => sum + num(seller.general), 0);
@@ -1535,12 +1632,9 @@
         <div class="seller-directory-actions"><button type="button" class="btn primary small seller-open-btn" data-open-seller="${index}"><span class="action-icon">👁️</span><span class="action-label">Ver</span></button><button type="button" class="btn secondary small seller-edit-btn" data-edit-seller="${index}"><span class="action-icon">✏️</span><span class="action-label">Editar</span></button><button type="button" class="btn danger small seller-delete-btn" data-delete-seller="${index}"><span class="action-icon">🗑️</span><span class="action-label">Excluir</span></button></div></div>
       </article>`;
     }).join('');
-    list.querySelectorAll('[data-open-seller]').forEach((button) => button.addEventListener('click', () => {
-      const index = Number(button.dataset.openSeller), seller = db.sellers[index]; if (!seller) return;
-      activeSellerProfileId = sellerIdentity(seller, index); activeScope = `seller:${index}`; sellerWorkspaceTab='overview';
-      renderSellerProfile(); renderScopeSelector();
-      document.body.classList.add('seller-modal-open');
-      const modal=document.getElementById('sellerProfile'); if(modal){ modal.classList.add('seller-modal-active'); modal.setAttribute('aria-hidden','false'); }
+    list.querySelectorAll('[data-open-seller]').forEach((button) => button.addEventListener('click', (event) => {
+      event.preventDefault(); event.stopPropagation();
+      openSellerManagerProfile(Number(button.dataset.openSeller));
     }));
     list.querySelectorAll('[data-edit-seller]').forEach((button) => button.addEventListener('click', () => openSellerEditor(Number(button.dataset.editSeller))));
     list.querySelectorAll('[data-delete-seller]').forEach((button) => button.addEventListener('click', () => deleteSellerFromManager(Number(button.dataset.deleteSeller))));
@@ -2086,8 +2180,7 @@
     if (activeScope.startsWith('seller:')) {
       const index = Number(activeScope.split(':')[1]), seller = db.sellers[index];
       activeSellerProfileId = seller ? sellerIdentity(seller, index) : null; renderSellerProfile();
-      document.body.classList.add('seller-modal-open');
-      const modal=document.getElementById('sellerProfile'); if(modal){ modal.classList.add('seller-modal-active'); modal.setAttribute('aria-hidden','false'); }
+      openSellerManagerProfile(index);
     } else { activeSellerProfileId = null; renderOverview(); showView('overview'); }
     renderPrint();
   });
@@ -2134,7 +2227,7 @@
   document.getElementById('refreshCompiled').addEventListener('click', renderCompiled);
   function closeSellerManagerModal(){
     document.body.classList.remove('seller-modal-open');
-    const modal=document.getElementById('sellerProfile'); if(modal){ modal.classList.remove('seller-modal-active'); modal.setAttribute('aria-hidden','true'); }
+    const modal=document.getElementById('sellerProfile'); if(modal){ modal.classList.remove('seller-modal-active'); modal.classList.remove('active'); modal.setAttribute('aria-hidden','true'); modal.style.display=''; }
     activeScope='branch'; activeSellerProfileId=null; renderScopeSelector(); renderSellers();
   }
   document.getElementById('sellerProfileBack').addEventListener('click', closeSellerManagerModal);
