@@ -1,7 +1,7 @@
 {
   "name": "Gestão de Resultados",
-  "short_name": "Resultados",
-  "description": "Metas, desempenho, vendedores, projeções e BI.",
+  "short_name": "Resultados Zenir",
+  "description": "Gestão de resultados Zenir: metas, desempenho, vendedores, projeções e BI.",
   "id": "./",
   "start_url": "./index.html",
   "scope": "./",
