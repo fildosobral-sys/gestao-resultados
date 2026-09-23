@@ -1423,7 +1423,7 @@
       const mercRate=mercGoal?a.general/mercGoal:0, serviceRate=serviceGoal?a.services/serviceGoal:0;
       const endDate=items.at(-1).date, startDate=items[0].date, now=new Date(today); now.setHours(12,0,0,0);
       const phase=now<startDate?'future':now>endDate?'closed':'current';
-      const tone = phase==='future' ? 'future' : (mercRate>=1 && serviceRate>=1 ? 'good' : (mercRate>=.7 || serviceRate>=.7 || launched ? 'mid' : 'bad'));
+      const tone = phase==='future' ? 'future' : (phase==='closed' && pending>0 ? 'mid' : (mercRate>=1 && serviceRate>=1 ? 'good' : (mercRate>=.7 || serviceRate>=.7 || launched ? 'mid' : 'bad')));
       return { index, items, a, share, mercGoal, serviceGoal, launched, working, pending, phase, startDate, endDate, first:startDate, last:endDate, mercRate, serviceRate, tone };
     });
   }
@@ -1441,7 +1441,7 @@
       return sum + merc + serv;
     },0);
     const range = w.first && w.last ? `${w.first.toLocaleDateString('pt-BR')} a ${w.last.toLocaleDateString('pt-BR')}` : '';
-    const badge = w.phase==='future'?'Futura':w.phase==='current'?'Em andamento':w.tone==='good'?'Meta atingida':'Encerrada abaixo da meta';
+    const badge = w.phase==='future'?'Futura':w.phase==='current'?'Em andamento':w.pending>0?'Encerrada com pendências':w.tone==='good'?'Meta atingida':'Encerrada abaixo da meta';
     return `<article class="seller-week-card ${w.tone}"><header><div><strong>${w.index+1}ª semana</strong><small>${range}</small></div><span>${badge}</span></header><div class="seller-week-grid">
       <div><span>💰 Mercantil</span><strong>${brl.format(w.a.general)}</strong><small>${w.mercGoal?`${pct.format(w.mercRate)} da meta • falta ${brl.format(missingMerc)}`:'Meta não cadastrada'}</small></div>
       <div><span>🛡️ Serviços</span><strong>${brl.format(w.a.services)}</strong><small>${w.serviceGoal?`${pct.format(w.serviceRate)} da meta • falta ${brl.format(missingServ)}`:'Meta não cadastrada'}</small></div>
@@ -1456,6 +1456,15 @@
       <div><span>📅 Dias da semana</span><strong>${w.launched}/${w.working}</strong><small>${w.pending} pendente(s)</small></div>
       <div><span>📊 Distribuição</span><strong>${pct2.format(w.share)}</strong><small>da meta mensal</small></div>
     </div><footer>Semana sincronizada com a configuração gerencial e com a distribuição diária da competência.</footer></article>`;
+  }
+  function sellerWorkspacePeriodCard(label, aggregateData={}, mercGoal=0, serviceGoal=0) {
+    const a = aggregateData || {};
+    const services = num(a.services);
+    const mercRate = num(mercGoal) ? num(a.general) / num(mercGoal) : 0;
+    const servRate = num(serviceGoal) ? services / num(serviceGoal) : 0;
+    const conv = num(a.nfs) ? num(a.warrantyQty) / num(a.nfs) : num(a.conversion);
+    const eff = num(a.eligible) ? services / num(a.eligible) : num(a.efficiency);
+    return `<article class="seller-workspace-card seller-period-card"><span>${esc(label)}</span><strong>${brl.format(num(a.general))}</strong><small>Serviços ${brl.format(services)}${num(mercGoal)?` • Mercantil ${pct.format(mercRate)}`:''}${num(serviceGoal)?` • Serviços ${pct.format(servRate)}`:''}</small><div class="seller-period-mini"><b>Conversão ${num(a.nfs)||conv?efficiencyPct.format(conv):'—'}</b><b>Eficiência ${num(a.eligible)||eff?efficiencyPct.format(eff):'—'}</b></div></article>`;
   }
   function hasSellerDayValue(day){return !!day&&['general','eligible','warranty','other','mixed','nfs','warrantyQty'].some(f=>num(day[f])>0)}
   function sellerDashboardPeriodRows(seller, period='month') {
@@ -1561,9 +1570,22 @@
       ['Média comissão serviços',pct2.format(financial.serviceRate),`${financial.commissionHistorySamples||1} competência(s) considerada(s)`],
       ['Ganho se bater as metas',brl.format(financial.targetTotal),'Potencial financeiro pelas metas cadastradas']
     ].map(([l,v,n])=>`<div class="seller-finance-item"><span>${l}</span><strong>${v}</strong><small>${n}</small></div>`).join('')}</div>`;
-    const daily=`<div class="seller-day-cards">${days.length?days.map(([key,day])=>{const services=num(day.warranty)+num(day.other)+num(day.mixed),conv=num(day.nfs)?num(day.warrantyQty)/num(day.nfs):0,eff=num(day.eligible)?services/num(day.eligible):0,mercComm=Object.prototype.hasOwnProperty.call(day,'commissionMercantile')?num(day.commissionMercantile):num(day.general)*num(day.commissionMercantileRate)/100,servComm=Object.prototype.hasOwnProperty.call(day,'commissionService')?num(day.commissionService):services*.05;const has=hasSellerDayValue(day);const st=day.status==='off'?'💤 Não trabalha':day.status==='medical'?'🩺 Atestado':day.status==='justified'?'📋 Justificada':day.status==='done'?'✅ Finalizado':has||day.status==='partial'?'🟡 Parcial':'⚠️ Pendente';return `<article class="seller-day-card seller-day-accordion" data-seller-day="${key}"><button type="button" class="seller-day-head" data-seller-day-toggle="${key}" aria-expanded="false"><div><span>DIA</span><strong>${new Date(`${key}T12:00:00`).toLocaleDateString('pt-BR',{day:'2-digit',month:'long'})}</strong></div><div class="seller-day-status"><span>STATUS</span><strong>${st}</strong></div><span class="seller-day-chevron">⌄</span></button><div class="seller-day-detail" hidden><div class="seller-day-actions" style="display:flex;justify-content:flex-end;margin:0 0 10px"><button type="button" class="btn small" data-seller-day-image="${key}">📲 Imagem do dia</button></div>${[
-['MERCANTIL',brl.format(num(day.general))],['VENDA ELEGÍVEL',brl.format(num(day.eligible))],['SERVIÇOS',brl.format(services)],['NOTAS FISCAIS',String(num(day.invoiceCount))],['QTD. ELEGÍVEL',String(num(day.nfs))],['QTD. GARANTIAS',String(num(day.warrantyQty))],['CONVERSÃO',num(day.nfs)?efficiencyPct.format(conv):'—'],['EFICIÊNCIA',num(day.eligible)?efficiencyPct.format(eff):'—'],['COMISSÃO MERC.',brl.format(mercComm)],['COMISSÃO SERVIÇOS',brl.format(servComm)],['TOTAL COMISSÕES',brl.format(mercComm+servComm)]
-].map(([l,v])=>`<div><span>${l}</span><strong>${v}</strong></div>`).join('')}</div></article>`}).join(''):'<div class="empty">Nenhum lançamento recebido deste vendedor.</div>'}</div>`;
+    const normalizedToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const daily=`<div class="seller-day-cards">${days.length?days.map(([key,day])=>{
+      const dateObj=new Date(`${key}T12:00:00`), dateOnly=new Date(dateObj.getFullYear(),dateObj.getMonth(),dateObj.getDate());
+      const isFuture=dateOnly>normalizedToday;
+      const services=num(day.warranty)+num(day.other)+num(day.mixed),conv=num(day.nfs)?num(day.warrantyQty)/num(day.nfs):0,eff=num(day.eligible)?services/num(day.eligible):0;
+      const mercComm=Object.prototype.hasOwnProperty.call(day,'commissionMercantile')?num(day.commissionMercantile):num(day.general)*num(day.commissionMercantileRate)/100;
+      const servComm=Object.prototype.hasOwnProperty.call(day,'commissionService')?num(day.commissionService):services*.05;
+      const has=hasSellerDayValue(day), excused=['off','medical','justified'].includes(day.status);
+      const st=day.status==='off'?'💤 Não trabalha':day.status==='medical'?'🩺 Atestado':day.status==='justified'?'📋 Justificada':day.status==='done'?'✅ Finalizado':has||day.status==='partial'?'🟡 Parcial':isFuture?'⏳ Aguardando':'⚠️ Pendente';
+      const detail=excused
+        ? `<div class="seller-day-occurrence"><span>OCORRÊNCIA</span><strong>${st}</strong><small>Dia sem indicadores comerciais. Nenhum resultado ou imagem de desempenho é exigido.</small></div>`
+        : `<div class="seller-day-actions" style="display:flex;justify-content:flex-end;margin:0 0 10px"><button type="button" class="btn small" data-seller-day-image="${key}" ${isFuture&&!has?'disabled':''}>📲 Imagem do dia</button></div>${[
+          ['MERCANTIL',brl.format(num(day.general))],['VENDA ELEGÍVEL',brl.format(num(day.eligible))],['SERVIÇOS',brl.format(services)],['NOTAS FISCAIS',String(num(day.invoiceCount))],['QTD. ELEGÍVEL',String(num(day.nfs))],['QTD. GARANTIAS',String(num(day.warrantyQty))],['CONVERSÃO',num(day.nfs)?efficiencyPct.format(conv):'—'],['EFICIÊNCIA',num(day.eligible)?efficiencyPct.format(eff):'—'],['COMISSÃO MERC.',brl.format(mercComm)],['COMISSÃO SERVIÇOS',brl.format(servComm)],['TOTAL COMISSÕES',brl.format(mercComm+servComm)]
+        ].map(([l,v])=>`<div><span>${l}</span><strong>${v}</strong></div>`).join('')}`;
+      return `<article class="seller-day-card seller-day-accordion ${isFuture&&!has?'seller-day-future':''} ${excused?'seller-day-excused':''}" data-seller-day="${key}"><button type="button" class="seller-day-head" data-seller-day-toggle="${key}" aria-expanded="false"><div><span>DIA</span><strong>${dateObj.toLocaleDateString('pt-BR',{day:'2-digit',month:'long'})}</strong></div><div class="seller-day-status"><span>STATUS</span><strong>${st}</strong></div><span class="seller-day-chevron">⌄</span></button><div class="seller-day-detail" hidden>${detail}</div></article>`
+    }).join(''):'<div class="empty">Nenhum lançamento recebido deste vendedor.</div>'}</div>`;
     let weeks=[]; try{weeks=sellerWorkspaceWeeks(seller)}catch(e){console.error('Falha no semanal do vendedor:',e)} const weekly=`<div class="seller-week-list">${weeks.length?weeks.map(sellerWorkspaceWeekCard).join(''):'<div class="empty">Sem resultados semanais ainda.</div>'}</div>`;
     const goals=`<div class="seller-goal-pair"><div class="seller-goal-box"><span>💰 Meta mercantil mensal</span><h2>${brl.format(num(seller.assignedGoal))}</h2><div class="seller-progress"><i style="width:${Math.min(100,mercRate*100)}%"></i></div><b>${num(seller.assignedGoal)?pct.format(mercRate):'Não cadastrada'}</b><p>${num(seller.assignedGoal)?`Faltam ${brl.format(Math.max(0,num(seller.assignedGoal)-mercTotal))}`:'O vendedor ainda não cadastrou esta meta.'}</p></div><div class="seller-goal-box service"><span>🛡️ Meta de serviços mensal</span><h2>${brl.format(num(seller.serviceGoal))}</h2><div class="seller-progress"><i style="width:${Math.min(100,servRate*100)}%"></i></div><b>${num(seller.serviceGoal)?pct.format(servRate):'Não cadastrada'}</b><p>${num(seller.serviceGoal)?`Faltam ${brl.format(Math.max(0,num(seller.serviceGoal)-total.services))}`:'O vendedor ainda não cadastrou esta meta.'}</p></div></div><div class="seller-workspace-grid" style="margin-top:12px"><div class="seller-workspace-card"><span>🎯 Conversão</span><strong>35,00%</strong><small>Meta fixa</small></div><div class="seller-workspace-card"><span>⚡ Eficiência</span><strong>7,00%</strong><small>Meta fixa</small></div><div class="seller-workspace-card"><span>💵 Comissões</span><strong>Em R$</strong><small>Informadas nos lançamentos</small></div><div class="seller-workspace-card"><span>📅 Dias da filial</span><strong>${planned}</strong><small>Definidos pela gestão</small></div></div>`;
     let compiled='';
