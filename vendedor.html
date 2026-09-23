@@ -151,6 +151,35 @@ html,body{max-width:100%;overflow-x:hidden}
 }
 </style>
 
+
+<style id="seller-v48-final">
+/* V48 — ajustes visuais finais do vendedor */
+.home-subheading{font-size:18px;font-weight:900;color:#17324d;margin:4px 0 10px;padding:0 2px}
+.week-grid .metric.metric-positive{background:#f1fbf5!important;border-color:#bfe8d0!important;box-shadow:inset 0 0 0 1px rgba(10,143,85,.03)}
+.week-grid .metric.metric-warning{background:#fffaf0!important;border-color:#f2dfad!important}
+.week-grid .metric.metric-negative{background:#fff5f6!important;border-color:#efc9d0!important}
+.week-grid .metric.metric-positive strong{color:#0a7f4f}
+.week-grid .metric.metric-warning strong{color:#946500}
+.week-grid .metric.metric-negative strong{color:#b92d45}
+.dash-section-head .dash-average{display:block;margin-top:5px;font-size:12px;font-weight:800;color:#6f8093}
+.dash-custom-range{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;padding:10px 12px;border:1px solid #e0e8f2;border-radius:16px;background:#f8fbff;margin-bottom:10px}
+.dash-custom-range label{display:block;font-size:10px;font-weight:900;text-transform:uppercase;color:#62748a;margin-bottom:5px}
+.dash-custom-range input{height:42px;border:1px solid #d8e2ee;border-radius:12px;padding:0 10px;background:#fff;color:#17324d;font:700 13px inherit}
+.dash-custom-range .btn{height:42px;padding:0 14px}
+@media(max-width:760px){
+  .dash-chart-expand{display:grid!important;place-items:center!important;width:32px;height:32px;right:8px;top:8px}
+  .dash-modal{display:grid!important;padding:0!important;overflow:hidden}
+  .dash-modal[hidden]{display:none!important}
+  .dash-modal-dialog{position:absolute!important;width:calc(100vh - 22px)!important;height:calc(100vw - 22px)!important;max-width:none!important;max-height:none!important;transform:rotate(90deg);border-radius:18px!important}
+  .dash-modal-head{padding:9px 12px!important;min-height:48px}
+  .dash-modal-head strong{font-size:16px!important}
+  .dash-modal-close{width:34px;height:34px;font-size:22px}
+  .dash-modal-body{padding:10px 12px 12px!important;overflow:auto!important}
+  .dash-card-expanded .dash-svg{width:100%!important;max-height:none!important;height:auto!important}
+  .dash-custom-range{display:none!important}
+}
+</style>
+
 </head><body>
 <div class="app">
 <header class="top"><div class="brand"><small>Central Inteligente de Vendas</small><h1>Meu Resultado</h1></div><div class="top-side"><div class="sync-pill busy" id="syncState" title="Status da sincronização">☁️</div><button class="user profile-trigger" id="profileTrigger" type="button" aria-label="Abrir meu perfil"><span class="seller-avatar" id="sellerAvatar">V</span><span class="seller-user-copy"><strong id="who">Vendedor</strong><small id="where"></small></span><span class="profile-caret">⌄</span></button></div></header>
@@ -162,7 +191,7 @@ html,body{max-width:100%;overflow-x:hidden}
       <article class="seller-hero-main"><div class="eyebrow">Venda mercantil total do vendedor</div><div class="hero-value" id="sellerRevenueHero">R$ 0,00</div><div class="hero-meta"><span><strong id="sellerWorkedHero">0</strong><br>dias trabalhados</span><span><strong id="sellerRemainingHero">0</strong><br>dias restantes</span><span><strong id="sellerDailyHero">R$ 0,00</strong><br>média por dia</span></div></article>
       <article class="panel seller-projection-card"><div class="seller-projection-top"><div><div class="eyebrow">Projeção de fechamento</div><div class="hint" id="sellerProjectionText">Preencha os resultados diários para calcular.</div></div><span id="sellerProjectionBadge" class="seller-progress-chip">Sem meta</span></div><div class="seller-projection-split"><div class="seller-projection-stat"><span>Venda mercantil</span><strong id="sellerProjectionHero">R$ 0,00</strong><small id="sellerProjectionMercRate">—</small></div><div class="seller-projection-stat service"><span>Venda serviços</span><strong id="sellerProjectionServiceValue">R$ 0,00</strong><small id="sellerProjectionServiceRate">—</small></div></div><div class="bar progress-over"><span class="bar-base" id="sellerProjectionBar" style="width:0%"></span><span class="bar-extra" id="sellerProjectionBarOver" style="display:none;width:0%;left:100%"></span></div><div class="seller-projection-breakdown"><div class="seller-projection-mini"><span>Projeção meta mercantil</span><strong id="sellerProjectionMercPercent">—</strong></div><div class="seller-projection-mini service"><span>Projeção venda serviço</span><strong id="sellerProjectionServPercent">—</strong></div></div></article>
     </div>
-    <div class="seller-home-day" id="sellerHomeDay"></div>
+    <div class="home-subheading">Resultados Hoje</div><div class="seller-home-day" id="sellerHomeDay"></div>
   </article>
   <article class="panel distribution-panel"><div class="section-title"><div><h2>Distribuição do que falta no mês</h2><div class="hint"></div></div><span class="pill" id="sellerDistributionTag">Meta individual</span></div><div class="seller-dist-grid" id="sellerDistributionGrid"></div><div class="seller-quick-note" id="sellerDistributionNote"></div></article>
   <article class="panel"><div class="title"><div><h2>📊 Ritmo do mês</h2><div class="hint">Realizado, projeção, indicadores e o que falta para concluir suas metas.</div></div></div><div class="grid" id="homeMetrics"></div></article>
@@ -178,4 +207,4 @@ html,body{max-width:100%;overflow-x:hidden}
 <div class="footer">Developed by <strong>Fildo Sobral</strong> • FS Soluções</div>
 </div>
 <div class="profile-backdrop" id="profileBackdrop" hidden><section class="profile-sheet" role="dialog" aria-modal="true" aria-label="Meu perfil"><div class="profile-sheet-handle"></div><div class="profile-head"><div class="profile-avatar" id="profileAvatar">V</div><div><strong id="profileName">Vendedor</strong><span id="profileMeta">Meu acesso</span></div><button type="button" class="profile-close" id="profileClose" aria-label="Fechar">×</button></div><div class="profile-actions"><button type="button" id="profileData">👤 Meus dados</button><label class="profile-photo-label" for="profilePhotoInput">📷 Trocar foto</label><input id="profilePhotoInput" class="profile-photo-input" type="file" accept="image/*"><button type="button" id="profileReport">🧾 Meu relatório</button><button type="button" id="profileSupport">💬 Suporte FS</button><button type="button" id="profileSwitch">🔄 Trocar usuário</button><button type="button" class="danger" id="profileLogout">🚪 Sair da plataforma</button></div><div class="profile-details" id="profileDetails" hidden></div></section></div>
-<script src="vendedor-v35.js?v=4701"></script></body></html>
+<script src="vendedor-v35.js?v=4801"></script></body></html>
