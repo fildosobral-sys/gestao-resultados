@@ -120,6 +120,37 @@ html,body{max-width:100%;overflow-x:hidden}
 @media (max-width:760px){.dash-chart-expand,.dash-modal{display:none!important}.dash-card,.dash-kpi,.dash-section,.metric,.panel{transform:none!important}}
 </style>
 
+
+<style id="seller-final-layout-v47">
+/* V47: ajustes de apresentação, sem alterar cálculos */
+.seller-projection-split,.seller-projection-breakdown,.seller-home-day,.seller-dist-grid{min-width:0}
+.seller-projection-stat,.seller-projection-mini,.seller-home-day .mini,.seller-dist-card{min-width:0;overflow:hidden}
+.seller-projection-stat strong,.seller-projection-mini strong{white-space:nowrap;max-width:100%;letter-spacing:-.035em}
+.seller-home-day .mini{display:flex;flex-direction:column;min-height:176px}
+.seller-home-day .mini>span{white-space:nowrap;overflow:visible;font-size:9px;letter-spacing:-.015em}
+.seller-home-day .mini>strong{white-space:nowrap;letter-spacing:-.03em}
+.seller-home-day .mini>small{min-height:34px;line-height:1.25}
+.seller-home-day .mini>.bar{margin-top:auto!important;flex:0 0 12px}
+.seller-dist-card strong{white-space:nowrap!important;overflow-wrap:normal!important;word-break:normal!important;letter-spacing:-.035em}
+@media(max-width:620px){
+  .seller-projection-card{padding:14px!important}
+  .seller-projection-split,.seller-projection-breakdown{gap:7px!important}
+  .seller-projection-stat,.seller-projection-mini{padding:11px 9px!important}
+  .seller-projection-stat span,.seller-projection-mini span{font-size:8.5px!important;line-height:1.1}
+  .seller-projection-stat strong{font-size:clamp(17px,5.1vw,23px)!important}
+  .seller-projection-stat small{font-size:14px!important;white-space:nowrap}
+  .seller-projection-mini strong{font-size:clamp(18px,5vw,21px)!important}
+  .seller-home-day .mini{padding:12px 10px!important;min-height:166px}
+  .seller-home-day .mini>span{font-size:8px!important}
+  .seller-home-day .mini>strong{font-size:clamp(18px,5.2vw,22px)!important}
+  .seller-home-day .mini>small{font-size:11px!important}
+  .seller-dist-card{padding:12px 9px!important;min-height:146px}
+  .seller-dist-card span{font-size:9px!important;line-height:1.15}
+  .seller-dist-card strong{font-size:clamp(16px,4.8vw,20px)!important;line-height:1.05!important}
+  .seller-dist-card small{font-size:9.5px!important}
+}
+</style>
+
 </head><body>
 <div class="app">
 <header class="top"><div class="brand"><small>Central Inteligente de Vendas</small><h1>Meu Resultado</h1></div><div class="top-side"><div class="sync-pill busy" id="syncState" title="Status da sincronização">☁️</div><button class="user profile-trigger" id="profileTrigger" type="button" aria-label="Abrir meu perfil"><span class="seller-avatar" id="sellerAvatar">V</span><span class="seller-user-copy"><strong id="who">Vendedor</strong><small id="where"></small></span><span class="profile-caret">⌄</span></button></div></header>
@@ -147,4 +178,4 @@ html,body{max-width:100%;overflow-x:hidden}
 <div class="footer">Developed by <strong>Fildo Sobral</strong> • FS Soluções</div>
 </div>
 <div class="profile-backdrop" id="profileBackdrop" hidden><section class="profile-sheet" role="dialog" aria-modal="true" aria-label="Meu perfil"><div class="profile-sheet-handle"></div><div class="profile-head"><div class="profile-avatar" id="profileAvatar">V</div><div><strong id="profileName">Vendedor</strong><span id="profileMeta">Meu acesso</span></div><button type="button" class="profile-close" id="profileClose" aria-label="Fechar">×</button></div><div class="profile-actions"><button type="button" id="profileData">👤 Meus dados</button><label class="profile-photo-label" for="profilePhotoInput">📷 Trocar foto</label><input id="profilePhotoInput" class="profile-photo-input" type="file" accept="image/*"><button type="button" id="profileReport">🧾 Meu relatório</button><button type="button" id="profileSupport">💬 Suporte FS</button><button type="button" id="profileSwitch">🔄 Trocar usuário</button><button type="button" class="danger" id="profileLogout">🚪 Sair da plataforma</button></div><div class="profile-details" id="profileDetails" hidden></div></section></div>
-<script src="vendedor-v35.js?v=4001"></script></body></html>
+<script src="vendedor-v35.js?v=4701"></script></body></html>

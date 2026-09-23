@@ -2494,10 +2494,16 @@
     const clone = card.cloneNode(true);
     clone.querySelectorAll('[data-chart-expand]').forEach(el => el.remove());
     clone.classList.add('dashboard-card-expanded');
-    const values = String(card.dataset.chartValues || '').split(',').filter(Boolean).map(Number);
-    const labels = String(card.dataset.chartLabels || '').split(',').filter(Boolean);
+    let values = String(card.dataset.chartValues || '').split(',').filter(Boolean).map(Number);
+    let labels = String(card.dataset.chartLabels || '').split(',').filter(Boolean);
     const metric = card.dataset.chartMetric || 'merc';
     const type = card.dataset.chartType || 'bar';
+    if (values.length && labels.length && labels.every(label => /^\d+$/.test(label))) {
+      const valueByDay = new Map(labels.map((label,index) => [Number(label), Number(values[index] || 0)]));
+      const lastDay = Math.max(...labels.map(Number));
+      labels = Array.from({length:lastDay}, (_,index) => String(index + 1));
+      values = labels.map(label => valueByDay.get(Number(label)) || 0);
+    }
     const oldSvg = clone.querySelector('.svg-chart');
     if (oldSvg && values.length && labels.length) {
       const wrap = document.createElement('div');
