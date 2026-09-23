@@ -1093,6 +1093,86 @@
     const safeName = String(seller.name || 'vendedor').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase();
     await shareOrDownloadImage(canvas, `${hasFollowUp ? 'resultado' : 'missao-diaria'}-${safeName || 'vendedor'}-${key}.png`, `${hasFollowUp ? analysis.periodLabel : 'Missão do dia'} - ${seller.name || 'Vendedor'}`);
   }
+  function sellerHistoricalCommissionRates(seller, source = db) {
+    const currentId = sellerIdentity(seller, (source.sellers || db.sellers || []).indexOf(seller));
+    const currentName = sellerKey(seller.name || '');
+    let mercSales = 0, mercCommission = 0, serviceSales = 0, serviceCommission = 0, samples = 0;
+    const consume = (item) => {
+      if (!item) return;
+      const entries = Object.values(item.daily || {});
+      let g = 0, svc = 0, mc = 0, sc = 0;
+      if (entries.length) {
+        entries.forEach((day) => {
+          const ds = num(day.warranty) + num(day.other) + num(day.mixed);
+          g += num(day.general); svc += ds;
+          mc += Object.prototype.hasOwnProperty.call(day,'commissionMercantile') ? num(day.commissionMercantile) : num(day.general) * num(day.commissionMercantileRate) / 100;
+          sc += Object.prototype.hasOwnProperty.call(day,'commissionService') ? num(day.commissionService) : ds * .05;
+        });
+      } else {
+        g = num(item.general); svc = num(item.warranty)+num(item.other)+num(item.mixed);
+        mc = num(item.commissionMercantile) || g * num(item.commissionMercantileRate) / 100;
+        sc = num(item.commissionService) || svc * (Object.prototype.hasOwnProperty.call(item,'commissionServiceRate') ? num(item.commissionServiceRate)/100 : .05);
+      }
+      if (g > 0 || svc > 0) samples += 1;
+      mercSales += g; mercCommission += mc; serviceSales += svc; serviceCommission += sc;
+    };
+    consume(seller);
+    const branch = String(source.branch || db.branch || '').trim().toLocaleUpperCase('pt-BR');
+    Object.values(vault.records || {}).forEach((record) => {
+      if (record === source || String(record.month) === String(source.month)) return;
+      if (String(record.branch || '').trim().toLocaleUpperCase('pt-BR') !== branch) return;
+      const match = (record.sellers || []).find((item,index) => sellerIdentity(item,index) === currentId || sellerKey(item.name) === currentName);
+      if (match) consume(match);
+    });
+    return {
+      mercantileRate: mercSales ? mercCommission / mercSales : 0,
+      serviceRate: serviceSales ? serviceCommission / serviceSales : 0,
+      samples,
+      mercSales, serviceSales, mercCommission, serviceCommission
+    };
+  }
+  function sellerPendingInfo(seller) {
+    const [yy, mm] = String(db.month || '').split('-').map(Number), last = new Date(yy, mm, 0).getDate();
+    const sameMonth = yy === today.getFullYear() && mm === today.getMonth()+1;
+    const cutoff = sameMonth ? Math.min(today.getDate(), last) : (new Date(yy,mm,0) < today ? last : 0);
+    let overdue = 0, considered = 0;
+    for (let d=1; d<=cutoff; d++) {
+      const key = `${db.month}-${String(d).padStart(2,'0')}`;
+      const branchDay = dayData(key), sellerDay = seller.daily?.[key];
+      const status = sellerDay?.status || branchDay.status;
+      if (status === 'off' || status === 'medical' || status === 'justified') continue;
+      considered += 1;
+      const has = sellerDay && (sellerDay.status === 'done' || sellerDay.status === 'partial' || hasSellerDayValue(sellerDay));
+      if (!has) overdue += 1;
+    }
+    return { overdue, considered };
+  }
+  function sellerHistoricalCommissionRates(seller) {
+    const id = sellerIdentity(seller, db.sellers.indexOf(seller)), name = seller.name || '';
+    const branch = String(db.branch || '').trim().toLocaleUpperCase('pt-BR');
+    let mercSales = 0, mercCommission = 0, serviceSales = 0, serviceCommission = 0, months = 0;
+    Object.values(vault.records || {}).forEach((record) => {
+      if (!record || record === db || record.month === db.month || String(record.branch || '').trim().toLocaleUpperCase('pt-BR') !== branch) return;
+      const match = (record.sellers || []).find((item, index) => sellerIdentity(item, index) === id || sellerKey(item.name) === sellerKey(name));
+      if (!match) return;
+      const entries = Object.values(match.daily || {});
+      let mSales = 0, mComm = 0, sSales = 0, sComm = 0;
+      entries.forEach((day) => {
+        const services = num(day.warranty) + num(day.other) + num(day.mixed);
+        mSales += num(day.general);
+        mComm += Object.prototype.hasOwnProperty.call(day,'commissionMercantile') ? num(day.commissionMercantile) : num(day.general) * num(day.commissionMercantileRate) / 100;
+        sSales += services;
+        sComm += Object.prototype.hasOwnProperty.call(day,'commissionService') ? num(day.commissionService) : services * .05;
+      });
+      if (!entries.length) {
+        mSales = num(match.general); mComm = num(match.commissionMercantile) || mSales * num(match.commissionMercantileRate) / 100;
+        sSales = num(match.warranty) + num(match.other) + num(match.mixed); sComm = num(match.commissionService) || sSales * .05;
+      }
+      if (mSales || sSales) months += 1;
+      mercSales += mSales; mercCommission += mComm; serviceSales += sSales; serviceCommission += sComm;
+    });
+    return { mercRate: mercSales ? mercCommission / mercSales : 0, serviceRate: serviceSales ? serviceCommission / serviceSales : 0, months };
+  }
   function sellerFinancials(seller, source = db) {
     const [year, month] = String(source.month || db.month).split('-').map(Number), calendarDays = new Date(year, month, 0).getDate();
     const services = num(seller.warranty) + num(seller.other) + num(seller.mixed);
@@ -1103,8 +1183,9 @@
     const legacyMercRate = num(seller.commissionMercantileRate) / 100;
     const mercantileCommission = hasDailyCommission ? dailyEntries.reduce((sum, day) => sum + (Object.prototype.hasOwnProperty.call(day,'commissionMercantile') ? num(day.commissionMercantile) : num(day.general) * num(day.commissionMercantileRate) / 100), 0) : (num(seller.commissionMercantile) || num(seller.general) * legacyMercRate);
     const serviceCommission = hasDailyCommission ? dailyEntries.reduce((sum, day) => { const dayServices=num(day.warranty)+num(day.other)+num(day.mixed); return sum + (Object.prototype.hasOwnProperty.call(day,'commissionService') ? num(day.commissionService) : dayServices*.05); }, 0) : (num(seller.commissionService) || services*.05);
-    const effectiveMercantileRate = num(seller.general) ? mercantileCommission / num(seller.general) : legacyMercRate;
-    const serviceRate = services ? serviceCommission / services : 0;
+    const historicalRates = sellerHistoricalCommissionRates(seller, source);
+    const effectiveMercantileRate = historicalRates.mercantileRate || (num(seller.general) ? mercantileCommission / num(seller.general) : legacyMercRate);
+    const serviceRate = historicalRates.serviceRate || (services ? serviceCommission / services : 0);
     const commissionSubtotal = mercantileCommission + serviceCommission;
     const plannedDays = num(seller.plannedDays) || num(source.businessDays);
     const sundayCount = Array.from({length:calendarDays}, (_,i) => new Date(year, month-1, i+1).getDay() === 0 ? 1 : 0).reduce((a,b)=>a+b,0);
@@ -1121,7 +1202,7 @@
     const targetServiceCommission = serviceGoal * serviceRate;
     const targetSubtotal = targetMercantileCommission + targetServiceCommission;
     const targetPaid = plannedDays ? targetSubtotal / plannedDays * paidDays : 0, targetTotal = targetSubtotal + targetPaid;
-    return { services, serviceCommission, mercantileCommission, commissionSubtotal, plannedDays, calendarDays, sundayCount, automaticRestDays, restDays, justifiedDays, paidDays, workedDays, dsr, total, projectedSubtotal, projectedDsr, projectedTotal, mercantileRate: effectiveMercantileRate, serviceRate, targetMercantileCommission, targetServiceCommission, targetSubtotal, targetPaid, targetTotal };
+    return { services, serviceCommission, mercantileCommission, commissionSubtotal, plannedDays, calendarDays, sundayCount, automaticRestDays, restDays, justifiedDays, paidDays, workedDays, dsr, total, projectedSubtotal, projectedDsr, projectedTotal, mercantileRate: effectiveMercantileRate, serviceRate, commissionHistorySamples: historicalRates.samples, targetMercantileCommission, targetServiceCommission, targetSubtotal, targetPaid, targetTotal };
   }
   function sellerFinancialComparison(seller, period = sellerResultPeriod(seller)) {
     const financial = sellerFinancials(seller), isClosure = period === 'month';
@@ -1170,13 +1251,67 @@
     panel.innerHTML = `<div class="section-title"><div><h2>Lançamentos diários do vendedor</h2><div class="hint">Dados recebidos pela sincronização do acesso individual. A visão do gestor é somente de acompanhamento.</div></div></div><div class="seller-summary"><div class="metric"><span>Mercantil acumulado</span><strong>${brl.format(total.general)}</strong></div><div class="metric"><span>Serviços acumulados</span><strong>${brl.format(total.services)}</strong></div><div class="metric"><span>Conversão</span><strong>${total.nfs?efficiencyPct.format(total.conversion):'—'}</strong></div><div class="metric"><span>Eficiência</span><strong>${total.eligible?efficiencyPct.format(total.efficiency):'—'}</strong></div></div><div class="table-wrap"><table><thead><tr><th>Dia</th><th>Status</th><th>Mercantil</th><th>Elegível</th><th>Serviços</th><th>Qtd. elegível</th><th>Garantias</th><th>Conversão</th><th>Eficiência</th></tr></thead><tbody>${rows || '<tr><td colspan="9" style="text-align:center">Nenhum lançamento diário recebido ainda.</td></tr>'}</tbody></table></div>`;
   }
   function sellerWorkspaceWeeks(seller) {
-    const rows = Object.entries(seller.daily || {}).sort(([a],[b]) => a.localeCompare(b));
-    const groups = new Map();
-    rows.forEach(([key, day]) => { const d=new Date(`${key}T12:00:00`); d.setDate(d.getDate()-((d.getDay()+6)%7)); const wk=isoDate(d.getFullYear(),d.getMonth()+1,d.getDate()); if(!groups.has(wk))groups.set(wk,[]); groups.get(wk).push([key,day]); });
-    return [...groups.entries()].map(([key,items]) => { const tmp={daily:Object.fromEntries(items)}, a=sellerDailyAggregate(tmp); return {key,items,a}; });
+    const [year, month] = String(db.month || '').split('-').map(Number), lastDay = new Date(year, month, 0).getDate();
+    const days = Array.from({length:lastDay}, (_,i) => {
+      const key = `${year}-${String(month).padStart(2,'0')}-${String(i+1).padStart(2,'0')}`;
+      const date = new Date(`${key}T12:00:00`);
+      const managed = db.daily?.[key] || {};
+      const data = { status: managed.status === 'off' ? 'off' : 'pending', ...(seller.daily?.[key] || {}) };
+      return { key, date, data, goalPercent:num(managed.goalPercent) };
+    });
+    const rawEnds = Array.isArray(db.weekEnds) ? db.weekEnds : String(db.weekEnds || '').split(/[,;\s]+/);
+    let ends = [...new Set(rawEnds.map(v=>Math.round(num(v))).filter(v=>v>=1&&v<=lastDay))].sort((a,b)=>a-b);
+    if (ends.length && ends.at(-1) !== lastDay) ends.push(lastDay);
+    let buckets = [];
+    if (ends.length) {
+      buckets = ends.map(()=>[]);
+      days.forEach(item => { const d=item.date.getDate(), idx=ends.findIndex(end=>d<=end); buckets[idx<0?buckets.length-1:idx].push(item); });
+      buckets = buckets.filter(Boolean).filter(x=>x.length);
+    } else {
+      const map = new Map();
+      days.forEach(item => { const monday=new Date(item.date); monday.setDate(monday.getDate()-((monday.getDay()+6)%7)); const k=isoDate(monday.getFullYear(),monday.getMonth()+1,monday.getDate()); if(!map.has(k))map.set(k,[]); map.get(k).push(item); });
+      buckets=[...map.values()];
+    }
+    return buckets.map((items,index) => {
+      const tmp={daily:Object.fromEntries(items.map(it=>[it.key,it.data]))}, a=sellerDailyAggregate(tmp);
+      const share=items.reduce((sum,it)=>sum+num(it.goalPercent),0)/100;
+      const mercGoal=num(seller.assignedGoal)*share, serviceGoal=num(seller.serviceGoal)*share;
+      const considered=items.filter(it=>it.data.status==='done'||it.data.status==='partial'||hasSellerDayValue(it.data)).length;
+      const pending=items.filter(it=>it.data.status==='pending'&&!hasSellerDayValue(it.data)&&it.data.status!=='off').length;
+      const endDate=items.at(-1).date, startDate=items[0].date, now=new Date(today); now.setHours(12,0,0,0);
+      const phase=now<startDate?'future':now>endDate?'closed':'current';
+      return { index, items, a, share, mercGoal, serviceGoal, considered, pending, phase, startDate, endDate };
+    });
   }
-  function sellerWorkspacePeriodCard(label, a, mercGoal, serviceGoal) {
-    return `<div class="seller-workspace-card"><span>${label}</span><strong>${brl.format(a.general)}</strong><small>Serviços ${brl.format(a.services)} • Conv. ${a.nfs?efficiencyPct.format(a.conversion):'—'} • Efic. ${a.eligible?efficiencyPct.format(a.efficiency):'—'}</small></div>`;
+  function sellerWorkspaceWeekCard(w) {
+    const conv = w.a.nfs ? efficiencyPct.format(w.a.conversion) : '—', eff = w.a.eligible ? efficiencyPct.format(w.a.efficiency) : '—';
+    const missingMerc = Math.max(0,w.mercGoal-w.a.general), missingServ = Math.max(0,w.serviceGoal-w.a.services);
+    const avgMerc = w.launched ? w.a.general/w.launched : 0, avgServ = w.launched ? w.a.services/w.launched : 0;
+    const projMerc = w.launched ? avgMerc*w.working : 0, projServ = w.launched ? avgServ*w.working : 0;
+    const ticket = w.a.invoiceCount ? w.a.general/w.a.invoiceCount : 0;
+    const commissions = w.items.reduce((sum,[,day]) => {
+      const services = num(day.warranty)+num(day.other)+num(day.mixed);
+      const merc = Object.prototype.hasOwnProperty.call(day,'commissionMercantile') ? num(day.commissionMercantile) : num(day.general)*num(day.commissionMercantileRate)/100;
+      const serv = Object.prototype.hasOwnProperty.call(day,'commissionService') ? num(day.commissionService) : services*.05;
+      return sum + merc + serv;
+    },0);
+    const pending = Math.max(0,w.working-w.launched);
+    const range = w.first && w.last ? `${w.first.toLocaleDateString('pt-BR')} a ${w.last.toLocaleDateString('pt-BR')}` : '';
+    const badge = w.phase==='future'?'Futura':w.phase==='current'?'Em andamento':w.tone==='good'?'Meta atingida':'Encerrada abaixo da meta';
+    return `<article class="seller-week-card ${w.tone}"><header><div><strong>${w.index+1}ª semana</strong><small>${range}</small></div><span>${badge}</span></header><div class="seller-week-grid">
+      <div><span>💰 Mercantil</span><strong>${brl.format(w.a.general)}</strong><small>${w.mercGoal?`${pct.format(w.mercRate)} da meta • falta ${brl.format(missingMerc)}`:'Meta não cadastrada'}</small></div>
+      <div><span>🛡️ Serviços</span><strong>${brl.format(w.a.services)}</strong><small>${w.serviceGoal?`${pct.format(w.serviceRate)} da meta • falta ${brl.format(missingServ)}`:'Meta não cadastrada'}</small></div>
+      <div><span>🎯 Conversão</span><strong>${conv}</strong><small>Meta 35%</small></div>
+      <div><span>⚡ Eficiência</span><strong>${eff}</strong><small>Meta 7%</small></div>
+      <div><span>🧾 Ticket médio</span><strong>${w.a.invoiceCount?brl.format(ticket):'—'}</strong><small>${w.a.invoiceCount||0} nota(s) fiscal(is)</small></div>
+      <div><span>💵 Comissões</span><strong>${brl.format(commissions)}</strong><small>Mercantil + serviços</small></div>
+      <div><span>📈 Projeção mercantil</span><strong>${brl.format(projMerc)}</strong><small>${w.mercGoal?pct.format(projMerc/w.mercGoal)+' projetado':'Sem meta'}</small></div>
+      <div><span>📈 Projeção serviços</span><strong>${brl.format(projServ)}</strong><small>${w.serviceGoal?pct.format(projServ/w.serviceGoal)+' projetado':'Sem meta'}</small></div>
+      <div><span>⚡ Média mercantil/dia</span><strong>${brl.format(avgMerc)}</strong><small>${w.launched} dia(s) lançado(s)</small></div>
+      <div><span>⚡ Média serviços/dia</span><strong>${brl.format(avgServ)}</strong><small>${w.working} dia(s) planejado(s)</small></div>
+      <div><span>📅 Dias da semana</span><strong>${w.launched}/${w.working}</strong><small>${pending} pendente(s)</small></div>
+      <div><span>📊 Distribuição</span><strong>${pct2.format(w.share)}</strong><small>da meta mensal</small></div>
+    </div><footer>Semana sincronizada com a configuração gerencial e com a distribuição diária da competência.</footer></article>`;
   }
   function hasSellerDayValue(day){return !!day&&['general','eligible','warranty','other','mixed','nfs','warrantyQty'].some(f=>num(day[f])>0)}
   function sellerDashboardPeriodRows(seller, period='month') {
@@ -1243,19 +1378,26 @@
   
   function renderSellerWorkspace(seller) {
     const host=document.getElementById('sellerWorkspace'); if(!host)return;
-    const total=sellerDailyAggregate(seller), metrics=sellerMetrics(seller), history=sellerProfileHistory(seller), days=Object.entries(seller.daily||{}).sort(([a],[b])=>b.localeCompare(a));
+    const total=sellerDailyAggregate(seller), metrics=sellerMetrics(seller), history=sellerProfileHistory(seller);
+    const [workspaceYear,workspaceMonth]=String(db.month||'').split('-').map(Number), workspaceLastDay=new Date(workspaceYear,workspaceMonth,0).getDate();
+    const days=Array.from({length:workspaceLastDay},(_,i)=>{const key=`${workspaceYear}-${String(workspaceMonth).padStart(2,'0')}-${String(i+1).padStart(2,'0')}`;const branchDay=db.daily?.[key]||{};const base={status:branchDay.status==='off'?'off':'pending'};return [key,{...base,...(seller.daily?.[key]||{})}]}).sort(([a],[b])=>b.localeCompare(a));
     const financial=sellerFinancials(seller), ecommerce=num(seller.ecommerce), mercTotal=total.general+ecommerce, planned=Math.max(1,num(db.businessDays)||metrics.plannedDays||1), consideredDays=Math.max(total.days,financial.workedDays||0), remaining=Math.max(0,planned-consideredDays), projMerc=consideredDays?total.general/consideredDays*planned+ecommerce:ecommerce, projServ=consideredDays?total.services/consideredDays*planned:0, avgMerc=consideredDays?mercTotal/consideredDays:0, avgServ=consideredDays?total.services/consideredDays:0, needMerc=remaining?Math.max(0,num(seller.assignedGoal)-mercTotal)/remaining:0, needServ=remaining?Math.max(0,num(seller.serviceGoal)-total.services)/remaining:0;
-    const todayKey=isoDate(today.getFullYear(), today.getMonth()+1, today.getDate()), todayData=seller.daily?.[todayKey]; const hasToday=todayData&&['general','eligible','warranty','other','mixed','nfs','warrantyQty'].some(f=>num(todayData[f])>0); const launchedDays=days.filter(([,d])=>d.status==='done'||hasSellerDayValue(d)).length, pendingDays=days.filter(([k,d])=>k<=todayKey&&d.status!=='off'&&d.status!=='medical'&&d.status!=='justified'&&d.status!=='done'&&!hasSellerDayValue(d)).length;
+    const todayKey=isoDate(today.getFullYear(), today.getMonth()+1, today.getDate()), todayData=seller.daily?.[todayKey];
+    const hasToday=!!(todayData&&(todayData.status==='done'||todayData.status==='partial'||hasSellerDayValue(todayData)));
+    const todayExcused=!!(todayData&&['off','medical','justified'].includes(todayData.status));
+    const pendingToday=String(db.month)===todayKey.slice(0,7)&&!hasToday&&!todayExcused;
+    const launchedDays=days.filter(([,d])=>d.status==='done'||d.status==='partial'||hasSellerDayValue(d)).length, pendingInfo=sellerPendingInfo(seller), overdueDays=pendingInfo.overdue;
+    const monthPending=Math.max(0,planned-launchedDays);
     const tabs=[['overview','🏠 Visão geral'],['daily','📝 Lançamentos'],['weekly','📊 Semanal'],['goals','🎯 Metas'],['dashboard','📊 Dashboard'],['compiled','📈 Compilado']];
     const mercRate=num(seller.assignedGoal)?mercTotal/num(seller.assignedGoal):0, servRate=num(seller.serviceGoal)?total.services/num(seller.serviceGoal):0;
-    const statusTone=pendingDays?'attention':hasToday?'ok':'neutral';
-    const overview=`<div class="seller-overview-strip"><div><span>📅 LANÇAMENTOS</span><strong>${launchedDays}</strong><small>dia(s) com resultado</small></div><div class="${statusTone}"><span>${pendingDays?'⚠️':'✅'} PENDÊNCIAS</span><strong>${pendingDays}</strong><small>${pendingDays?'requer acompanhamento':'nenhuma pendência registrada'}</small></div><div><span>☁️ SINCRONIZAÇÃO</span><strong>${hasToday?'Hoje':'Ativa'}</strong><small>${seller.updatedAt?new Date(seller.updatedAt).toLocaleString('pt-BR'):'aguardando atualização'}</small></div></div>
+    const statusTone=pendingToday||overdueDays?'attention':hasToday?'ok':'neutral';
+    const overview=`<div class="seller-overview-strip"><div><span>📅 LANÇAMENTOS</span><strong>${launchedDays}</strong><small>${monthPending} dia(s) ainda sem lançamento no mês</small></div><div class="${statusTone}"><span>${pendingToday?'⚠️':'✅'} PENDÊNCIAS</span><strong>${monthPending}</strong><small>${pendingToday?'Pendente hoje • ':''}${overdueDays?`${overdueDays} dia(s) vencido(s) • `:''}${monthPending?`${monthPending} pendente(s) na competência`:'nenhuma pendência registrada'}</small></div><div><span>☁️ SINCRONIZAÇÃO</span><strong>${hasToday?'Hoje':'Ativa'}</strong><small>${seller.updatedAt?new Date(seller.updatedAt).toLocaleString('pt-BR'):'aguardando atualização'}</small></div></div>
     <h3 class="seller-block-title">📊 Desempenho e projeção</h3><div class="seller-workspace-grid">${[
       ['💰 Mercantil',brl.format(mercTotal),num(seller.assignedGoal)?`${pct.format(mercRate)} da meta`:'Meta não cadastrada'],['🛡️ Serviços',brl.format(total.services),num(seller.serviceGoal)?`${pct.format(servRate)} da meta`:'Meta não cadastrada'],
       ['🎯 Conversão',total.nfs?efficiencyPct.format(total.conversion):'—','Meta 35%'],['⚡ Eficiência',total.eligible?efficiencyPct.format(total.efficiency):'—','Meta 7%'],
       ['📈 Projeção mercantil',brl.format(projMerc),num(seller.assignedGoal)?`${pct.format(projMerc/num(seller.assignedGoal))} projetado`:'—'],['📈 Projeção serviços',brl.format(projServ),num(seller.serviceGoal)?`${pct.format(projServ/num(seller.serviceGoal))} projetado`:'—'],
       ['⚡ Média mercantil/dia',brl.format(avgMerc),`Necessário ${brl.format(needMerc)}/dia`],['⚡ Média serviços/dia',brl.format(avgServ),`Necessário ${brl.format(needServ)}/dia`],
-      ['📅 Dias considerados',String(consideredDays),`${remaining} restante(s) de ${planned}`],['🌐 E-commerce',brl.format(ecommerce),'Acumulado do mês']
+      ['📅 Dias considerados',String(consideredDays),`${remaining} restante(s) de ${planned}`],['🌐 E-commerce',brl.format(ecommerce),'Acumulado do mês'],['💹 Comissão média mercantil',financial.mercantileRate?pct2.format(financial.mercantileRate):'—',financial.commissionHistorySamples>1?`Média ponderada com ${financial.commissionHistorySamples} competência(s)`:'Calculada pelos lançamentos atuais'],['💹 Comissão média serviços',financial.serviceRate?pct2.format(financial.serviceRate):'—',financial.commissionHistorySamples>1?`Média ponderada com ${financial.commissionHistorySamples} competência(s)`:'Calculada pelos lançamentos atuais']
     ].map(([l,v,n])=>`<div class="seller-workspace-card"><span>${l}</span><strong>${v}</strong><small>${n}</small></div>`).join('')}</div>
     <h3 class="seller-block-title">💵 Ganhos e projeção financeira</h3><div class="seller-finance-dashboard"><div class="seller-finance-main"><span>💰 PROJEÇÃO DE GANHO TOTAL</span><strong>${brl.format(financial.projectedTotal)}</strong><small>Comissões projetadas + DSR estimado</small></div>${[
       ['Comissão mercantil atual',brl.format(financial.mercantileCommission),'Valor lançado pelo vendedor'],
@@ -1263,14 +1405,19 @@
       ['Subtotal atual',brl.format(financial.commissionSubtotal),'Mercantil + serviços'],
       ['DSR estimado',brl.format(financial.projectedDsr),`${financial.restDays} domingo(s)/repouso(s) • ${financial.justifiedDays} ausência(s) considerada(s)`],
       ['Projeção das comissões',brl.format(financial.projectedSubtotal),`${financial.workedDays} dia(s) considerados de ${financial.plannedDays}`],
+      ['Média comissão mercantil',pct2.format(financial.mercantileRate),`${financial.commissionHistorySamples||1} competência(s) considerada(s)`],
+      ['Média comissão serviços',pct2.format(financial.serviceRate),`${financial.commissionHistorySamples||1} competência(s) considerada(s)`],
       ['Ganho se bater as metas',brl.format(financial.targetTotal),'Potencial financeiro pelas metas cadastradas']
     ].map(([l,v,n])=>`<div class="seller-finance-item"><span>${l}</span><strong>${v}</strong><small>${n}</small></div>`).join('')}</div>`;
-    const daily=`<div class="seller-day-cards">${days.length?days.map(([key,day])=>{const services=num(day.warranty)+num(day.other)+num(day.mixed),conv=num(day.nfs)?num(day.warrantyQty)/num(day.nfs):0,eff=num(day.eligible)?services/num(day.eligible):0,mercComm=Object.prototype.hasOwnProperty.call(day,'commissionMercantile')?num(day.commissionMercantile):num(day.general)*num(day.commissionMercantileRate)/100,servComm=Object.prototype.hasOwnProperty.call(day,'commissionService')?num(day.commissionService):services*.05;const has=hasSellerDayValue(day);const st=day.status==='off'?'💤 Não trabalha':day.status==='medical'?'🩺 Atestado':day.status==='justified'?'📋 Justificada':day.status==='done'?'✅ Finalizado':has||day.status==='partial'?'🟡 Parcial':'⚠️ Pendente';return `<article class="seller-day-card"><div><span>DIA</span><strong>${new Date(`${key}T12:00:00`).toLocaleDateString('pt-BR')}</strong></div><div><span>STATUS</span><strong>${st}</strong></div><div><span>MERCANTIL</span><strong>${brl.format(num(day.general))}</strong></div><div><span>SERVIÇOS</span><strong>${brl.format(services)}</strong></div><div><span>CONVERSÃO</span><strong>${num(day.nfs)?efficiencyPct.format(conv):'—'}</strong></div><div><span>EFICIÊNCIA</span><strong>${num(day.eligible)?efficiencyPct.format(eff):'—'}</strong></div><div><span>COMISSÃO MERC.</span><strong>${brl.format(mercComm)}</strong><small>valor informado</small></div><div><span>COMISSÃO SERVIÇOS</span><strong>${brl.format(servComm)}</strong><small>valor informado</small></div></article>`}).join(''):'<div class="empty">Nenhum lançamento recebido deste vendedor.</div>'}</div>`;
-    const weeks=sellerWorkspaceWeeks(seller); const weekly=`<div class="seller-workspace-grid">${weeks.length?weeks.map((w,i)=>sellerWorkspacePeriodCard(`${i+1}ª semana`,w.a,0,0)).join(''):'<div class="empty">Sem resultados semanais ainda.</div>'}</div>`;
+    const daily=`<div class="seller-day-cards">${days.length?days.map(([key,day])=>{const services=num(day.warranty)+num(day.other)+num(day.mixed),conv=num(day.nfs)?num(day.warrantyQty)/num(day.nfs):0,eff=num(day.eligible)?services/num(day.eligible):0,mercComm=Object.prototype.hasOwnProperty.call(day,'commissionMercantile')?num(day.commissionMercantile):num(day.general)*num(day.commissionMercantileRate)/100,servComm=Object.prototype.hasOwnProperty.call(day,'commissionService')?num(day.commissionService):services*.05;const has=hasSellerDayValue(day);const st=day.status==='off'?'💤 Não trabalha':day.status==='medical'?'🩺 Atestado':day.status==='justified'?'📋 Justificada':day.status==='done'?'✅ Finalizado':has||day.status==='partial'?'🟡 Parcial':'⚠️ Pendente';return `<article class="seller-day-card seller-day-accordion" data-seller-day="${key}"><button type="button" class="seller-day-head" data-seller-day-toggle="${key}" aria-expanded="false"><div><span>DIA</span><strong>${new Date(`${key}T12:00:00`).toLocaleDateString('pt-BR',{day:'2-digit',month:'long'})}</strong></div><div class="seller-day-status"><span>STATUS</span><strong>${st}</strong></div><span class="seller-day-chevron">⌄</span></button><div class="seller-day-detail" hidden>${[
+['MERCANTIL',brl.format(num(day.general))],['VENDA ELEGÍVEL',brl.format(num(day.eligible))],['SERVIÇOS',brl.format(services)],['NOTAS FISCAIS',String(num(day.invoiceCount))],['QTD. ELEGÍVEL',String(num(day.nfs))],['QTD. GARANTIAS',String(num(day.warrantyQty))],['CONVERSÃO',num(day.nfs)?efficiencyPct.format(conv):'—'],['EFICIÊNCIA',num(day.eligible)?efficiencyPct.format(eff):'—'],['COMISSÃO MERC.',brl.format(mercComm)],['COMISSÃO SERVIÇOS',brl.format(servComm)],['TOTAL COMISSÕES',brl.format(mercComm+servComm)]
+].map(([l,v])=>`<div><span>${l}</span><strong>${v}</strong></div>`).join('')}</div></article>`}).join(''):'<div class="empty">Nenhum lançamento recebido deste vendedor.</div>'}</div>`;
+    const weeks=sellerWorkspaceWeeks(seller); const weekly=`<div class="seller-week-list">${weeks.length?weeks.map(sellerWorkspaceWeekCard).join(''):'<div class="empty">Sem resultados semanais ainda.</div>'}</div>`;
     const goals=`<div class="seller-goal-pair"><div class="seller-goal-box"><span>💰 Meta mercantil mensal</span><h2>${brl.format(num(seller.assignedGoal))}</h2><div class="seller-progress"><i style="width:${Math.min(100,mercRate*100)}%"></i></div><b>${num(seller.assignedGoal)?pct.format(mercRate):'Não cadastrada'}</b><p>${num(seller.assignedGoal)?`Faltam ${brl.format(Math.max(0,num(seller.assignedGoal)-mercTotal))}`:'O vendedor ainda não cadastrou esta meta.'}</p></div><div class="seller-goal-box service"><span>🛡️ Meta de serviços mensal</span><h2>${brl.format(num(seller.serviceGoal))}</h2><div class="seller-progress"><i style="width:${Math.min(100,servRate*100)}%"></i></div><b>${num(seller.serviceGoal)?pct.format(servRate):'Não cadastrada'}</b><p>${num(seller.serviceGoal)?`Faltam ${brl.format(Math.max(0,num(seller.serviceGoal)-total.services))}`:'O vendedor ainda não cadastrou esta meta.'}</p></div></div><div class="seller-workspace-grid" style="margin-top:12px"><div class="seller-workspace-card"><span>🎯 Conversão</span><strong>35,00%</strong><small>Meta fixa</small></div><div class="seller-workspace-card"><span>⚡ Eficiência</span><strong>7,00%</strong><small>Meta fixa</small></div><div class="seller-workspace-card"><span>💵 Comissões</span><strong>Em R$</strong><small>Informadas nos lançamentos</small></div><div class="seller-workspace-card"><span>📅 Dias da filial</span><strong>${planned}</strong><small>Definidos pela gestão</small></div></div>`;
     const compiled=`<div class="seller-finance-dashboard compiled-finance"><div class="seller-finance-main"><span>💵 PROJEÇÃO FINANCEIRA ATUAL</span><strong>${brl.format(financial.projectedTotal)}</strong><small>Inclui comissões informadas e DSR estimado</small></div></div><div class="seller-workspace-grid" style="margin-top:12px">${history.length?history.map((h)=>{const a=h.seller.daily?sellerDailyAggregate(h.seller):{general:num(h.seller.general),services:h.services,eligible:num(h.seller.eligible),nfs:num(h.seller.nfs),warrantyQty:num(h.seller.warrantyQty)};a.general+=num(h.seller.ecommerce);a.conversion=a.nfs?a.warrantyQty/a.nfs:0;a.efficiency=a.eligible?a.services/a.eligible:0;return sellerWorkspacePeriodCard(monthLabel(h.month),a,num(h.seller.assignedGoal),num(h.seller.serviceGoal))}).join(''):'<div class="empty">Ainda não há histórico de outras competências.</div>'}</div>`;
     const dashboard='<div class="seller-dashboard-target" data-period="month" data-metric="merc" data-compare="prev"></div>'; host.innerHTML=`<nav class="seller-workspace-tabs">${tabs.map(([id,label])=>`<button class="seller-workspace-tab ${sellerWorkspaceTab===id?'active':''}" data-seller-workspace-tab="${id}">${label}</button>`).join('')}</nav>${tabs.map(([id])=>`<section class="seller-workspace-view ${sellerWorkspaceTab===id?'active':''}" data-seller-workspace-view="${id}">${id==='overview'?overview:id==='daily'?daily:id==='weekly'?weekly:id==='goals'?goals:id==='dashboard'?dashboard:compiled}</section>`).join('')}`; const dashRoot=host.querySelector('.seller-dashboard-target'); if(dashRoot)mountSellerDashboard(seller,dashRoot);
     host.querySelectorAll('[data-seller-workspace-tab]').forEach(btn=>btn.addEventListener('click',()=>{sellerWorkspaceTab=btn.dataset.sellerWorkspaceTab;renderSellerWorkspace(seller);const modal=document.querySelector('#sellerProfile>article');if(modal)modal.scrollTo({top:0,behavior:'smooth'});}));
+    host.querySelectorAll('[data-seller-day-toggle]').forEach(btn=>btn.addEventListener('click',()=>{const card=btn.closest('.seller-day-accordion'),detail=card?.querySelector('.seller-day-detail'),open=btn.getAttribute('aria-expanded')==='true';btn.setAttribute('aria-expanded',String(!open));if(detail)detail.hidden=open;card?.classList.toggle('open',!open);}));
   }
   function renderSellerProfile() {
     if (!activeSellerProfileId) return;
@@ -1294,7 +1441,7 @@
     document.getElementById('profileCommissionServiceRate').value = '';
     document.getElementById('profileRestDays').value = financial.restDays;
     document.getElementById('profileJustifiedDays').value = num(seller.justifiedDays) || '';
-    document.getElementById('sellerFinanceResults').innerHTML = `<div class="metric"><span>COMISSÃO MERCANTIL</span><strong>${brl.format(financial.mercantileCommission)}</strong></div><div class="metric"><span>COMISSÃO SERVIÇOS</span><strong>${brl.format(financial.serviceCommission)}</strong></div><div class="metric"><span>SUBTOTAL COMISSÕES</span><strong>${brl.format(financial.commissionSubtotal)}</strong></div><div class="metric"><span>REPOUSOS + ATESTADOS ESTIMADOS</span><strong>${brl.format(financial.dsr)}</strong><small>${financial.restDays} repouso(s) + ${financial.justifiedDays} atestado(s)</small></div><div class="metric financial-highlight"><span>GANHO APURADO / ESTIMADO</span><strong>${brl.format(financial.total)}</strong></div><div class="metric financial-highlight"><span>${financialComparison.currentLabel.toUpperCase()}</span><strong>${brl.format(financialComparison.current)}</strong></div><div class="metric financial-highlight"><span>GANHO SE BATER AS METAS</span><strong>${brl.format(financial.targetTotal)}</strong></div><div class="metric financial-highlight"><span>${financialComparison.gapLabel.toUpperCase()}</span><strong>${brl.format(Math.abs(financialComparison.gap))}</strong><small>${financialComparison.gapNote}</small></div><div class="metric"><span>COMISSÃO-ALVO MERCANTIL</span><strong>${brl.format(financial.targetMercantileCommission)}</strong></div><div class="metric"><span>COMISSÃO-ALVO SERVIÇOS</span><strong>${brl.format(financial.targetServiceCommission)}</strong></div>`;
+    document.getElementById('sellerFinanceResults').innerHTML = `<div class="metric"><span>COMISSÃO MERCANTIL</span><strong>${brl.format(financial.mercantileCommission)}</strong></div><div class="metric"><span>COMISSÃO SERVIÇOS</span><strong>${brl.format(financial.serviceCommission)}</strong></div><div class="metric"><span>SUBTOTAL COMISSÕES</span><strong>${brl.format(financial.commissionSubtotal)}</strong></div><div class="metric"><span>REPOUSOS + ATESTADOS ESTIMADOS</span><strong>${brl.format(financial.dsr)}</strong><small>${financial.restDays} repouso(s) + ${financial.justifiedDays} atestado(s)</small></div><div class="metric financial-highlight"><span>GANHO APURADO / ESTIMADO</span><strong>${brl.format(financial.total)}</strong></div><div class="metric financial-highlight"><span>${financialComparison.currentLabel.toUpperCase()}</span><strong>${brl.format(financialComparison.current)}</strong></div><div class="metric financial-highlight"><span>GANHO SE BATER AS METAS</span><strong>${brl.format(financial.targetTotal)}</strong></div><div class="metric financial-highlight"><span>${financialComparison.gapLabel.toUpperCase()}</span><strong>${brl.format(Math.abs(financialComparison.gap))}</strong><small>${financialComparison.gapNote}</small></div><div class="metric"><span>MÉDIA % COMISSÃO MERCANTIL</span><strong>${pct2.format(financial.mercantileRate)}</strong><small>média ponderada pelo histórico disponível</small></div><div class="metric"><span>MÉDIA % COMISSÃO SERVIÇOS</span><strong>${pct2.format(financial.serviceRate)}</strong><small>média ponderada pelo histórico disponível</small></div><div class="metric"><span>COMISSÃO-ALVO MERCANTIL</span><strong>${brl.format(financial.targetMercantileCommission)}</strong></div><div class="metric"><span>COMISSÃO-ALVO SERVIÇOS</span><strong>${brl.format(financial.targetServiceCommission)}</strong></div>`;
     const projectionRate = expectedTotal ? financial.projectedTotal / expectedTotal : 0;
     document.getElementById('sellerProfileDirection').innerHTML = `<strong>Leitura para a reunião:</strong> ${!financial.mercantileRate && !financial.serviceRate ? 'informe as taxas de comissão para ativar as projeções financeiras.' : financial.projectedTotal >= expectedTotal && expectedTotal ? 'a projeção financeira está dentro ou acima do ganho previsto ao bater as metas.' : expectedTotal && financial.projectedTotal ? `a projeção atual está em ${pct.format(projectionRate)} do ganho previsto ao bater as metas.` : `ao atingir as metas cadastradas, a estimativa de ganho é ${brl.format(expectedTotal)}, incluindo repousos e atestados informados.`}`;
     const historyRow = (item) => `<tr><td>${esc(monthLabel(item.month))}</td><td>${brl.format(num(item.seller.general))}</td><td>${brl.format(item.services)}</td><td>${brl.format(item.ticket)}</td><td>${brl.format(item.financial.mercantileCommission)}</td><td>${brl.format(item.financial.serviceCommission)}</td><td>${brl.format(item.financial.dsr)}</td><td>${brl.format(item.financial.total)}</td><td>${pct2.format(item.financial.mercantileRate)}</td></tr>`;
@@ -1320,11 +1467,11 @@
     const todayKey = isoDate(today.getFullYear(), today.getMonth() + 1, today.getDate());
     const inMonth = todayKey.startsWith(`${db.month}-`);
     const key = inMonth ? todayKey : `${db.month}-${String(Math.min(new Date(year, month, 0).getDate(), 1)).padStart(2,'0')}`;
-    const day = seller.daily?.[key];
-    const hasAny = day && ['general','eligible','warranty','other','mixed','nfs','warrantyQty'].some((field) => num(day[field]) > 0);
-    if (day?.status === 'done' || hasAny) return { label:'Atualizado hoje', cls:'ok' };
-    if (day?.status === 'off') return { label:'Não trabalha hoje', cls:'ok' };
-    return { label:'Pendente hoje', cls:'bad' };
+    const day = seller.daily?.[key], pending = sellerPendingInfo(seller);
+    const hasAny = day && (day.status==='partial' || ['general','eligible','warranty','other','mixed','nfs','warrantyQty'].some((field) => num(day[field]) > 0));
+    if (day?.status === 'done' || hasAny) return { label:'Atualizado hoje', cls:'ok', overdue:pending.overdue };
+    if (day?.status === 'off' || day?.status === 'medical' || day?.status === 'justified') return { label:'Sem lançamento hoje', cls:'ok', overdue:pending.overdue };
+    return { label:'Pendente hoje', cls:'bad', overdue:pending.overdue };
   }
   let sellerEditIndex = -1;
   function openSellerEditor(index) {
@@ -1376,13 +1523,15 @@
     list.innerHTML = db.sellers.map((seller, index) => {
       const metrics = sellerMetrics(seller), daily = sellerDailyAggregate(seller), status = sellerDailyStatus(seller);
       const commission = sellerFinancials(seller);
+      const launchedCount = Object.values(seller.daily||{}).filter(d=>d&&(d.status==='done'||d.status==='partial'||hasSellerDayValue(d))).length;
+      const monthPending = Math.max(0, metrics.plannedDays - launchedCount);
       return `<article class="seller-directory-card" data-i="${index}">
-        <div class="seller-person"><strong>${esc(seller.name || `Vendedor ${index + 1}`)}</strong><span>${metrics.plannedDays} dias planejados • ${daily.days} lançados • ${metrics.remainingDays} restantes</span></div>
+        <div class="seller-person"><strong>${esc(seller.name || `Vendedor ${index + 1}`)}</strong><span>${metrics.plannedDays} dias planejados • ${launchedCount} lançados • ${Math.max(0,metrics.plannedDays-launchedCount)} sem lançamento</span></div>
         <div class="seller-mini-kpi"><span>Mercantil</span><strong>${brl.format(daily.general+num(seller.ecommerce))}</strong></div>
         <div class="seller-mini-kpi"><span>Serviços</span><strong>${brl.format(daily.services)}</strong></div>
         <div class="seller-mini-kpi"><span>Conversão</span><strong>${daily.nfs ? efficiencyPct.format(daily.conversion) : '—'}</strong></div>
         <div class="seller-mini-kpi"><span>Eficiência</span><strong>${daily.eligible ? efficiencyPct.format(daily.efficiency) : '—'}</strong></div>
-        <div class="seller-card-footer"><div class="seller-card-status"><span class="seller-pending ${status.cls}">${status.label}</span><small class="seller-updated"><span class="updated-full">${seller.updatedAt?'🕐 '+new Date(seller.updatedAt).toLocaleString('pt-BR'):'🕐 Sem atualização'}</span><span class="updated-short">${seller.updatedAt?'🕐 '+new Date(seller.updatedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'🕐 —'}</span></small></div>
+        <div class="seller-card-footer"><div class="seller-card-status"><span class="seller-pending ${status.cls}">${status.label}${monthPending?` • ${monthPending} no mês`:''}</span>${status.overdue?`<span class="seller-overdue">📅 ${status.overdue} dia(s) pendente(s)</span>`:''}<small class="seller-updated"><span class="updated-full">${seller.updatedAt?'🕐 '+new Date(seller.updatedAt).toLocaleString('pt-BR'):'🕐 Sem atualização'}</span><span class="updated-short">${seller.updatedAt?'🕐 '+new Date(seller.updatedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'🕐 —'}</span></small></div>
         <div class="seller-directory-actions"><button type="button" class="btn primary small seller-open-btn" data-open-seller="${index}"><span class="action-icon">👁️</span><span class="action-label">Ver</span></button><button type="button" class="btn secondary small seller-edit-btn" data-edit-seller="${index}"><span class="action-icon">✏️</span><span class="action-label">Editar</span></button><button type="button" class="btn danger small seller-delete-btn" data-delete-seller="${index}"><span class="action-icon">🗑️</span><span class="action-label">Excluir</span></button></div></div>
       </article>`;
     }).join('');
