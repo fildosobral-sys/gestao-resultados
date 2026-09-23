@@ -145,11 +145,9 @@
         }
         status('↓ Nova atualização recebida da nuvem', 'busy');
         try {
-          const activeView = document.querySelector('.view.active')?.id;
-          if (activeView) sessionStorage.setItem('fs_resultados_active_view', activeView);
-          sessionStorage.setItem('fs_resultados_scroll_y', String(window.scrollY || 0));
+          window.dispatchEvent(new CustomEvent('results-cloud-updated', { detail: { vault: reconciled } }));
         } catch (_) {}
-        setTimeout(() => location.reload(), 700);
+        setTimeout(() => status('✓ Sincronizado com a nuvem'), 650);
       } catch (error) {
         status('⚠ Salvo neste aparelho; sem conexão com a nuvem', 'error');
       } finally { cleanup(); }
@@ -166,5 +164,10 @@
     setTimeout(pull, 400);
     setInterval(pull, POLL_MS);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) pull(); });
+    window.addEventListener('online', () => {
+      if (pending) { clearTimeout(timer); timer = setTimeout(pushNow, 180); }
+      else setTimeout(pull, 220);
+    });
+    window.addEventListener('offline', () => status('✓ Dados salvos neste aparelho • sincronização em segundo plano', 'error'));
   });
 })();

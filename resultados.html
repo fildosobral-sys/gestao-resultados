@@ -523,6 +523,20 @@ body.seller-modal-open{overflow:hidden}
 }
 </style>
 
+
+<style id="desktop-dashboard-interactions-v45">
+.dashboard-chart-expand{display:none;position:absolute;right:10px;top:10px;width:34px;height:34px;border:1px solid #dbe6f2;border-radius:10px;background:rgba(255,255,255,.92);color:#315a87;font-size:18px;font-weight:900;cursor:pointer;box-shadow:0 5px 14px rgba(15,42,67,.08);z-index:2}
+.dashboard-card{position:relative;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease,background .18s ease}
+.dashboard-chart-modal[hidden]{display:none!important}.dashboard-chart-modal{position:fixed;inset:0;z-index:99999;background:rgba(9,24,42,.58);display:grid;place-items:center;padding:28px}.dashboard-chart-modal-dialog{width:min(1180px,94vw);max-height:90vh;background:#fff;border-radius:24px;box-shadow:0 28px 90px rgba(8,24,42,.35);overflow:hidden;display:flex;flex-direction:column}.dashboard-chart-modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid #e4ebf3;background:linear-gradient(135deg,#f7fbff,#f5f3ff)}.dashboard-chart-modal-head strong{font-size:21px;color:#17324d}.dashboard-chart-modal-close{width:40px;height:40px;border:0;border-radius:12px;background:#eef3f8;color:#17324d;font-size:25px;cursor:pointer}.dashboard-chart-modal-body{padding:18px 20px 24px;overflow:auto}.dashboard-card-expanded{border:0!important;box-shadow:none!important;padding:0!important;background:#fff!important}.dashboard-card-expanded .svg-chart{width:100%;max-height:68vh;height:auto}.dashboard-chart-modal-open{overflow:hidden!important}
+@media (min-width:761px){
+  .dashboard-card:hover,.dashboard-kpi:hover,.dashboard-section:hover,.seller-directory-card:hover,.overview-card:hover,.panel:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(23,50,77,.10)}
+  .dashboard-card:hover{border-color:#b8cee6;background:#fcfeff}
+  .dashboard-card:hover .dashboard-chart-expand,.dashboard-chart-expand:focus{display:grid;place-items:center}
+  .dashboard-chart-expand:hover{background:#eef6ff;border-color:#bcd4ed;transform:scale(1.04)}
+}
+@media (max-width:760px){.dashboard-chart-expand,.dashboard-chart-modal{display:none!important}.dashboard-card,.dashboard-kpi,.dashboard-section,.seller-directory-card,.overview-card,.panel{transform:none!important}}
+</style>
+
 </head>
 <body>
 <main class="app">
