@@ -2468,13 +2468,14 @@
   }
 
   function renderAll() { if (dailyExportGesture) { dailyRenderDeferred=true; return; } if (document.getElementById("biCharts")) renderBI(); fillSettings(); renderScopeSelector(); renderOverview(); renderDaily(); renderWeekly(); renderSellers(); renderGoalsHistory(); renderCompiled(); renderBranchDashboard(); renderSellerProfile(); renderPrint(); }
-  function showView(id) {
+  function showView(id, options = {}) {
     document.querySelectorAll('.view').forEach((view) => view.classList.toggle('active', view.id === id));
     document.querySelectorAll('.tab').forEach((tab) => tab.classList.toggle('active', tab.dataset.view === id));
+    try { sessionStorage.setItem('fs_resultados_active_view', id); } catch (_) {}
     if (id === 'goalsHistory') renderGoalsHistory();
     if (id === 'compiled') { renderCompiled(); renderBI(); }
     if (id === 'branchDashboard') renderBranchDashboard();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (!options.keepScroll) window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   document.querySelectorAll('.tab').forEach((tab) => tab.addEventListener('click', () => showView(tab.dataset.view)));
@@ -3119,6 +3120,19 @@
   initBI();
 
   renderAll();
-  if(location.hash==='#sellers'){setTimeout(()=>{try{showView('sellers')}catch(e){console.warn('Não foi possível reabrir Vendedores:',e)}},0)}
+  let restoredView = '';
+  try { restoredView = sessionStorage.getItem('fs_resultados_active_view') || ''; } catch (_) {}
+  const validViews = new Set([...document.querySelectorAll('.view')].map(v => v.id));
+  if (location.hash === '#sellers') restoredView = 'sellers';
+  if (restoredView && validViews.has(restoredView)) {
+    setTimeout(() => {
+      try {
+        showView(restoredView, { keepScroll: true });
+        const y = Number(sessionStorage.getItem('fs_resultados_scroll_y') || 0);
+        if (Number.isFinite(y) && y > 0) window.scrollTo({ top: y, behavior: 'auto' });
+        sessionStorage.removeItem('fs_resultados_scroll_y');
+      } catch (e) { console.warn('Não foi possível restaurar a visualização:', e); }
+    }, 0);
+  }
 document.addEventListener('DOMContentLoaded',()=>{const b=document.getElementById('resultsInternalBack');if(b)b.hidden=true;});
 })();

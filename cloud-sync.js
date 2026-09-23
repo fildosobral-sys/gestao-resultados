@@ -23,7 +23,13 @@
     const stamps = [vault?._cloudUpdatedAt, ...Object.values(vault?.records || {}).map(r => r?.updatedAt)];
     return Math.max(0, ...stamps.map(x => Date.parse(x || 0) || 0));
   };
-  const same = (a, b) => JSON.stringify(a || null) === JSON.stringify(b || null);
+  const comparable = value => {
+    if (!value) return value;
+    const copy = JSON.parse(JSON.stringify(value));
+    delete copy._cloudUpdatedAt;
+    return copy;
+  };
+  const same = (a, b) => JSON.stringify(comparable(a) || null) === JSON.stringify(comparable(b) || null);
 
   const parseStamp = value => Date.parse(value || 0) || 0;
   function sellerKey(seller, index = 0) {
@@ -64,7 +70,8 @@
       out.sellers = [...map.values()];
       merged.records[key] = out;
     });
-    merged._cloudUpdatedAt = new Date().toISOString();
+    const latestCloudStamp = Math.max(parseStamp(local?._cloudUpdatedAt), parseStamp(remote?._cloudUpdatedAt));
+    merged._cloudUpdatedAt = latestCloudStamp ? new Date(latestCloudStamp).toISOString() : new Date().toISOString();
     return merged;
   }
   function loadRemote() {
@@ -136,8 +143,13 @@
           clearTimeout(timer);
           timer = setTimeout(pushNow, 300);
         }
-        status('↓ Dados reconciliados com a nuvem; atualizando…', 'busy');
-        setTimeout(() => location.reload(), 450);
+        status('↓ Nova atualização recebida da nuvem', 'busy');
+        try {
+          const activeView = document.querySelector('.view.active')?.id;
+          if (activeView) sessionStorage.setItem('fs_resultados_active_view', activeView);
+          sessionStorage.setItem('fs_resultados_scroll_y', String(window.scrollY || 0));
+        } catch (_) {}
+        setTimeout(() => location.reload(), 700);
       } catch (error) {
         status('⚠ Salvo neste aparelho; sem conexão com a nuvem', 'error');
       } finally { cleanup(); }

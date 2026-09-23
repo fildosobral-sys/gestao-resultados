@@ -87,6 +87,32 @@
 <style id="seller-v40-visual-fine-tune">
 #homeMetrics .metric,.finance-grid>.metric{display:flex;flex-direction:column}#homeMetrics .metric{min-height:166px}.finance-grid>.metric{min-height:145px}#homeMetrics .metric small,.finance-grid>.metric small{margin-top:auto!important;padding-top:14px!important;text-align:right!important;align-self:flex-end;display:block;width:100%;font-weight:800}#homeMetrics .metric strong,#homeMetrics .metric span,.finance-grid>.metric strong,.finance-grid>.metric span{position:relative;z-index:1}.note-footer{margin-top:auto!important;padding-top:14px!important;text-align:right!important;align-self:flex-end;width:100%}.note-emphasis{font-weight:900!important;opacity:1!important}.note-blue{color:#355fc6!important}.note-green{color:#0a8f55!important}.note-gold{color:#8b6500!important}.note-purple{color:#6a55d8!important}.note-red{color:#c22b42!important}.dash-section-head{padding:12px 14px;border-radius:15px;border:1px solid transparent;margin-bottom:9px}.dash-section-head h3,.dash-section-head>strong{line-height:1.15}.dash-theme-merc .dash-section-head{background:#eef7ff;border-color:#d9e8ff}.dash-theme-services .dash-section-head{background:#eefaf2;border-color:#d7ebdc}.dash-theme-conversion .dash-section-head{background:#fff5f8;border-color:#f2dbe3}.dash-theme-efficiency .dash-section-head{background:#fffbed;border-color:#f1e3b4}.dash-theme-ticket .dash-section-head{background:#f4fbff;border-color:#d8e9f2}.dash-theme-gain .dash-section-head{background:#f1fbf3;border-color:#d7eadc}.dash-theme-merc .dash-section-head h3,.dash-theme-merc .dash-section-head>strong{color:#1d4f86}.dash-theme-services .dash-section-head h3,.dash-theme-services .dash-section-head>strong{color:#176c45}.dash-theme-conversion .dash-section-head h3,.dash-theme-conversion .dash-section-head>strong{color:#b63255}.dash-theme-efficiency .dash-section-head h3,.dash-theme-efficiency .dash-section-head>strong{color:#8b6500}.dash-theme-ticket .dash-section-head h3,.dash-theme-ticket .dash-section-head>strong{color:#285f87}.dash-theme-gain .dash-section-head h3,.dash-theme-gain .dash-section-head>strong{color:#1b7d49}.dash-theme-merc .dash-section-head p{color:#52739a}.dash-theme-services .dash-section-head p{color:#4c7c60}.dash-theme-conversion .dash-section-head p{color:#8d6170}.dash-theme-efficiency .dash-section-head p{color:#8f7c43}.dash-theme-ticket .dash-section-head p{color:#5c7e95}.dash-theme-gain .dash-section-head p{color:#5c8465}.dash-section .dash-card,.dash-section .dash-kpi{margin-top:8px}@media(max-width:620px){#homeMetrics .metric{min-height:148px}.finance-grid>.metric{min-height:132px}#homeMetrics .metric small,.finance-grid>.metric small{padding-top:12px!important;font-size:10px!important}.dash-section-head{padding:10px 12px;border-radius:14px}}
 </style>
+
+<style id="seller-v44-mobile-stability">
+html,body{max-width:100%;overflow-x:hidden}
+.app,.panel,.view,.seller-dist-grid,.seller-dist-card{min-width:0;max-width:100%}
+@media(max-width:620px){
+  .tabs{
+    display:grid!important;
+    grid-template-columns:none!important;
+    grid-auto-flow:column!important;
+    grid-auto-columns:calc((100% - 12px)/4)!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    overscroll-behavior-x:contain;
+    scrollbar-width:none;
+    scroll-snap-type:x proximity;
+  }
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{min-width:0!important;scroll-snap-align:center;overflow:hidden;text-overflow:ellipsis}
+  .seller-dist-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+  .seller-dist-card{padding:12px!important;min-width:0!important}
+  .seller-dist-card strong{font-size:20px!important;white-space:normal!important;overflow-wrap:anywhere}
+  .seller-dist-card small{font-size:10px!important;line-height:1.25}
+  .distribution-panel{overflow:hidden}
+}
+</style>
+
 </head><body>
 <div class="app">
 <header class="top"><div class="brand"><small>Central Inteligente de Vendas</small><h1>Meu Resultado</h1></div><div class="top-side"><div class="sync-pill busy" id="syncState" title="Status da sincronização">☁️</div><button class="user profile-trigger" id="profileTrigger" type="button" aria-label="Abrir meu perfil"><span class="seller-avatar" id="sellerAvatar">V</span><span class="seller-user-copy"><strong id="who">Vendedor</strong><small id="where"></small></span><span class="profile-caret">⌄</span></button></div></header>
