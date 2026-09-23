@@ -37,6 +37,13 @@
 @media(max-width:620px){body{padding-bottom:96px}.app{padding-bottom:112px}.top{min-height:112px}.top-side{gap:7px}.sync-pill{width:42px;height:42px;border-radius:14px;font-size:20px}.user{max-width:47%!important}.tabs{left:12px!important;right:12px!important;bottom:10px!important;min-height:68px;padding:8px!important;border-radius:22px!important;gap:6px!important;display:flex!important;overflow-x:auto!important;overflow-y:hidden!important;align-items:stretch}.tabs .tab{flex:0 0 94px!important;min-width:94px!important;min-height:50px!important;padding:10px 8px!important;border-radius:15px!important;font-size:10px!important;line-height:1.15!important;display:flex;align-items:center;justify-content:center;gap:3px}.day-head{align-items:center}.day-toggle{padding:13px 7px 13px 12px}.day-head select{margin-right:9px;width:145px;max-width:42vw;padding:9px 6px;font-size:12px}.day-summary-v14{grid-template-columns:1fr 1fr}.daily-goal-context{grid-template-columns:1fr auto}.day-image-btn{width:100%}.day-actions{margin-top:8px}.day-body{padding:10px 11px 12px!important}.day-list{gap:9px}.day{border-radius:18px}.day-toggle strong{font-size:16px}.day-chevron{width:34px;height:34px}.footer{margin-bottom:18px}}
 </style>
 
+
+<style id="seller-fixes-v15">
+/* V15 — robustez e acabamento do app do vendedor */
+.top{padding:17px 20px;min-height:112px}.brand{min-width:0}.brand small{font-size:12px;letter-spacing:.01em}.brand h1{font-size:27px;line-height:1.05}.top-side{margin-left:auto}.user{min-width:116px;max-width:180px!important;padding:9px 11px;border-radius:16px;background:rgba(255,255,255,.11);border:1px solid rgba(255,255,255,.16);font-size:13px!important;line-height:1.08;text-align:right}.user small{margin-top:4px;font-size:11px;line-height:1.2;opacity:.9}.sync-pill{box-shadow:inset 0 1px rgba(255,255,255,.22),0 6px 18px rgba(22,56,132,.16)}
+.day-results .commission-total{background:linear-gradient(135deg,#eefaf4,#f5fbff);border:1px solid #ccebdc}.day-results .commission-total strong{color:#087a4b;font-size:17px}.day-results>div:last-child{background:#fff8e8;border:1px solid #f1dfad}
+@media(max-width:620px){.top{padding:14px 13px;min-height:108px}.brand{flex:1}.brand small{font-size:10px}.brand h1{font-size:22px}.top-side{gap:7px;flex:0 0 auto}.user{min-width:106px;max-width:122px!important;padding:8px 8px;font-size:12px!important}.user small{font-size:10px}.sync-pill{width:44px;height:44px}.day-results{grid-template-columns:1fr 1fr!important}.day-results .commission-total{grid-column:1/2}.day-results>div:last-child{grid-column:2/3}.tabs{min-height:74px!important}.tabs .tab{min-height:54px!important;font-size:10.5px!important}}
+</style>
 </head><body>
 <div class="app">
 <header class="top"><div class="brand"><small>Central Inteligente de Vendas</small><h1>Meu Resultado</h1></div><div class="top-side"><div class="sync-pill busy" id="syncState" title="Status da sincronização">☁️</div><div class="user" id="who">Vendedor<small id="where"></small></div></div></header>
@@ -54,4 +61,4 @@
 <section class="view" id="dashboard"><article class="panel"><div class="title"><div><h2>📊 Meu Dashboard</h2><div class="hint">Explore seu desempenho por semana, 15 dias, mês ou ano. Os gráficos exibem somente os dias que já possuem lançamento, com suporte a até 31 dias no mês.</div></div></div><div id="sellerDashboard"></div></article></section>
 <section class="view" id="periods"><article class="panel"><div class="title"><div><h2>📈 Minhas análises</h2><div class="hint">Compare seu desempenho atual com períodos anteriores.</div></div></div><div class="compare" id="periodCompare"></div></article></section>
 <div class="footer">FS Soluções • Gestão de Resultados • ambiente individual do vendedor</div>
-</div><script src="vendedor.js?v=140"></script></body></html>
+</div><script src="vendedor.js?v=150"></script></body></html>
