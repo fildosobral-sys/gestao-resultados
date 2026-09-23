@@ -431,11 +431,22 @@
     return new Promise((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('Falha ao gerar a imagem.')), 'image/png'));
   }
   async function shareOrDownloadImage(canvas, filename, title) {
-    const blob = await canvasToBlob(canvas), file = new File([blob], filename, { type: 'image/png' });
+    const blob = await canvasToBlob(canvas).catch(() => null);
+    const file = blob ? new File([blob], filename, { type: 'image/png' }) : null;
     try {
-      if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title }); return; }
+      if (file && navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title }); return; }
     } catch (error) { if (error.name === 'AbortError') return; }
-    const anchor = document.createElement('a'); anchor.href = URL.createObjectURL(blob); anchor.download = filename; anchor.click(); setTimeout(() => URL.revokeObjectURL(anchor.href), 1200);
+    const anchor = document.createElement('a');
+    anchor.download = filename;
+    anchor.rel = 'noopener';
+    anchor.style.display = 'none';
+    anchor.href = blob ? URL.createObjectURL(blob) : canvas.toDataURL('image/png');
+    document.body.appendChild(anchor);
+    anchor.click();
+    setTimeout(() => {
+      if (blob) URL.revokeObjectURL(anchor.href);
+      anchor.remove();
+    }, 1800);
   }
   function imageHeader(ctx, title, subtitle, width, centered = false) {
     const gradient = ctx.createLinearGradient(0, 0, width, 0); gradient.addColorStop(0, '#0879e8'); gradient.addColorStop(1, '#6b4ce6');
@@ -520,7 +531,7 @@
     card(54, 378, 305, 142, 'VENDA MERCANTIL', brl.format(num(day.general)), mission.percent ? `${mercHit ? 'Meta batida • ' : 'Minha meta '}${brl.format(mission.mercantileGoal)}` : 'Meta diária aguardando distribuição', metricTone(mercHit, mercRate >= .75, !mission.percent));
     card(387, 378, 305, 142, 'SERVIÇOS', brl.format(services), mission.percent ? `${serviceHit ? 'Meta batida • ' : 'Minha meta '}${brl.format(mission.serviceGoal)}` : 'Meta diária aguardando distribuição', metricTone(serviceHit, servRate >= .75, !mission.percent));
     card(720, 378, 305, 142, 'COMISSÕES', brl.format(totalCommission), allGoalsHit ? 'Dia forte • mercantil + serviços' : 'Mercantil + serviços', allGoalsHit ? '#e9f8ef' : partialGoalsHit ? '#fff5df' : '#eefaf4');
-    card(54, 546, 305, 142, 'REFERÊNCIA FILIAL', brl.format(mission.branchMercantilePerSeller), mission.percent ? `${mission.percent.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}% do dia` : 'Sem percentual do dia', metricTone(mission.percent && num(day.general) >= mission.branchMercantilePerSeller, mission.percent && num(day.general) >= mission.branchMercantilePerSeller * .8, !mission.percent));
+    card(54, 546, 305, 142, 'PERCENTUAL DO DIA', mission.percent ? `${mission.percent.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}%` : '—', mission.percent ? `Minha meta ${brl.format(mission.mercantileGoal)} • serviços ${brl.format(mission.serviceGoal)}` : 'Sem percentual do dia', metricTone(mercHit || serviceHit, mission.percent && (mercRate >= .75 || servRate >= .75), !mission.percent));
     card(387, 546, 305, 142, 'CONVERSÃO', num(day.nfs) ? efficiencyPct.format(conversion) : '—', num(day.nfs) ? (conversionHit ? 'Meta 35,00% • atingida' : 'Meta 35,00%') : 'Sem base suficiente', metricTone(conversionHit, num(day.nfs) && conversion >= .25, !num(day.nfs)));
     card(720, 546, 305, 142, 'EFICIÊNCIA', num(day.eligible) ? efficiencyPct.format(efficiency) : '—', num(day.eligible) ? (efficiencyHit ? 'Meta 7,00% • atingida' : 'Meta 7,00%') : 'Sem base suficiente', metricTone(efficiencyHit, num(day.eligible) && efficiency >= .05, !num(day.eligible)));
     card(54, 714, 305, 142, 'TICKET MÉDIO', ticket ? brl.format(ticket) : '—', `${num(day.invoiceCount)} nota(s) fiscal(is)`, allGoalsHit ? '#e4f8ec' : '#ffffff');
@@ -1064,7 +1075,7 @@
     const metrics = sellerMetrics(seller), percent = num(dayData(key).goalPercent), branchMission = dailyGoalMetrics(key);
     const mercantileGoal = metrics.individualGoal * percent / 100;
     const serviceGoal = num(seller.serviceGoal) * percent / 100;
-    return { key, percent, mercantileGoal, serviceGoal, branchMercantilePerSeller: branchMission.perSeller, branchServicePerSeller: branchMission.servicePerSeller, sellerCount: branchMission.sellerCount, metrics };
+    return { key, percent, mercantileGoal, serviceGoal, branchMercantileGoal: branchMission.branchGoal, branchServiceGoal: branchMission.serviceGoal, branchMercantilePerSeller: branchMission.perSeller, branchServicePerSeller: branchMission.servicePerSeller, sellerCount: branchMission.sellerCount, metrics };
   }
   const EFFICIENCY_TARGET = 0.07, CONVERSION_TARGET = 0.35;
   function sellerResultPeriod(seller) {
@@ -1552,13 +1563,13 @@
     const tabs=[['overview','🏠 Visão geral'],['daily','📝 Lançamentos'],['weekly','📊 Semanal'],['goals','🎯 Metas'],['dashboard','📊 Dashboard'],['compiled','📈 Compilado']];
     const mercRate=num(seller.assignedGoal)?mercTotal/num(seller.assignedGoal):0, servRate=num(seller.serviceGoal)?total.services/num(seller.serviceGoal):0;
     const statusTone=pendingToday||overdueDays?'attention':hasToday?'ok':'neutral';
-    const overview=`<div class="seller-overview-strip"><div><span>📅 LANÇAMENTOS</span><strong>${launchedDays}</strong><small>${monthPending} dia(s) ainda sem lançamento no mês</small></div><div class="${statusTone}"><span>${pendingToday?'⚠️':'✅'} PENDÊNCIAS</span><strong>${monthPending}</strong><small>${pendingToday?'Pendente hoje • ':''}${overdueDays?`${overdueDays} dia(s) vencido(s) • `:''}${monthPending?`${monthPending} pendente(s) na competência`:'nenhuma pendência registrada'}</small></div><div><span>☁️ SINCRONIZAÇÃO</span><strong>${hasToday?'Hoje':'Ativa'}</strong><small>${seller.updatedAt?new Date(seller.updatedAt).toLocaleString('pt-BR'):'aguardando atualização'}</small></div></div>
+    const overview=`<div class="seller-overview-strip"><div><span>📅 LANÇAMENTOS</span><strong>${launchedDays}</strong><small>${monthPending} dia(s) ainda sem lançamento no mês</small></div><div class="${statusTone}"><span>${pendingToday?'⚠️':'✅'} PENDÊNCIAS</span><strong>${monthPending}</strong><small>${pendingToday?'Pendente hoje • ':''}${overdueDays?`${overdueDays} dia(s) vencido(s) • `:''}${monthPending?`${monthPending} pendente(s) na competência`:'nenhuma pendência registrada'}</small></div><div><span>🌐 E-COMMERCE + COMISSÃO</span><strong>${brl.format(ecommerce)}</strong><small>Comissão ${brl.format(num(seller.ecommerceCommission))} • entra no mercantil e nos ganhos</small></div></div>
     <h3 class="seller-block-title">📊 Desempenho e projeção</h3><div class="seller-workspace-grid">${[
-      ['💰 Mercantil',brl.format(mercTotal),num(seller.assignedGoal)?`${pct.format(mercRate)} da meta`:'Meta não cadastrada'],['🛡️ Serviços',brl.format(total.services),num(seller.serviceGoal)?`${pct.format(servRate)} da meta`:'Meta não cadastrada'],
+      ['💰 Mercantil',brl.format(mercTotal),`${num(seller.assignedGoal)?pct.format(mercRate):'—'} da meta${ecommerce?` • inclui ${brl.format(ecommerce)} de e-commerce`:''}`],['🛡️ Serviços',brl.format(total.services),num(seller.serviceGoal)?`${pct.format(servRate)} da meta`:'Meta não cadastrada'],
       ['🎯 Conversão',total.nfs?efficiencyPct.format(total.conversion):'—','Meta 35%'],['⚡ Eficiência',total.eligible?efficiencyPct.format(total.efficiency):'—','Meta 7%'],
       ['📈 Projeção mercantil',brl.format(projMerc),num(seller.assignedGoal)?`${pct.format(projMerc/num(seller.assignedGoal))} projetado`:'—'],['📈 Projeção serviços',brl.format(projServ),num(seller.serviceGoal)?`${pct.format(projServ/num(seller.serviceGoal))} projetado`:'—'],
       ['⚡ Média mercantil/dia',brl.format(avgMerc),`Necessário ${brl.format(needMerc)}/dia`],['⚡ Média serviços/dia',brl.format(avgServ),`Necessário ${brl.format(needServ)}/dia`],
-      ['📅 Dias considerados',String(consideredDays),`${remaining} restante(s) de ${planned}`],['🌐 E-commerce',brl.format(ecommerce),'Acumulado do mês'],['💹 Comissão média mercantil',financial.mercantileRate?pct2.format(financial.mercantileRate):'—',financial.commissionHistorySamples>1?`Média ponderada com ${financial.commissionHistorySamples} competência(s)`:'Calculada pelos lançamentos atuais'],['💹 Comissão média serviços',financial.serviceRate?pct2.format(financial.serviceRate):'—',financial.commissionHistorySamples>1?`Média ponderada com ${financial.commissionHistorySamples} competência(s)`:'Calculada pelos lançamentos atuais']
+      ['📅 Dias considerados',String(consideredDays),`${remaining} restante(s) de ${planned}`],['💰 Comissão e-commerce',brl.format(num(seller.ecommerceCommission)),'Somada à projeção de ganhos'],['💹 Comissão média mercantil',financial.mercantileRate?pct2.format(financial.mercantileRate):'—',financial.commissionHistorySamples>1?`Média ponderada com ${financial.commissionHistorySamples} competência(s)`:'Calculada pelos lançamentos atuais'],['💹 Comissão média serviços',financial.serviceRate?pct2.format(financial.serviceRate):'—',financial.commissionHistorySamples>1?`Média ponderada com ${financial.commissionHistorySamples} competência(s)`:'Calculada pelos lançamentos atuais']
     ].map(([l,v,n])=>`<div class="seller-workspace-card"><span>${l}</span><strong>${v}</strong><small>${n}</small></div>`).join('')}</div>
     <h3 class="seller-block-title">💵 Ganhos e projeção financeira</h3><div class="seller-finance-dashboard"><div class="seller-finance-main"><span>💰 PROJEÇÃO DE GANHO TOTAL</span><strong>${brl.format(financial.projectedTotal)}</strong><small>Comissões projetadas + DSR estimado</small></div>${[
       ['Comissão mercantil atual',brl.format(financial.mercantileCommission),'Valor lançado pelo vendedor'],
@@ -1579,48 +1590,56 @@
       const servComm=Object.prototype.hasOwnProperty.call(day,'commissionService')?num(day.commissionService):services*.05;
       const has=hasSellerDayValue(day), excused=['off','medical','justified'].includes(day.status);
       const st=day.status==='off'?'💤 Não trabalha':day.status==='medical'?'🩺 Atestado':day.status==='justified'?'📋 Justificada':day.status==='done'?'✅ Finalizado':has||day.status==='partial'?'🟡 Parcial':isFuture?'⏳ Aguardando':'⚠️ Pendente';
-      const percent=num(db.daily?.[key]?.goalPercent);
-      const branchDayGoal=num(db.mercantileGoal)*percent/100;
-      const sellerDayGoal=num(seller.assignedGoal)*percent/100;
-      const sellerServiceDayGoal=sellerDayGoal*.07;
+      const mission=sellerMissionMetrics(seller,key);
+      const mercHit=!!mission.percent && num(day.general)>=num(mission.mercantileGoal);
+      const serviceHit=!!mission.percent && services>=num(mission.serviceGoal);
+      const conversionHit=num(day.nfs)?conv>=0.35:false;
+      const efficiencyHit=num(day.eligible)?eff>=0.07:false;
+      const indicators=[];
+      if(mission.percent){indicators.push(mercHit,serviceHit);} if(num(day.nfs))indicators.push(conversionHit); if(num(day.eligible))indicators.push(efficiencyHit);
+      const passedCount=indicators.filter(Boolean).length;
+      const dayToneClass=excused?'seller-day-excused':isFuture&&!has?'seller-day-future':!has&&day.status!=='partial'?'':indicators.length&&passedCount===indicators.length?'seller-day-hit':passedCount>0?'seller-day-partial':'seller-day-miss';
+      const missionStrip = mission.percent ? `<div class="seller-day-mission-strip"><div><span>📅 PERCENTUAL DO DIA</span><strong>${mission.percent.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}%</strong><small>Distribuição aplicada pela gestão</small></div><div><span>MINHA META DO DIA</span><strong>${brl.format(mission.mercantileGoal)}</strong><small>Calculada sobre a sua meta mensal</small></div><div><span>META DE SERVIÇOS</span><strong>${brl.format(mission.serviceGoal)}</strong><small>Referência financeira de 7%</small></div><div><span>OBJETIVOS FIXOS</span><strong>35% • 7%</strong><small>Conversão e eficiência</small></div><button type="button" class="btn small" data-seller-day-image="${key}" ${isFuture&&!has?'disabled':''}>📲 Baixar imagem HD</button></div>` : `<div class="seller-day-mission-strip empty-mission"><div><span>📅 META DO DIA</span><strong>Aguardando percentual da filial</strong><small>O percentual cadastrado na gestão alimentará automaticamente este dia.</small></div></div>`;
       const detail=excused
         ? `<div class="seller-day-occurrence"><span>OCORRÊNCIA</span><strong>${st}</strong><small>Dia sem indicadores comerciais. Nenhum resultado ou imagem de desempenho é exigido.</small></div>`
-        : `<div class="seller-day-mission-strip"><div><span>PERCENTUAL DO DIA</span><strong>${percent?pct2.format(percent/100):'—'}</strong></div><div><span>META FILIAL</span><strong>${percent?brl.format(branchDayGoal):'—'}</strong></div><div><span>MINHA META DO DIA</span><strong>${percent?brl.format(sellerDayGoal):'—'}</strong></div><div><span>SERVIÇOS DO DIA</span><strong>${percent?brl.format(sellerServiceDayGoal):'—'}</strong><small>7% da meta mercantil individual</small></div><button type="button" class="btn small seller-day-image-btn" data-seller-day-image="${key}" ${isFuture&&!has?'disabled':''}>📲 Baixar imagem HD</button></div>${[
+        : `${missionStrip}<div class="seller-day-result-label">RESULTADO REGISTRADO</div>${[
           ['MERCANTIL',brl.format(num(day.general))],['VENDA ELEGÍVEL',brl.format(num(day.eligible))],['SERVIÇOS',brl.format(services)],['NOTAS FISCAIS',String(num(day.invoiceCount))],['QTD. ELEGÍVEL',String(num(day.nfs))],['QTD. GARANTIAS',String(num(day.warrantyQty))],['CONVERSÃO',num(day.nfs)?efficiencyPct.format(conv):'—'],['EFICIÊNCIA',num(day.eligible)?efficiencyPct.format(eff):'—'],['COMISSÃO MERC.',brl.format(mercComm)],['COMISSÃO SERVIÇOS',brl.format(servComm)],['TOTAL COMISSÕES',brl.format(mercComm+servComm)]
         ].map(([l,v])=>`<div><span>${l}</span><strong>${v}</strong></div>`).join('')}`;
-      return `<article class="seller-day-card seller-day-accordion ${isFuture&&!has?'seller-day-future':''} ${excused?'seller-day-excused':''}" data-seller-day="${key}"><button type="button" class="seller-day-head" data-seller-day-toggle="${key}" aria-expanded="false"><div><span>DIA</span><strong>${dateObj.toLocaleDateString('pt-BR',{day:'2-digit',month:'long'})}</strong></div><div class="seller-day-status"><span>STATUS</span><strong>${st}</strong></div><span class="seller-day-chevron">⌄</span></button><div class="seller-day-detail" hidden>${detail}</div></article>`
+      return `<article class="seller-day-card seller-day-accordion ${isFuture&&!has?'seller-day-future':''} ${dayToneClass}" data-seller-day="${key}"><button type="button" class="seller-day-head" data-seller-day-toggle="${key}" aria-expanded="false"><div><span>DIA</span><strong>${dateObj.toLocaleDateString('pt-BR',{day:'2-digit',month:'long'})}</strong></div><div class="seller-day-status"><span>STATUS</span><strong>${st}</strong></div><span class="seller-day-chevron">⌄</span></button><div class="seller-day-detail" hidden>${detail}</div></article>`
     }).join(''):'<div class="empty">Nenhum lançamento recebido deste vendedor.</div>'}</div>`;
     let weeks=[]; try{weeks=sellerWorkspaceWeeks(seller)}catch(e){console.error('Falha no semanal do vendedor:',e)} const weekly=`<div class="seller-week-list">${weeks.length?weeks.map(sellerWorkspaceWeekCard).join(''):'<div class="empty">Sem resultados semanais ainda.</div>'}</div>`;
     const goals=`<div class="seller-goal-pair"><div class="seller-goal-box"><span>💰 Meta mercantil mensal</span><h2>${brl.format(num(seller.assignedGoal))}</h2><div class="seller-progress"><i style="width:${Math.min(100,mercRate*100)}%"></i></div><b>${num(seller.assignedGoal)?pct.format(mercRate):'Não cadastrada'}</b><p>${num(seller.assignedGoal)?`Faltam ${brl.format(Math.max(0,num(seller.assignedGoal)-mercTotal))}`:'O vendedor ainda não cadastrou esta meta.'}</p></div><div class="seller-goal-box service"><span>🛡️ Meta de serviços mensal</span><h2>${brl.format(num(seller.serviceGoal))}</h2><div class="seller-progress"><i style="width:${Math.min(100,servRate*100)}%"></i></div><b>${num(seller.serviceGoal)?pct.format(servRate):'Não cadastrada'}</b><p>${num(seller.serviceGoal)?`Faltam ${brl.format(Math.max(0,num(seller.serviceGoal)-total.services))}`:'O vendedor ainda não cadastrou esta meta.'}</p></div></div><div class="seller-workspace-grid" style="margin-top:12px"><div class="seller-workspace-card"><span>🎯 Conversão</span><strong>35,00%</strong><small>Meta fixa</small></div><div class="seller-workspace-card"><span>⚡ Eficiência</span><strong>7,00%</strong><small>Meta fixa</small></div><div class="seller-workspace-card"><span>💵 Comissões</span><strong>Em R$</strong><small>Informadas nos lançamentos</small></div><div class="seller-workspace-card"><span>📅 Dias da filial</span><strong>${planned}</strong><small>Definidos pela gestão</small></div></div>`;
     let compiled='';
     try {
-      const branch=calculate();
-      const branchMercGoal=num(db.mercantileGoal), branchServGoal=num(db.servicesGoal), sellerMercGoal=num(seller.assignedGoal), sellerServGoal=num(seller.serviceGoal)||sellerMercGoal*.07;
-      const sellerTicket=total.invoiceCount?mercTotal/total.invoiceCount:0;
-      const branchRates={merc:branchMercGoal?branch.revenue/branchMercGoal:0,serv:branchServGoal?branch.services/branchServGoal:0,conv:branch.conversion||0,eff:branch.efficiency||0,proj:branchMercGoal?branch.projection/branchMercGoal:0};
-      const sellerRates={merc:sellerMercGoal?mercTotal/sellerMercGoal:0,serv:sellerServGoal?total.services/sellerServGoal:0,conv:total.conversion||0,eff:total.efficiency||0,proj:sellerMercGoal?projMerc/sellerMercGoal:0};
-      const compareRow=(title,branchValue,sellerValue,branchRate,sellerRate,kind='money')=>{
-        const gap=sellerRate-branchRate, tone=gap>.03?'good':gap<-.03?'bad':'same';
-        const fmt=(v)=>kind==='pct'?efficiencyPct.format(v):kind==='number'?String(Math.round(v)):brl.format(v);
-        return `<article class="seller-compare-card ${tone}"><header><strong>${title}</strong><span>${gap>.03?'▲ Acima da filial':gap<-.03?'▼ Abaixo da filial':'● Alinhado à filial'}</span></header><div class="seller-compare-columns"><div><small>FILIAL</small><b>${fmt(branchValue)}</b><em>${kind==='pct'?'Referência':pct.format(branchRate)+' da meta'}</em></div><div><small>VENDEDOR</small><b>${fmt(sellerValue)}</b><em>${kind==='pct'?'Resultado individual':pct.format(sellerRate)+' da meta'}</em></div></div><footer>Diferença: ${gap>=0?'+':''}${(gap*100).toFixed(1).replace('.',',')} p.p. no ritmo comparável</footer></article>`;
-      };
-      const nfShare=branch.invoiceCount?total.invoiceCount/branch.invoiceCount:0;
-      const ticketGap=branch.ticket?sellerTicket/branch.ticket-1:0;
-      compiled=`<section class="seller-compiled-hero"><div><span>📊 COMPILADO FILIAL × VENDEDOR</span><strong>${mercRate>=branchRates.merc?'Acompanhando ou acima do ritmo da filial':'Abaixo do ritmo atual da filial'}</strong><small>${monthLabel(db.month)} • comparação pela mesma competência e metas proporcionais</small></div><div class="seller-compiled-score"><span>Mercantil vendedor</span><b>${pct.format(sellerRates.merc)}</b><small>Filial ${pct.format(branchRates.merc)}</small></div></section><div class="seller-compare-grid">
-        ${compareRow('💰 Mercantil',branch.revenue,mercTotal,branchRates.merc,sellerRates.merc)}
-        ${compareRow('🛡️ Serviços',branch.services,total.services,branchRates.serv,sellerRates.serv)}
-        ${compareRow('🎯 Conversão',branch.conversion,total.conversion,branch.conversion,total.conversion,'pct')}
-        ${compareRow('⚡ Eficiência',branch.efficiency,total.efficiency,branch.efficiency,total.efficiency,'pct')}
-        ${compareRow('📈 Projeção mercantil',branch.projection,projMerc,branchRates.proj,sellerRates.proj)}
-        ${compareRow('🧾 Ticket médio',branch.ticket,sellerTicket,1,branch.ticket?sellerTicket/branch.ticket:0)}
-        <article class="seller-compare-card ${nfShare>=1?'good':'same'}"><header><strong>🧾 Notas fiscais</strong><span>Participação no volume</span></header><div class="seller-compare-columns"><div><small>FILIAL</small><b>${branch.invoiceCount||0}</b><em>Total na competência</em></div><div><small>VENDEDOR</small><b>${total.invoiceCount||0}</b><em>${branch.invoiceCount?pct.format(nfShare)+' do total da filial':'Sem base comparativa'}</em></div></div><footer>Leitura adicional para volume e ticket médio.</footer></article>
-        <article class="seller-compare-card ${ticketGap>.03?'good':ticketGap<-.03?'bad':'same'}"><header><strong>💵 Ganhos projetados</strong><span>${financial.projectedTotal>=financial.targetTotal&&financial.targetTotal?'▲ No potencial':'Acompanhamento financeiro'}</span></header><div class="seller-compare-columns"><div><small>PROJEÇÃO ATUAL</small><b>${brl.format(financial.projectedTotal)}</b><em>Comissões + DSR</em></div><div><small>POTENCIAL NA META</small><b>${brl.format(financial.targetTotal)}</b><em>Com metas cadastradas</em></div></div><footer>Média de comissão mercantil: ${financial.mercantileRate?pct2.format(financial.mercantileRate):'—'}.</footer></article>
-      </div>`;
+      const branchResult=calculate();
+      const branchMercRate=num(db.mercantileGoal)?num(branchResult.revenue)/num(db.mercantileGoal):0;
+      const branchServRate=num(db.servicesGoal)?num(branchResult.services)/num(db.servicesGoal):0;
+      const sellerMercRate=num(seller.assignedGoal)?mercTotal/num(seller.assignedGoal):0;
+      const sellerServRate=num(seller.serviceGoal)?total.services/num(seller.serviceGoal):0;
+      const branchConv=num(branchResult.nfs)?num(branchResult.warrantyQty)/num(branchResult.nfs):0;
+      const sellerConv=num(total.nfs)?num(total.warrantyQty)/num(total.nfs):0;
+      const branchEff=num(branchResult.eligible)?num(branchResult.services)/num(branchResult.eligible):0;
+      const sellerEff=num(total.eligible)?num(total.services)/num(total.eligible):0;
+      const branchTicket=num(branchResult.invoiceCount)?num(branchResult.revenue)/num(branchResult.invoiceCount):0;
+      const sellerTicket=num(total.invoiceCount)?mercTotal/num(total.invoiceCount):0;
+      const diffPp=(sellerRate,branchRate)=>sellerRate-branchRate;
+      const compareTone=d=>d>.02?'positive':d<-.02?'negative':'neutral';
+      const compareText=d=>d>.02?`▲ ${pct2.format(Math.abs(d))} acima`:d<-.02?`▼ ${pct2.format(Math.abs(d))} abaixo`:'≈ alinhado';
+      const compRow=(icon,label,branchValue,sellerValue,branchRate,sellerRate,valueFmt=brl.format)=>{const d=diffPp(sellerRate,branchRate);return `<div class="seller-compiled-row"><div class="seller-compiled-title"><span>${icon} ${label}</span><b class="${compareTone(d)}">${compareText(d)}</b></div><div class="seller-compiled-cols"><div><small>FILIAL</small><strong>${valueFmt(branchValue)}</strong><span>${pct.format(branchRate)} da referência</span></div><div><small>VENDEDOR</small><strong>${valueFmt(sellerValue)}</strong><span>${pct.format(sellerRate)} da meta</span></div></div></div>`};
+      const pctValue=v=>efficiencyPct.format(v);
+      const nfGoalBranch=Math.max(1,num(branchResult.invoiceCount));
+      const nfRateBranch=num(db.businessDays)?num(branchResult.invoiceCount)/Math.max(1,num(db.businessDays)):0;
+      const nfRateSeller=num(db.businessDays)?num(total.invoiceCount)/Math.max(1,num(db.businessDays)):0;
+      const trendGap=num(seller.assignedGoal)?projMerc/num(seller.assignedGoal)-branchResult.projection/Math.max(1,num(db.mercantileGoal)):0;
+      const trendText=trendGap>.02?'Vendedor projetando acima do ritmo da filial':trendGap<-.02?'Vendedor projetando abaixo do ritmo da filial':'Vendedor acompanhando o ritmo da filial';
+      compiled=`<div class="seller-compiled-hero"><span>📈 COMPARATIVO FILIAL × VENDEDOR</span><strong>${trendText}</strong><small>Mesma competência e mesma janela de acompanhamento. Diferenças exibidas em pontos percentuais.</small></div><div class="seller-compiled-list">${compRow('💰','Mercantil',branchResult.revenue,mercTotal,branchMercRate,sellerMercRate)}${compRow('🛡️','Serviços',branchResult.services,total.services,branchServRate,sellerServRate)}${compRow('🎯','Conversão',branchConv,sellerConv,branchConv,sellerConv,pctValue)}${compRow('⚡','Eficiência',branchEff,sellerEff,branchEff,sellerEff,pctValue)}${compRow('🧾','Ticket médio',branchTicket,sellerTicket,branchTicket?Math.min(1,branchTicket/Math.max(branchTicket,sellerTicket||1)):0,sellerTicket?Math.min(1,sellerTicket/Math.max(branchTicket||1,sellerTicket)):0)}${compRow('📄','Notas fiscais',branchResult.invoiceCount,total.invoiceCount,nfRateBranch,nfRateSeller,v=>String(Math.round(v)))}</div><div class="seller-compiled-foot"><div><span>PROJEÇÃO FILIAL</span><strong>${brl.format(branchResult.projection)}</strong><small>${num(db.mercantileGoal)?pct.format(branchResult.projection/num(db.mercantileGoal)):'—'} da meta</small></div><div><span>PROJEÇÃO VENDEDOR</span><strong>${brl.format(projMerc)}</strong><small>${num(seller.assignedGoal)?pct.format(projMerc/num(seller.assignedGoal)):'—'} da meta</small></div></div>`;
     } catch (compiledError) {
       console.error('Falha no compilado do vendedor:', compiledError);
-      compiled='<div class="empty">O comparativo filial × vendedor está temporariamente indisponível. Os dados atuais permanecem acessíveis.</div>';
+      compiled='<div class="empty">O histórico compilado está temporariamente indisponível. Os dados atuais permanecem acessíveis.</div>';
     }
-    const dashboard='<div class="seller-dashboard-target" data-period="month" data-metric="merc" data-compare="prev"></div>'; host.innerHTML=`<nav class="seller-workspace-tabs seller-workspace-footer-nav">${tabs.map(([id,label])=>`<button class="seller-workspace-tab ${sellerWorkspaceTab===id?'active':''}" data-seller-workspace-tab="${id}">${label}</button>`).join('')}</nav>${tabs.map(([id])=>`<section class="seller-workspace-view ${sellerWorkspaceTab===id?'active':''}" data-seller-workspace-view="${id}">${id==='overview'?overview:id==='daily'?daily:id==='weekly'?weekly:id==='goals'?goals:id==='dashboard'?dashboard:compiled}</section>`).join('')}`; const dashRoot=host.querySelector('.seller-dashboard-target'); if(dashRoot && sellerWorkspaceTab==='dashboard'){ try{mountSellerDashboard(seller,dashRoot)}catch(e){console.error('Falha no dashboard do vendedor:',e);dashRoot.innerHTML='<div class="empty">Dashboard temporariamente indisponível. As demais informações do vendedor continuam acessíveis.</div>'} }
+    const dashboard='<div class="seller-dashboard-target" data-period="month" data-metric="merc" data-compare="prev"></div>'; host.innerHTML=`${tabs.map(([id])=>`<section class="seller-workspace-view ${sellerWorkspaceTab===id?'active':''}" data-seller-workspace-view="${id}">${id==='overview'?overview:id==='daily'?daily:id==='weekly'?weekly:id==='goals'?goals:id==='dashboard'?dashboard:compiled}</section>`).join('')}<nav class="seller-workspace-tabs seller-workspace-tabs-bottom">${tabs.map(([id,label])=>`<button class="seller-workspace-tab ${sellerWorkspaceTab===id?'active':''}" data-seller-workspace-tab="${id}">${label}</button>`).join('')}</nav>`; const dashRoot=host.querySelector('.seller-dashboard-target'); if(dashRoot && sellerWorkspaceTab==='dashboard'){ try{mountSellerDashboard(seller,dashRoot)}catch(e){console.error('Falha no dashboard do vendedor:',e);dashRoot.innerHTML='<div class="empty">Dashboard temporariamente indisponível. As demais informações do vendedor continuam acessíveis.</div>'} }
+    const activeWorkspaceTab=host.querySelector('.seller-workspace-tab.active');
+    if(activeWorkspaceTab){try{activeWorkspaceTab.scrollIntoView({inline:'center',block:'nearest'});}catch{}}
     host.querySelectorAll('[data-seller-workspace-tab]').forEach(btn=>btn.addEventListener('click',()=>{sellerWorkspaceTab=btn.dataset.sellerWorkspaceTab;renderSellerWorkspace(seller);const modal=document.querySelector('#sellerProfile>article');if(modal)modal.scrollTo({top:0,behavior:'smooth'});}));
     host.querySelectorAll('[data-seller-day-toggle]').forEach(btn=>btn.addEventListener('click',()=>{const card=btn.closest('.seller-day-accordion'),detail=card?.querySelector('.seller-day-detail'),open=btn.getAttribute('aria-expanded')==='true';btn.setAttribute('aria-expanded',String(!open));if(detail)detail.hidden=open;card?.classList.toggle('open',!open);}));
     host.querySelectorAll('[data-seller-day-image]').forEach(btn=>btn.addEventListener('click',()=>managerDownloadSellerDayImage(seller, btn.dataset.sellerDayImage)));
@@ -1635,7 +1654,8 @@
     const expectedTotal = financial.targetTotal;
     const sellerIndex = db.sellers.indexOf(seller);
     document.getElementById('sellerProfileTitle').textContent = seller.name || `Vendedor ${sellerIndex + 1}`;
-    document.getElementById('sellerProfileSubtitle').textContent = `${db.branch || 'Filial não informada'} • ${monthLabel(db.month)} • acompanhamento individual sincronizado`;
+    const syncLabel = seller.updatedAt ? `sincronização ativa • ${new Date(seller.updatedAt).toLocaleString('pt-BR')}` : 'sincronização pendente';
+    document.getElementById('sellerProfileSubtitle').textContent = `${db.branch || 'Filial não informada'} • ${monthLabel(db.month)} • ${syncLabel}`;
     document.getElementById('sellerProfileKpis').innerHTML = [
       ['Venda mercantil total', brl.format(num(seller.general))], ['Venda elegível (base eficiência)', brl.format(num(seller.eligible))], ['Meta mercantil', brl.format(metrics.individualGoal)], ['Meta mercantil por dia planejado', brl.format(metrics.targetDailyAverage)], ['Atingimento mercantil', pct.format(metrics.rate)],
       ['Falta mercantil', brl.format(metrics.missing)], ['Média mercantil/dia', brl.format(metrics.dailyAverage)], ['Projeção mercantil', brl.format(metrics.projection)], ['Necessário/dia', brl.format(metrics.neededPerDay)],
@@ -1721,39 +1741,17 @@
 
   function openSellerManagerProfile(index) {
     const seller = db.sellers[index]; if (!seller) return;
-    activeSellerProfileId = sellerIdentity(seller, index);
-    activeScope = `seller:${index}`;
-    sellerWorkspaceTab = 'overview';
-    document.body.classList.add('seller-modal-open');
-    const modal = document.getElementById('sellerProfile');
-    if (modal) {
-      modal.classList.add('seller-modal-active');
-      modal.classList.add('active');
-      modal.setAttribute('aria-hidden','false');
-      modal.style.setProperty('display','flex','important');
-    }
-    try {
-      renderSellerProfile();
-      renderScopeSelector();
-    } catch (error) {
-      console.error('Falha ao abrir vendedor:', error);
-      const title = document.getElementById('sellerProfileTitle');
-      const subtitle = document.getElementById('sellerProfileSubtitle');
-      if (title) title.textContent = seller.name || `Vendedor ${index + 1}`;
-      if (subtitle) subtitle.textContent = `${db.branch || 'Filial não informada'} • ${monthLabel(db.month)} • acompanhamento individual`;
-      const host = document.getElementById('sellerWorkspace');
-      if (host && !host.children.length) {
-        try { renderSellerWorkspace(seller); } catch (workspaceError) {
-          console.error('Falha também no workspace principal:', workspaceError);
-          host.innerHTML = '<div class="empty">Não foi possível carregar o painel individual. Seus dados permanecem salvos.</div>';
-        }
-      }
-    }
-    if (modal) {
-      const article = modal.querySelector('article.panel');
-      if (article) article.scrollTo({ top: 0, behavior: 'auto' });
-    }
+    const sellerId = sellerIdentity(seller, index);
+    const params = new URLSearchParams({
+      managerView: '1',
+      seller: String(seller.name || `Vendedor ${index + 1}`),
+      sellerId: String(seller.id || sellerId),
+      branch: String(db.branch || ''),
+      month: String(db.month || '')
+    });
+    location.href = `./vendedor.html?${params.toString()}`;
   }
+
   function renderSellers() {
     const branch = calculate();
     const sellerSales = db.sellers.reduce((sum, seller) => sum + num(seller.general), 0);
@@ -2974,5 +2972,6 @@
   initBI();
 
   renderAll();
+  if(location.hash==='#sellers'){setTimeout(()=>{try{showView('sellers')}catch(e){console.warn('Não foi possível reabrir Vendedores:',e)}},0)}
 document.addEventListener('DOMContentLoaded',()=>{const b=document.getElementById('resultsInternalBack');if(b)b.hidden=true;});
 })();
