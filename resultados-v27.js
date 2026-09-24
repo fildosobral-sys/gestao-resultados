@@ -789,7 +789,14 @@
     const servicesRate = num(goalSource.servicesGoal) ? result.services / num(goalSource.servicesGoal) : 0;
     setText('servicesRate', pct.format(servicesRate)); document.getElementById('servicesRate').className = `pill ${statusClass(servicesRate)}`;
     setText('servicesCurrent', brl.format(result.services)); setText('servicesGoal', brl.format(num(goalSource.servicesGoal)));
-    setText('servicesProjection', `Projeção: ${brl.format(result.servicesProjection)} • ${pct.format(num(goalSource.servicesGoal) ? result.servicesProjection / num(goalSource.servicesGoal) : 0)} da meta`);
+    {
+      const serviceProjectionEl = document.getElementById('servicesProjection');
+      if (serviceProjectionEl) {
+        const serviceProjectionRate = num(goalSource.servicesGoal) ? result.servicesProjection / num(goalSource.servicesGoal) : 0;
+        serviceProjectionEl.classList.add('services-projection-executive');
+        serviceProjectionEl.innerHTML = `<span class="services-projection-chip"><small>Projeção</small><b>${brl.format(result.servicesProjection)}</b></span><span class="services-projection-chip rate"><small>Atingimento projetado</small><b>${pct.format(serviceProjectionRate)}</b></span>`;
+      }
+    }
     document.getElementById('servicesBar').style.width = `${clampRate(servicesRate)}%`;
     const sellerCount = scope.type === 'seller' ? 1 : configuredSellerCount();
     const plannedDays = Math.max(1, num(scope.type === 'seller' ? result.worked + result.remaining : db.businessDays));
@@ -3572,4 +3579,44 @@
     }, 0);
   }
 document.addEventListener('DOMContentLoaded',()=>{const b=document.getElementById('resultsInternalBack');if(b)b.hidden=true;});
+})();
+
+
+/* V69 — acabamento executivo: rodapé, projeção de serviços e tipografia semanal */
+(function applyV69ExecutiveFinish(){
+  if (document.getElementById('v69ExecutiveFinishCss')) return;
+  const st=document.createElement('style');
+  st.id='v69ExecutiveFinishCss';
+  st.textContent=`
+    .services-projection-executive{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px!important;margin-top:12px!important;color:inherit!important;font-size:inherit!important}
+    .services-projection-chip{display:flex;flex-direction:column;gap:3px;min-width:0;padding:10px 12px;border:1px solid #dce7f2;border-radius:13px;background:#f7fbff}
+    .services-projection-chip.rate{background:#f8f7ff;border-color:#e3ddfb}
+    .services-projection-chip small{font-size:.64rem;line-height:1.1;font-weight:850;text-transform:uppercase;letter-spacing:.025em;color:#718096}
+    .services-projection-chip b{font-size:clamp(1rem,2vw,1.25rem);line-height:1.08;font-weight:900;color:#17324d;white-space:nowrap}
+    .week-indicator-grid .metric{min-width:0!important;overflow:hidden!important}
+    .week-indicator-grid .metric>strong{font-size:clamp(1.12rem,2.45vw,1.55rem)!important;line-height:1.06!important;letter-spacing:-.025em!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:clip!important;max-width:100%!important}
+    .week-indicator-grid .metric.emphasized>strong,.week-indicator-grid .metric.result-status>strong{font-size:clamp(1.16rem,2.6vw,1.62rem)!important}
+    .week-indicator-grid .metric>small{font-size:.61rem!important;line-height:1.18!important;color:#607a96!important;opacity:1!important;padding:5px 7px!important;margin-top:auto!important}
+    .week-goals{align-items:stretch!important}
+    .week-goal{min-width:0!important;padding:12px 13px!important;overflow:hidden!important}
+    .week-goal header{font-size:.92rem!important;line-height:1.1!important;align-items:center!important}
+    .week-goal dl{grid-template-columns:minmax(0,1fr) auto!important;column-gap:10px!important;row-gap:6px!important;font-size:.72rem!important;line-height:1.15!important}
+    .week-goal dt{min-width:0!important;color:#34495e!important}
+    .week-goal dd{font-size:.78rem!important;line-height:1.12!important;letter-spacing:-.012em!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:clip!important;max-width:100%!important}
+    .footer-note{font-size:.76rem!important;letter-spacing:.01em!important}
+    @media(max-width:760px){
+      .services-projection-executive{gap:8px!important}
+      .services-projection-chip{padding:9px 10px!important}
+      .services-projection-chip b{font-size:clamp(.92rem,4.2vw,1.08rem)!important}
+      .week-indicator-grid .metric>strong{font-size:clamp(1.02rem,4.15vw,1.34rem)!important}
+      .week-indicator-grid .metric.emphasized>strong,.week-indicator-grid .metric.result-status>strong{font-size:clamp(1.06rem,4.35vw,1.4rem)!important}
+      .week-indicator-grid .metric>small{font-size:.57rem!important}
+      .week-goal header{font-size:.9rem!important}
+      .week-goal dl{font-size:.69rem!important}
+      .week-goal dd{font-size:.74rem!important}
+    }
+  `;
+  document.head.appendChild(st);
+  const syncFooter=()=>document.querySelectorAll('.footer-note').forEach(el=>{el.textContent='Developed by Fildo Sobral • FS Soluções'});
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',syncFooter,{once:true});else syncFooter();
 })();

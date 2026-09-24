@@ -437,3 +437,23 @@ function setupInternalNavigationGuard(){
 
 (async function init(){document.getElementById('who').textContent=name;document.getElementById('where').textContent=branchText;vault=localVault()||{version:2,currentKey:'',records:{}};record=findRecord(vault,month)||findRecord(vault);if(record)seller=ensureSeller(record);if(seller&&!MANAGER_VIEW&&!seller.profilePhoto&&localStorage.getItem(PROFILE_PHOTO_KEY)){seller.profilePhoto=localStorage.getItem(PROFILE_PHOTO_KEY);seller.updatedAt=new Date().toISOString();editVersion++;dirty=true;syncLegacy(seller);localStorage.setItem(STORE,JSON.stringify(vault));setTimeout(()=>saveCloud('Foto do vendedor sincronizada',false),80)}if(seller)applySellerPhoto(seller?.profilePhoto||(!MANAGER_VIEW?localStorage.getItem(PROFILE_PHOTO_KEY):'')||'');if(MANAGER_VIEW&&record&&!seller){state('⚠ Vendedor não encontrado nesta competência.','err');document.getElementById('homeMetrics').innerHTML='<div class="empty">Não foi possível localizar este vendedor. Volte à gestão e abra novamente pelo botão de visualização.</div>';return}if(record&&seller){render();try{const savedView=sessionStorage.getItem('fs_vendedor_active_view');const tab=savedView&&document.querySelector(`.tab[data-view="${savedView}"]`);if(tab){document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===tab));document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===savedView));setTimeout(()=>tab.scrollIntoView({behavior:'auto',block:'nearest',inline:'center'}),0)}}catch{};state('⟳ Conferindo a nuvem…','busy')}await pull();if(!record){state('⚠ Nenhuma competência da filial encontrada. Peça ao gestor para abrir/configurar o mês primeiro.','err');document.getElementById('homeMetrics').innerHTML='<div class="empty">Aguardando a competência da filial ser criada pelo gestor.</div>';return}if(!seller){seller=ensureSeller(record);editVersion++;dirty=true;await saveCloud('Seu acesso foi vinculado à equipe')}setInterval(pull,12000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)pull()})})();
 })();
+
+
+/* V69 — tipografia semanal alinhada ao padrão executivo */
+(function applyV69SellerWeeklyFinish(){
+  if(document.getElementById('v69SellerWeeklyFinishCss'))return;
+  const st=document.createElement('style');
+  st.id='v69SellerWeeklyFinishCss';
+  st.textContent=`
+    .weekly-indicator-group .metric{min-width:0!important;overflow:hidden!important}
+    .weekly-indicator-group .metric>strong{font-size:clamp(1.12rem,2.45vw,1.55rem)!important;line-height:1.06!important;letter-spacing:-.025em!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:clip!important;max-width:100%!important}
+    .weekly-indicator-group .metric.metric-positive>strong,.weekly-indicator-group .metric.metric-negative>strong{font-size:clamp(1.16rem,2.6vw,1.62rem)!important}
+    .weekly-indicator-group .metric>small{font-size:.61rem!important;line-height:1.18!important;color:#607a96!important;opacity:1!important;padding-top:7px!important}
+    @media(max-width:760px){
+      .weekly-indicator-group .metric>strong{font-size:clamp(1.02rem,4.15vw,1.34rem)!important}
+      .weekly-indicator-group .metric.metric-positive>strong,.weekly-indicator-group .metric.metric-negative>strong{font-size:clamp(1.06rem,4.35vw,1.4rem)!important}
+      .weekly-indicator-group .metric>small{font-size:.57rem!important}
+    }
+  `;
+  document.head.appendChild(st);
+})();
