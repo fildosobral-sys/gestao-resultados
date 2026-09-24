@@ -20,6 +20,7 @@
     const parsed = Number(text);
     return Math.max(0, Number.isFinite(parsed) ? parsed : 0);
   };
+  const signedBrl = (value) => { const n = Number(value || 0); return `${n > 0 ? '+ ' : n < 0 ? '− ' : ''}${brl.format(Math.abs(n))}`; };
   const esc = (value) => String(value ?? '').replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
   const sellerIdentity = (seller = {}, index = 0) => {
     if (seller.id) return String(seller.id);
@@ -907,6 +908,7 @@
       const salesGap = Math.max(0, primaryTarget - result.general), serviceGap = Math.max(0, serviceTarget - result.services);
       const averageDay = result.worked ? result.general / result.worked : 0, serviceAverageDay = result.worked ? result.services / result.worked : 0;
       const targetDay = plannedDays ? primaryTarget / plannedDays : 0, targetServiceDay = plannedDays ? serviceTarget / plannedDays : 0;
+      const salesDailyDelta = averageDay - targetDay, serviceDailyDelta = serviceAverageDay - targetServiceDay;
       const paceProjection = averageDay * plannedDays, ticket = result.invoiceCount ? result.general / result.invoiceCount : 0;
       const goals = tierGoals().map((tier) => {
         const target = weeklyTierTarget(tier, targetContext, weeks), mercTarget = target.mercantile, grossTarget = target.grossProfit;
@@ -940,7 +942,7 @@
       const perSellerService = sellerCount ? serviceGap / sellerCount : 0;
       const perDaySellerSales = sellerCount && plannedDays ? salesGap / plannedDays / sellerCount : 0;
       const perDaySellerService = sellerCount && plannedDays ? serviceGap / plannedDays / sellerCount : 0;
-      return `<article class="week ${visualClass}"><div class="week-top"><div><div class="week-title">${index + 1}ª semana</div><div class="week-date">${items[0].date.toLocaleDateString('pt-BR')} a ${items.at(-1).date.toLocaleDateString('pt-BR')}</div></div><div class="week-head-actions">${result.pendingDays && phase !== 'future' ? `<span class="week-pending-chip ${phase === 'current' ? 'current' : ''}">${pendingLabel}</span>` : ''}<button type="button" class="week-status-toggle ${toggleStatus}" data-week-toggle="${index}" aria-expanded="${expanded}"><span>${hasResults || phase === 'closed' ? pct.format(primary.overall) : 'Sem dados'}</span><span class="chevron">⌄</span></button></div></div>${chart}<div class="week-metrics"><div class="metric result-status ${mercantileStatus}"><span>VENDA MERCANTIL</span><strong>${brl.format(result.general)} · ${pct.format(primary.mercRate)}</strong></div><div class="metric"><span>LUCRO BRUTO</span><strong>${grossAvailable ? brl.format(result.grossProfit) : 'Não informado'}</strong></div><div class="metric"><span>SERVIÇOS</span><strong class="${statusClass(serviceRate)}">${brl.format(result.services)} · ${pct.format(serviceRate)}</strong></div><div class="metric result-status ${efficiencyStatus}"><span>EFICIÊNCIA</span><strong>${result.eligible > 0 ? efficiencyPct.format(result.efficiency) : 'Não calculada'}</strong></div><div class="metric result-status ${conversionStatus}"><span>TAXA DE CONVERSÃO</span><strong>${result.nfs ? efficiencyPct.format(conversion) : 'Não calculada'}</strong><small>Qtd. garantias ÷ qtd. elegível</small></div></div><div class="week-analysis"><div class="metric"><span>MÉDIA MERCANTIL / DIA</span><strong>${brl.format(averageDay)}</strong><small>Meta/dia: ${brl.format(targetDay)}</small></div><div class="metric"><span>FALTA MERCANTIL / DIA</span><strong class="${salesGap ? 'negative' : 'positive'}">${brl.format(plannedDays ? salesGap / plannedDays : 0)}</strong><small>Total: ${brl.format(salesGap)}</small></div><div class="metric"><span>FALTA MERCANTIL / VENDEDOR</span><strong class="${salesGap ? 'negative' : 'positive'}">${brl.format(perSellerSales)}</strong><small>${sellerNote}</small></div><div class="metric emphasized"><span>MERCANTIL / DIA / VENDEDOR</span><strong class="${salesGap ? 'negative' : 'positive'}">${brl.format(perDaySellerSales)}</strong><small>${sellerNote}</small></div><div class="metric"><span>PROJEÇÃO PELO RITMO</span><strong>${brl.format(paceProjection)}</strong><small>Ticket: ${brl.format(ticket)}</small></div><div class="metric"><span>MÉDIA SERVIÇOS / DIA</span><strong>${brl.format(serviceAverageDay)}</strong><small>Meta/dia: ${brl.format(targetServiceDay)}</small></div><div class="metric"><span>FALTA SERVIÇOS / DIA</span><strong class="${serviceGap ? 'negative' : 'positive'}">${brl.format(plannedDays ? serviceGap / plannedDays : 0)}</strong><small>Total: ${brl.format(serviceGap)}</small></div><div class="metric"><span>FALTA SERVIÇOS / VENDEDOR</span><strong class="${serviceGap ? 'negative' : 'positive'}">${brl.format(perSellerService)}</strong><small>${sellerNote}</small></div><div class="metric emphasized services"><span>SERVIÇOS / DIA / VENDEDOR</span><strong class="${serviceGap ? 'negative' : 'positive'}">${brl.format(perDaySellerService)}</strong><small>${sellerNote}</small></div><div class="metric"><span>NOTAS FISCAIS</span><strong>${result.invoiceCount}</strong><small>${result.worked} dia(s) lançado(s)</small></div></div><div class="hint">${targetNote}${grossAvailable ? ' • Lucro bruto mensal distribuído pela participação da semana nas vendas.' : ' • Lucro bruto não informado; percentual calculado somente pelo mercantil.'}</div><div class="week-goals">${goals}</div></article>`;
+      return `<article class="week ${visualClass}"><div class="week-top"><div><div class="week-title">${index + 1}ª semana</div><div class="week-date">${items[0].date.toLocaleDateString('pt-BR')} a ${items.at(-1).date.toLocaleDateString('pt-BR')}</div></div><div class="week-head-actions">${result.pendingDays && phase !== 'future' ? `<span class="week-pending-chip ${phase === 'current' ? 'current' : ''}">${pendingLabel}</span>` : ''}<button type="button" class="week-status-toggle ${toggleStatus}" data-week-toggle="${index}" aria-expanded="${expanded}"><span>${hasResults || phase === 'closed' ? pct.format(primary.overall) : 'Sem dados'}</span><span class="chevron">⌄</span></button></div></div>${chart}<div class="week-metrics"><div class="metric result-status ${mercantileStatus}"><span>VENDA MERCANTIL</span><strong>${brl.format(result.general)} · ${pct.format(primary.mercRate)}</strong></div><div class="metric"><span>LUCRO BRUTO</span><strong>${grossAvailable ? brl.format(result.grossProfit) : 'Não informado'}</strong></div><div class="metric"><span>SERVIÇOS</span><strong class="${statusClass(serviceRate)}">${brl.format(result.services)} · ${pct.format(serviceRate)}</strong></div><div class="metric result-status ${efficiencyStatus}"><span>EFICIÊNCIA</span><strong>${result.eligible > 0 ? efficiencyPct.format(result.efficiency) : 'Não calculada'}</strong></div><div class="metric result-status ${conversionStatus}"><span>TAXA DE CONVERSÃO</span><strong>${result.nfs ? efficiencyPct.format(conversion) : 'Não calculada'}</strong><small>Qtd. garantias ÷ qtd. elegível</small></div></div><div class="week-analysis"><div class="metric"><span>MÉDIA MERCANTIL / DIA</span><strong>${brl.format(averageDay)}</strong><small>Meta/dia: ${brl.format(targetDay)}</small></div><div class="metric"><span>SALDO MERCANTIL / DIA</span><strong class="${salesDailyDelta >= 0 ? 'positive' : 'negative'}">${signedBrl(salesDailyDelta)}</strong><small>Meta/dia: ${brl.format(targetDay)} • ${salesDailyDelta >= 0 ? 'acima' : 'abaixo'} ${brl.format(Math.abs(salesDailyDelta))}</small></div><div class="metric"><span>FALTA MERCANTIL / VENDEDOR</span><strong class="${salesGap ? 'negative' : 'positive'}">${brl.format(perSellerSales)}</strong><small>${sellerNote}</small></div><div class="metric emphasized"><span>MERCANTIL / DIA / VENDEDOR</span><strong class="${salesGap ? 'negative' : 'positive'}">${brl.format(perDaySellerSales)}</strong><small>${sellerNote}</small></div><div class="metric"><span>PROJEÇÃO PELO RITMO</span><strong>${brl.format(paceProjection)}</strong><small>Ticket: ${brl.format(ticket)}</small></div><div class="metric"><span>MÉDIA SERVIÇOS / DIA</span><strong>${brl.format(serviceAverageDay)}</strong><small>Meta/dia: ${brl.format(targetServiceDay)}</small></div><div class="metric"><span>SALDO SERVIÇOS / DIA</span><strong class="${serviceDailyDelta >= 0 ? 'positive' : 'negative'}">${signedBrl(serviceDailyDelta)}</strong><small>Meta/dia: ${brl.format(targetServiceDay)} • ${serviceDailyDelta >= 0 ? 'acima' : 'abaixo'} ${brl.format(Math.abs(serviceDailyDelta))}</small></div><div class="metric"><span>FALTA SERVIÇOS / VENDEDOR</span><strong class="${serviceGap ? 'negative' : 'positive'}">${brl.format(perSellerService)}</strong><small>${sellerNote}</small></div><div class="metric emphasized services"><span>SERVIÇOS / DIA / VENDEDOR</span><strong class="${serviceGap ? 'negative' : 'positive'}">${brl.format(perDaySellerService)}</strong><small>${sellerNote}</small></div><div class="metric"><span>NOTAS FISCAIS</span><strong>${result.invoiceCount}</strong><small>${result.worked} dia(s) lançado(s)</small></div></div><div class="hint">${targetNote}${grossAvailable ? ' • Lucro bruto mensal distribuído pela participação da semana nas vendas.' : ' • Lucro bruto não informado; percentual calculado somente pelo mercantil.'}</div><div class="week-goals">${goals}</div></article>`;
     }).join('');
     grid.querySelectorAll('.week').forEach((week, index) => {
       const stats = weekStats(weekBuckets()[index]);
@@ -1441,7 +1443,7 @@
   function sellerWorkspaceWeekCard(w) {
     const conv = w.a.nfs ? efficiencyPct.format(w.a.conversion) : '—', eff = w.a.eligible ? efficiencyPct.format(w.a.efficiency) : '—';
     const missingMerc = Math.max(0,w.mercGoal-w.a.general), missingServ = Math.max(0,w.serviceGoal-w.a.services);
-    const avgMerc = w.launched ? w.a.general/w.launched : 0, avgServ = w.launched ? w.a.services/w.launched : 0;
+    const avgMerc = w.launched ? w.a.general/w.launched : 0, avgServ = w.launched ? w.a.services/w.launched : 0, targetMercDay=w.working?w.mercGoal/w.working:0, targetServDay=w.working?w.serviceGoal/w.working:0, deltaMercDay=avgMerc-targetMercDay, deltaServDay=avgServ-targetServDay;
     const projMerc = w.launched ? avgMerc*w.working : 0, projServ = w.launched ? avgServ*w.working : 0;
     const ticket = w.a.invoiceCount ? w.a.general/w.a.invoiceCount : 0;
     const commissions = w.items.reduce((sum,item) => {
@@ -1463,7 +1465,9 @@
       <div><span>📈 Projeção mercantil</span><strong>${brl.format(projMerc)}</strong><small>${w.mercGoal?pct.format(projMerc/w.mercGoal)+' projetado':'Sem meta'}</small></div>
       <div><span>📈 Projeção serviços</span><strong>${brl.format(projServ)}</strong><small>${w.serviceGoal?pct.format(projServ/w.serviceGoal)+' projetado':'Sem meta'}</small></div>
       <div><span>⚡ Média mercantil/dia</span><strong>${brl.format(avgMerc)}</strong><small>${w.launched} dia(s) lançado(s)</small></div>
+      <div><span>↕ Saldo mercantil/dia</span><strong class="${deltaMercDay>=0?'positive':'negative'}">${signedBrl(deltaMercDay)}</strong><small>Meta/dia ${brl.format(targetMercDay)}</small></div>
       <div><span>⚡ Média serviços/dia</span><strong>${brl.format(avgServ)}</strong><small>${w.working} dia(s) planejado(s)</small></div>
+      <div><span>↕ Saldo serviços/dia</span><strong class="${deltaServDay>=0?'positive':'negative'}">${signedBrl(deltaServDay)}</strong><small>Meta/dia ${brl.format(targetServDay)}</small></div>
       <div><span>📅 Dias da semana</span><strong>${w.launched}/${w.working}</strong><small>${w.pending} pendente(s)</small></div>
       <div><span>📊 Distribuição</span><strong>${pct2.format(w.share)}</strong><small>da meta mensal</small></div>
     </div><footer>Semana sincronizada com a configuração gerencial e com a distribuição diária da competência.</footer></article>`;
@@ -3184,6 +3188,24 @@
     document.getElementById('biCharts').innerHTML=Object.entries(biTypes).map(([type,title])=>biSection(type,title,records.filter(record=>record.type===type),settings)).join('');
     document.getElementById('biSaved').innerHTML=`<h3>Registros do BI · ${esc(db.branch||'filial não informada')}</h3>${all.length?`<div class="bi-saved-list">${[...all].sort((a,b)=>b.month.localeCompare(a.month)).map(record=>`<div><strong>${esc(monthLabel(record.month))}</strong><span>${esc(biTypes[record.type]||record.type)} · ${record.rows.length} categoria(s) · ${record.completeness==='partial'?'Parcial':'Fechado'}</span><small>${esc(record.source||'Importação')} · ${new Date(record.updatedAt).toLocaleDateString('pt-BR')}</small></div>`).join('')}</div>`:'<p>Nenhum registro importado para esta filial.</p>'}`;
   }
+
+  function applyV56TabletPolish() {
+    if (document.getElementById('fs-v56-tablet-polish')) return;
+    const st = document.createElement('style');
+    st.id = 'fs-v56-tablet-polish';
+    st.textContent = `
+      .seller-card-rank{display:none!important}
+      .seller-directory-card .seller-card-head{gap:10px!important}
+      @media (min-width:761px) and (max-width:1180px){
+        .goal-grid{grid-template-columns:1fr!important}
+        .goal dl.goal-dual{grid-template-columns:minmax(110px,1fr) minmax(128px,auto) minmax(128px,auto)!important;column-gap:16px!important}
+        .goal dl.goal-dual dd{min-width:0!important;white-space:nowrap!important;font-size:clamp(11px,1.25vw,13px)!important}
+        .goal-col-head{font-size:8px!important}
+      }
+    `;
+    document.head.appendChild(st);
+  }
+  applyV56TabletPolish();
 
   initBI();
 
