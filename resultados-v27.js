@@ -1720,8 +1720,13 @@
   function renderTeamDashboard(){const layer=ensureTeamDashboardModal(),host=layer.querySelector('#teamDashboardModalContent');if(!layer.classList.contains('open'))return;const period=host.dataset.period||'month',compare=host.dataset.compare||'none';const metrics=['merc','services','conversion','efficiency','ticket','invoice','gain'];host.innerHTML=`<div class="dashboard-controls"><div><label>Período</label><select id="teamDashPeriod"><option value="week" ${period==='week'?'selected':''}>Semana</option><option value="fortnight" ${period==='fortnight'?'selected':''}>15 dias</option><option value="month" ${period==='month'?'selected':''}>Mês</option></select></div><div><label>Comparação</label><select id="teamDashCompare"><option value="none" ${compare==='none'?'selected':''}>Somente atual</option><option value="previous" ${compare==='previous'?'selected':''}>Atual × período anterior</option></select></div><div class="dashboard-report-actions"><label>Relatório</label><button class="btn primary" id="teamDashPrint" type="button">🧾 Baixar / imprimir A4</button></div></div><div class="team-dashboard-summary"><div><span>Vendedores</span><strong>${db.sellers.length}</strong></div><div><span>Atualizados hoje</span><strong>${db.sellers.filter(s=>sellerDailyStatus(s).cls!=='bad').length}</strong></div><div><span>Pendentes</span><strong>${db.sellers.filter(s=>sellerDailyStatus(s).cls==='bad').length}</strong></div></div>${metrics.map(m=>renderTeamMetric(period,m)).join('')}`;host.querySelector('#teamDashPeriod').onchange=e=>{host.dataset.period=e.target.value;renderTeamDashboard()};host.querySelector('#teamDashCompare').onchange=e=>{host.dataset.compare=e.target.value;renderTeamDashboard()};host.querySelector('#teamDashPrint').onclick=()=>dashboardPrint('Dashboard da equipe',host.innerHTML);}
   function openTeamDashboard(){const layer=ensureTeamDashboardModal();layer.classList.add('open');layer.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';renderTeamDashboard();}
 
+  function branchDashboardHasVisibleDay(day) {
+    if (!day) return false;
+    const hasValues = ['general','eligible','warranty','other','mixed','invoiceCount','nfs','warrantyQty'].some((field) => num(day[field]) > 0);
+    return hasValues || day.status === 'done';
+  }
   function branchDashboardRows(period='month') {
-    const all = Object.entries(db.daily || {}).filter(([, day]) => day && ['general','eligible','warranty','other','mixed','invoiceCount','nfs','warrantyQty'].some((field) => num(day[field]) > 0)).sort(([a],[b]) => a.localeCompare(b));
+    const all = Object.entries(db.daily || {}).filter(([, day]) => branchDashboardHasVisibleDay(day)).sort(([a],[b]) => a.localeCompare(b));
     if (period === 'month') return all;
     const [yy, mm] = String(db.month || '').split('-').map(Number);
     const last = new Date(yy, mm, 0).getDate();
@@ -1745,7 +1750,7 @@
       if (prevEnd < 1) return [];
       return Object.entries(db.daily || {}).filter(([key, day]) => {
         const numDay = Number(key.slice(-2));
-        return numDay >= prevStart && numDay <= prevEnd && day && ['general','eligible','warranty','other','mixed','invoiceCount','nfs','warrantyQty'].some((field) => num(day[field]) > 0);
+        return numDay >= prevStart && numDay <= prevEnd && branchDashboardHasVisibleDay(day);
       }).sort(([a],[b]) => a.localeCompare(b));
     }
     if (compare === 'lastYear') {
@@ -1753,7 +1758,7 @@
       const targetBranch = String(db.branch || '').trim().toLocaleUpperCase('pt-BR');
       const record = Object.values(vault.records || {}).find((item) => item && item.month === targetMonth && String(item.branch || '').trim().toLocaleUpperCase('pt-BR') === targetBranch);
       if (!record?.daily) return [];
-      return Object.entries(record.daily).filter(([, day]) => day && ['general','eligible','warranty','other','mixed','invoiceCount','nfs','warrantyQty'].some((field) => num(day[field]) > 0)).sort(([a],[b]) => a.localeCompare(b)).slice(0, 31);
+      return Object.entries(record.daily).filter(([, day]) => branchDashboardHasVisibleDay(day)).sort(([a],[b]) => a.localeCompare(b)).slice(0, 31);
     }
     return [];
   }
