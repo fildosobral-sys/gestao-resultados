@@ -88,32 +88,48 @@ function renderHome(){
   if(distTag)distTag.textContent=`Meta individual • ${planned} dia(s)`;
   const distHint=document.querySelector('.distribution-panel .hint'); if(distHint)distHint.textContent='';
   if(distHost){
-    const distCards=[
-      ['Falta mercantil total',brl.format(mercGap),mg?`Meta mercantil: ${brl.format(mg)}`:'Cadastre sua meta mercantil',`${mercGap?'negative':'positive'}`],
-      ['Mercantil / dia',brl.format(needMerc),`${remaining} dia(s) restante(s)`,`${needMerc?'negative':'positive'}`],
-      ['Mercantil no mês',brl.format(mercTotal),mg?`${pct.format(mercRate)} da meta`:'Sem meta cadastrada',mercRate>=1?'positive':''],
-      ['Projeção mercantil',brl.format(projMerc),mg?`${pct.format(projMercRate)} da meta`:'Sem meta cadastrada',projMercRate>=1?'positive':''],
-      ['Falta serviços total',brl.format(servGap),sg?`Meta serviços: ${brl.format(sg)}`:'Cadastre sua meta de serviços',`${servGap?'negative':'positive'} service`],
-      ['Serviços / dia',brl.format(needServ),`${remaining} dia(s) restante(s)`,`${needServ?'negative':'positive'} service`],
-      ['Serviços no mês',brl.format(a.services),sg?`${pct.format(servRate)} da meta`:'Sem meta cadastrada',servRate>=1?'positive service':'service'],
-      ['Projeção serviços',brl.format(projServ),sg?`${pct.format(projServRate)} da meta`:'Sem meta cadastrada',projServRate>=1?'positive service':'service']
-    ];
-    distHost.innerHTML=distCards.map(([label,value,note,cls],i)=>{const tones=['note-blue','note-gold','note-blue','note-gold','note-purple','note-gold','note-purple','note-green'];return `<div class="seller-dist-card ${cls||''}"><span>${label}</span><strong>${value}</strong><small class="dist-footer-note ${tones[i]||''}">${note}</small></div>`}).join('');
+    const distCard=(label,value,note,cls='',tone='')=>`<div class="seller-dist-card ${cls}"><span>${label}</span><strong>${value}</strong><small class="dist-footer-note ${tone}">${note}</small></div>`;
+    const mercCards=[
+      distCard('Falta mercantil total',brl.format(mercGap),mg?`Meta mercantil: ${brl.format(mg)}`:'Cadastre sua meta mercantil',mercGap?'negative':'positive','note-blue'),
+      distCard('Mercantil / dia',brl.format(needMerc),`${remaining} dia(s) restante(s)`,needMerc?'negative':'positive','note-gold'),
+      distCard('Mercantil no mês',brl.format(mercTotal),mg?`${pct.format(mercRate)} da meta`:'Sem meta cadastrada',mercRate>=1?'positive':'','note-blue'),
+      distCard('Projeção mercantil',brl.format(projMerc),mg?`${pct.format(projMercRate)} da meta`:'Sem meta cadastrada',projMercRate>=1?'positive':'','note-gold')
+    ].join('');
+    const serviceCards=[
+      distCard('Falta serviços total',brl.format(servGap),sg?`Meta serviços: ${brl.format(sg)}`:'Cadastre sua meta de serviços',`${servGap?'negative':'positive'} service`,'note-purple'),
+      distCard('Serviços / dia',brl.format(needServ),`${remaining} dia(s) restante(s)`,`${needServ?'negative':'positive'} service`,'note-gold'),
+      distCard('Serviços no mês',brl.format(a.services),sg?`${pct.format(servRate)} da meta`:'Sem meta cadastrada',servRate>=1?'positive service':'service','note-purple'),
+      distCard('Projeção serviços',brl.format(projServ),sg?`${pct.format(projServRate)} da meta`:'Sem meta cadastrada',projServRate>=1?'positive service':'service','note-green')
+    ].join('');
+    distHost.innerHTML=`<section class="seller-dist-group merc"><header><strong>🛒 MERCANTIL</strong><small>Realizado, necessidade diária e projeção</small></header><div class="seller-dist-group-grid">${mercCards}</div></section><section class="seller-dist-group services"><header><strong>🔐 SERVIÇOS</strong><small>Realizado, necessidade diária e projeção</small></header><div class="seller-dist-group-grid">${serviceCards}</div></section>`;
   }
   if(distNote){distNote.innerHTML='';distNote.hidden=true;}
-  const cards=[
-    ['💰 Mercantil no mês',brl.format(mercTotal),mg?`${pct.format(mercRate)} da meta`:'Cadastre sua meta','strong-card','note-footer note-emphasis note-blue',mg?mercRate:null,'meta'],
-    ['🛡️ Serviços no mês',brl.format(a.services),sg?`${pct.format(servRate)} da meta`:'Cadastre sua meta','strong-card','note-footer note-emphasis note-purple',sg?servRate:null,'meta'],
-    ['🎯 Conversão',a.nfs?pct.format(a.conversion):'—','Meta 35,00%',a.conversion>=.35?'good':a.nfs?'attention':'','note-footer note-emphasis note-red',a.nfs?a.conversion/.35:null,'meta'],
-    ['⚡ Eficiência',a.eligible?pct.format(a.efficiency):'—','Meta 7,00%',a.efficiency>=.07?'good':a.eligible?'attention':'','note-footer note-emphasis note-green',a.eligible?a.efficiency/.07:null,'meta'],
-    ['📈 Projeção mercantil',brl.format(projMerc),mg?progressText(projMerc,mg):'Meta não definida',projMerc>=mg&&mg?'good':'','note-footer note-emphasis '+(projMerc>=mg&&mg?'note-green':'note-gold'),mg?projMercRate:null,'meta'],
-    ['📈 Projeção serviços',brl.format(projServ),sg?progressText(projServ,sg):'Meta não definida',projServ>=sg&&sg?'good':'','note-footer note-emphasis '+(projServ>=sg&&sg?'note-green':'note-gold'),sg?projServRate:null,'meta'],
-    ['⚡ Média mercantil/dia',brl.format(avgMerc),`Necessário ${brl.format(needMerc)}/dia`,'','note-footer note-gold',mg&&planned?avgMerc/(mg/planned):null,'pace'],
-    ['⚡ Média serviços/dia',brl.format(avgServ),`Necessário ${brl.format(needServ)}/dia`,'','note-footer note-gold',sg&&planned?avgServ/(sg/planned):null,'pace'],
-    ['📅 Dias considerados',String(worked),`${remaining} restante(s) de ${planned}`,'','note-footer',null,'none'],
-    ['🌐 E-commerce',brl.format(ecom),'Acumulado da competência','','note-footer',null,'none']
+  const metricCard=x=>`<div class="metric ${x[3]||''}"><div class="metric-status-head"><span class="metric-status-label">${x[0]}</span>${metricTrendArrow(x[5],x[6])}</div><strong>${x[1]}</strong><small class="${x[4]||''}">${x[2]}</small></div>`;
+  const invoiceAvg=worked?a.invoiceCount/worked:0;
+  const rhythmGroups=[
+    ['merc','1 🛒 Mercantil','Vendas, médias, saldos e projeções',[
+      ['💰 Mercantil no mês',brl.format(mercTotal),mg?`${pct.format(mercRate)} da meta`:'Cadastre sua meta','strong-card','note-footer note-emphasis note-blue',mg?mercRate:null,'meta'],
+      ['⚡ Média mercantil/dia',brl.format(avgMerc),`Necessário ${brl.format(needMerc)}/dia`,'','note-footer note-gold',mg&&planned?avgMerc/(mg/planned):null,'pace'],
+      ['📈 Projeção mercantil',brl.format(projMerc),mg?progressText(projMerc,mg):'Meta não definida',projMerc>=mg&&mg?'good':'','note-footer note-emphasis '+(projMerc>=mg&&mg?'note-green':'note-gold'),mg?projMercRate:null,'meta']
+    ]],
+    ['indicators','2 📄 Notas Fiscais e Indicadores','Quantidade, conversão, eficiência e médias',[
+      ['📄 Notas fiscais total',String(a.invoiceCount||0),`${worked} dia(s) considerado(s)`,'','note-footer',null,'none'],
+      ['📊 Média notas fiscais/dia',invoiceAvg.toLocaleString('pt-BR',{minimumFractionDigits:Number.isInteger(invoiceAvg)?0:1,maximumFractionDigits:1}),`${worked} dia(s) considerado(s)`,'','note-footer',null,'none'],
+      ['🎯 Conversão',a.nfs?pct.format(a.conversion):'—','Meta 35,00%',a.conversion>=.35?'good':a.nfs?'attention':'','note-footer note-emphasis note-red',a.nfs?a.conversion/.35:null,'meta'],
+      ['⚡ Eficiência',a.eligible?pct.format(a.efficiency):'—','Meta 7,00%',a.efficiency>=.07?'good':a.eligible?'attention':'','note-footer note-emphasis note-green',a.eligible?a.efficiency/.07:null,'meta']
+    ]],
+    ['services','3 🔐 Serviços','Vendas, médias, saldos e projeções',[
+      ['🛡️ Serviços no mês',brl.format(a.services),sg?`${pct.format(servRate)} da meta`:'Cadastre sua meta','strong-card','note-footer note-emphasis note-purple',sg?servRate:null,'meta'],
+      ['⚡ Média serviços/dia',brl.format(avgServ),`Necessário ${brl.format(needServ)}/dia`,'','note-footer note-gold',sg&&planned?avgServ/(sg/planned):null,'pace'],
+      ['📈 Projeção serviços',brl.format(projServ),sg?progressText(projServ,sg):'Meta não definida',projServ>=sg&&sg?'good':'','note-footer note-emphasis '+(projServ>=sg&&sg?'note-green':'note-gold'),sg?projServRate:null,'meta']
+    ]],
+    ['aux','4 📅 Dias e E-commerce','Competência e vendas digitais',[
+      ['📅 Dias considerados',String(worked),`${remaining} restante(s) de ${planned}`,'','note-footer',null,'none'],
+      ['🌐 E-commerce',brl.format(ecom),'Acumulado da competência','','note-footer',null,'none']
+    ]]
   ];
-  document.getElementById('homeMetrics').innerHTML=cards.map(x=>`<div class="metric ${x[3]||''}"><div class="metric-status-head"><span class="metric-status-label">${x[0]}</span>${metricTrendArrow(x[5],x[6])}</div><strong>${x[1]}</strong><small class="${x[4]||''}">${x[2]}</small></div>`).join('');
+  const homeMetrics=document.getElementById('homeMetrics');
+  if(homeMetrics)homeMetrics.innerHTML=rhythmGroups.map(([cls,title,subtitle,items])=>`<section class="rhythm-group ${cls}"><header><strong>${title}</strong><small>${subtitle}</small></header><div class="rhythm-group-grid">${items.map(metricCard).join('')}</div></section>`).join('');
   const finance=document.getElementById('financeMetrics'); if(finance) finance.innerHTML=`<div class="finance-hero"><span>🚀 PROJEÇÃO DE GANHO TOTAL</span><strong>${brl.format(fin.projectedTotal)}</strong><small>Comissões projetadas + DSR estimado</small></div>${[
     ['💵 Comissão mercantil atual',brl.format(a.mercCommission+ecomCommission),ecomCommission?'Diário + e-commerce':'Valor informado nos lançamentos','note-footer'],
     ['🛡️ Comissão serviços atual',brl.format(a.serviceCommission),'Valor informado nos lançamentos','note-footer'],
@@ -167,35 +183,45 @@ function renderWeekly(){
   const today=new Date();today.setHours(12,0,0,0);
   const toneFor=rate=>rate>=1?'metric-positive':rate>=.85?'metric-warning':'metric-negative';
   const donut=(label,rate,note,tone)=>`<div class="seller-week-donut-item"><div class="seller-week-donut ${tone}" style="--week-rate:${Math.max(0,Math.min(100,rate*100)).toFixed(2)}"><strong>${pct.format(rate||0)}</strong></div><b>${label}</b><small>${note}</small></div>`;
+  const metricCard=([label,value,note,tone=''])=>`<div class="metric ${tone}"><span>${label}</span><strong>${value}</strong><small>${note}</small></div>`;
   host.innerHTML=weeks().map((w,i)=>{
     const a=sumDays(w.items),workedItems=w.items.filter(it=>isDashboardLaunchedDay(it.data)),days=workedItems.length;
     const weekPct=w.items.reduce((sum,it)=>sum+goalPercent(it.key),0)/100,mg=num(seller.assignedGoal)*weekPct,sg=num(seller.serviceGoal)*weekPct;
     const plannedDays=Math.max(days,w.items.filter(it=>goalPercent(it.key)>0&&!['off','medical','justified'].includes(String(it.data?.status||''))).length||days||1);
     const pending=w.items.filter(it=>it.data.status==='pending').length,avgM=days?a.general/days:0,avgS=days?a.services/days:0;
     const mercRate=mg?a.general/mg:0,servRate=sg?a.services/sg:0,convRate=a.nfs?a.conversion/.35:0,effRate=a.eligible?a.efficiency/.07:0;
-    const ticket=a.invoiceCount?a.general/a.invoiceCount:0,remaining=Math.max(0,plannedDays-days),missingMerc=Math.max(0,mg-a.general),missingServ=Math.max(0,sg-a.services),paceMerc=days?a.general/days*plannedDays:0,paceServ=days?a.services/days*plannedDays:0,projectionRate=mg?paceMerc/mg:0,targetMercDay=plannedDays?mg/plannedDays:0,targetServDay=plannedDays?sg/plannedDays:0,deltaMercDay=avgM-targetMercDay,deltaServDay=avgS-targetServDay;
+    const ticket=a.invoiceCount?a.general/a.invoiceCount:0,remaining=Math.max(0,plannedDays-days),paceMerc=days?a.general/days*plannedDays:0,paceServ=days?a.services/days*plannedDays:0,projectionRate=mg?paceMerc/mg:0,serviceProjectionRate=sg?paceServ/sg:0,targetMercDay=plannedDays?mg/plannedDays:0,targetServDay=plannedDays?sg/plannedDays:0,deltaMercDay=avgM-targetMercDay,deltaServDay=avgS-targetServDay;
+    const invoiceAvg=days?a.invoiceCount/days:0;
     const startDate=new Date(w.items[0].date);startDate.setHours(12,0,0,0);const endDate=new Date(w.items.at(-1).date);endDate.setHours(12,0,0,0);
     const hit=!!(mg&&mercRate>=1),current=today>=startDate&&today<=endDate,past=today>endDate;
     let tone='neutral',label=mg?`Mercantil ${pct.format(mercRate)}`:'Sem meta';if(hit){tone='positive';label=`✅ Mercantil ${pct.format(mercRate)}`}else if(current){tone='warning';label=`🟡 ${mg?`Mercantil ${pct.format(mercRate)}`:'Em andamento'}`}else if(past){tone='negative';label=`🔴 ${mg?`Mercantil ${pct.format(mercRate)}`:'Encerrada'}`}else label=`⚪ ${mg?`Mercantil ${pct.format(mercRate)}`:'Futura'}`;
-    const cards=[
-      ['💰 Mercantil',brl.format(a.general),mg?`Meta ${brl.format(mg)} • ${progressText(a.general,mg)}`:'Meta aguardando gestão',mg?toneFor(mercRate):''],
-      ['🛡️ Serviços',brl.format(a.services),sg?`Meta ${brl.format(sg)} • ${progressText(a.services,sg)}`:'Meta aguardando gestão',sg?toneFor(servRate):''],
-      ['🎯 Conversão',a.nfs?pct.format(a.conversion):'—','Meta 35%',a.nfs?toneFor(convRate):''],
-      ['⚡ Eficiência',a.eligible?pct.format(a.efficiency):'—','Meta 7%',a.eligible?toneFor(effRate):''],
-      ['⚡ Média mercantil/dia',brl.format(avgM),`${days} dia(s) considerado(s)`,''],
-      ['↕ Saldo mercantil/dia',signedBrl(deltaMercDay),`Meta/dia: ${brl.format(targetMercDay)} • ${deltaMercDay>=0?'acima':'abaixo'} ${brl.format(Math.abs(deltaMercDay))}`,deltaMercDay>=0?'metric-positive':'metric-negative'],
-      ['📈 Projeção pelo ritmo',brl.format(paceMerc),mg?`${pct.format(projectionRate)} da meta`:'Sem meta definida',mg?toneFor(projectionRate):''],
-      ['⚡ Média serviços/dia',brl.format(avgS),`${pending} pendência(s)`,''],
-      ['↕ Saldo serviços/dia',signedBrl(deltaServDay),`Meta/dia: ${brl.format(targetServDay)} • ${deltaServDay>=0?'acima':'abaixo'} ${brl.format(Math.abs(deltaServDay))}`,deltaServDay>=0?'metric-positive':'metric-negative'],
-      ['🧾 Ticket médio',a.invoiceCount?brl.format(ticket):'—',`${a.invoiceCount||0} nota(s) fiscal(is)`,''],
-      ['📄 Notas fiscais total',String(a.invoiceCount||0),`${days} dia(s) lançado(s)`,''],
-      ['📊 Média notas fiscais/dia',days?(a.invoiceCount/days).toLocaleString('pt-BR',{minimumFractionDigits:Number.isInteger(a.invoiceCount/days)?0:1,maximumFractionDigits:1}):'0',`${days} dia(s) considerado(s)`,''],
-      ['📅 Dias da semana',`${days}/${plannedDays}`,remaining?`${remaining} dia(s) restante(s)`:'Período concluído','']
+    const groups=[
+      ['merc','1 🛒 Mercantil','Vendas, médias, saldos e projeção',[
+        ['💰 Mercantil',brl.format(a.general),mg?`Meta ${brl.format(mg)} • ${progressText(a.general,mg)}`:'Meta aguardando gestão',mg?toneFor(mercRate):''],
+        ['⚡ Média mercantil/dia',brl.format(avgM),`${days} dia(s) considerado(s)`,''],
+        ['↕ Saldo mercantil/dia',signedBrl(deltaMercDay),`Meta/dia: ${brl.format(targetMercDay)} • ${deltaMercDay>=0?'acima':'abaixo'} ${brl.format(Math.abs(deltaMercDay))}`,deltaMercDay>=0?'metric-positive':'metric-negative'],
+        ['📈 Projeção pelo ritmo',brl.format(paceMerc),mg?`${pct.format(projectionRate)} da meta`:'Sem meta definida',mg?toneFor(projectionRate):'']
+      ]],
+      ['indicators','2 📄 Notas Fiscais e Indicadores','Quantidade, médias, conversão, eficiência e ticket',[
+        ['📄 Notas fiscais total',String(a.invoiceCount||0),`${days} dia(s) lançado(s)`,''],
+        ['📊 Média notas fiscais/dia',invoiceAvg.toLocaleString('pt-BR',{minimumFractionDigits:Number.isInteger(invoiceAvg)?0:1,maximumFractionDigits:1}),`${days} dia(s) considerado(s)`,''],
+        ['🎯 Conversão',a.nfs?pct.format(a.conversion):'—',a.nfs?`${a.warrantyQty} garantia(s) ÷ ${a.nfs} elegível(is) • Meta 35%`:'Meta 35%',a.nfs?toneFor(convRate):''],
+        ['⚡ Eficiência',a.eligible?pct.format(a.efficiency):'—','Meta 7%',a.eligible?toneFor(effRate):''],
+        ['🧾 Ticket médio',a.invoiceCount?brl.format(ticket):'—',`${a.invoiceCount||0} nota(s) fiscal(is)`,''],
+        ['📅 Dias da semana',`${days}/${plannedDays}`,remaining?`${remaining} dia(s) restante(s)`:'Período concluído','']
+      ]],
+      ['services','3 🔐 Serviços','Serviços, médias, saldos e projeção',[
+        ['🛡️ Serviços',brl.format(a.services),sg?`Meta ${brl.format(sg)} • ${progressText(a.services,sg)}`:'Meta aguardando gestão',sg?toneFor(servRate):''],
+        ['⚡ Média serviços/dia',brl.format(avgS),`${pending} pendência(s)`,''],
+        ['↕ Saldo serviços/dia',signedBrl(deltaServDay),`Meta/dia: ${brl.format(targetServDay)} • ${deltaServDay>=0?'acima':'abaixo'} ${brl.format(Math.abs(deltaServDay))}`,deltaServDay>=0?'metric-positive':'metric-negative'],
+        ['📈 Projeção de serviços',brl.format(paceServ),sg?`${pct.format(serviceProjectionRate)} da meta`:'Sem meta definida',sg?toneFor(serviceProjectionRate):'']
+      ]]
     ];
     const labels=workedItems.map(it=>String(it.date.getDate())),mercValues=workedItems.map(it=>num(it.data.general)),servValues=workedItems.map(it=>num(it.data.warranty)+num(it.data.other)+num(it.data.mixed)),mercHits=workedItems.map(it=>{const dm=dailyMission(it.key);return !!dm.p&&num(it.data.general)>=num(dm.individualMerc)}),servHits=workedItems.map(it=>{const dm=dailyMission(it.key);return !!dm.p&&(num(it.data.warranty)+num(it.data.other)+num(it.data.mixed))>=num(dm.individualServices)});
     const expanded=String(sessionStorage.getItem(`fs_week_open_${record?.month||month}_${i}`)||'0')==='1';
     const details=`<div class="seller-week-details" ${expanded?'':'hidden'}><div class="seller-week-summary"><div><strong>Percentuais e projeção da semana</strong><span>Comparação com as metas individuais do período</span></div><div class="seller-week-donut-grid">${donut('Mercantil',mercRate,`Realizado ${brl.format(a.general)} • Meta ${brl.format(mg)}`,mercRate>=1?'good':'bad')}${donut('Serviços',servRate,`Realizado ${brl.format(a.services)} • Meta ${brl.format(sg)}`,servRate>=1?'good':'bad')}${donut('Projeção',projectionRate,`Projetado ${brl.format(paceMerc)} • Meta ${brl.format(mg)}`,projectionRate>=1?'good':'blue')}</div></div><div class="seller-week-chart-grid"><div class="seller-week-chart"><h4>💰 Mercantil por dia</h4>${dashSvg(mercValues,labels,'bar','merc',false,mercHits)}</div><div class="seller-week-chart"><h4>🛡️ Serviços por dia</h4>${dashSvg(servValues,labels,'bar','services',false,servHits)}</div></div></div>`;
-    return `<article class="week week-${tone}"><button type="button" class="seller-week-toggle" data-week-toggle="${i}" aria-expanded="${expanded}"><div><strong>📅 ${i+1}ª semana</strong><div class="hint">${w.items[0].date.toLocaleDateString('pt-BR')} a ${w.items.at(-1).date.toLocaleDateString('pt-BR')}</div></div><span class="week-status ${tone}">${label} <i>${expanded?'⌃':'⌄'}</i></span></button>${details}<div class="week-grid">${cards.map(x=>`<div class="metric ${x[3]}"><span>${x[0]}</span><strong>${x[1]}</strong><small>${x[2]}</small></div>`).join('')}</div></article>`
+    const groupHtml=groups.map(([cls,title,subtitle,items])=>`<section class="weekly-indicator-group ${cls}"><header><strong>${title}</strong><small>${subtitle}</small></header><div class="week-grid">${items.map(metricCard).join('')}</div></section>`).join('');
+    return `<article class="week week-${tone}"><button type="button" class="seller-week-toggle" data-week-toggle="${i}" aria-expanded="${expanded}"><div><strong>📅 ${i+1}ª semana</strong><div class="hint">${w.items[0].date.toLocaleDateString('pt-BR')} a ${w.items.at(-1).date.toLocaleDateString('pt-BR')}</div></div><span class="week-status ${tone}">${label} <i>${expanded?'⌃':'⌄'}</i></span></button>${details}<div class="weekly-indicator-groups">${groupHtml}</div></article>`
   }).join('');
   host.querySelectorAll('[data-week-toggle]').forEach(btn=>btn.addEventListener('click',()=>{const i=btn.dataset.weekToggle,key=`fs_week_open_${record?.month||month}_${i}`,open=btn.getAttribute('aria-expanded')==='true';sessionStorage.setItem(key,open?'0':'1');renderWeekly()}));
 }
@@ -377,9 +403,10 @@ function applyV52VisualPolish(){if(document.getElementById('fs-v53-polish'))retu
 .seller-dist-card small,.metric small,.mini small{transition:color .18s ease}
 
 .metric-status-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap;width:100%;min-width:0}.metric-status-label{min-width:0;flex:1 1 110px}.metric-trend-badge{display:inline-flex;align-items:center;gap:4px;flex:0 0 auto;max-width:100%;padding:4px 8px;border-radius:999px;font-size:.66rem;font-weight:850;line-height:1;white-space:nowrap;letter-spacing:.01em}.metric-trend-badge b{font-size:.86rem;line-height:1}.metric-trend-badge em{font-style:normal;font-weight:800}.metric-trend-badge.up{color:#16734c;background:rgba(22,145,93,.10);border:1px solid rgba(22,145,93,.16)}.metric-trend-badge.down{color:#b83249;background:rgba(200,61,83,.09);border:1px solid rgba(200,61,83,.15)}.metric-trend-badge.flat{color:#93690d;background:rgba(197,139,23,.11);border:1px solid rgba(197,139,23,.18)}
-.metric.metric-positive strong{color:#15915d!important}.metric.metric-negative strong{color:#c83d53!important}
+ .metric.metric-positive strong{color:#15915d!important}.metric.metric-negative strong{color:#c83d53!important}
+#homeMetrics{display:block!important}.rhythm-group,.seller-dist-group,.weekly-indicator-group{border:1px solid #e3eaf2;border-radius:18px;background:#fff;padding:12px;margin:0 0 12px}.rhythm-group>header,.seller-dist-group>header,.weekly-indicator-group>header{display:flex;flex-direction:column;gap:2px;margin:0 0 10px}.rhythm-group>header strong,.seller-dist-group>header strong,.weekly-indicator-group>header strong{font-size:.92rem;color:#17324d}.rhythm-group>header small,.seller-dist-group>header small,.weekly-indicator-group>header small{font-size:.73rem;color:#7a8798}.rhythm-group-grid,.seller-dist-group-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.rhythm-group.merc{background:linear-gradient(180deg,#fbfdff,#fff)}.rhythm-group.indicators{background:linear-gradient(180deg,#f8fbff,#fff)}.rhythm-group.services{background:linear-gradient(180deg,#f8fcf9,#fff)}.rhythm-group.aux{background:linear-gradient(180deg,#fbfbfd,#fff)}.seller-dist-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}.seller-dist-group{margin:0!important}.seller-dist-group.services{background:#fbf9ff}.seller-dist-group-grid .seller-dist-card{min-height:150px}.weekly-indicator-groups{display:flex;flex-direction:column;gap:12px;margin-top:12px}.weekly-indicator-group{margin:0}.weekly-indicator-group.merc{background:rgba(248,251,255,.76)}.weekly-indicator-group.indicators{background:rgba(249,251,254,.88)}.weekly-indicator-group.services{background:rgba(247,252,249,.86)}.weekly-indicator-group .week-grid{margin:0!important}.weekly-indicator-group .metric{min-height:126px}
 @media(min-width:761px) and (max-width:1180px){.dash-pie-wrap{grid-template-columns:minmax(120px,150px) minmax(0,1fr)!important}.dash-legend{min-width:0}.dash-legend div{grid-template-columns:10px minmax(0,1fr) minmax(82px,auto)!important}.dash-legend b{white-space:nowrap;text-align:right;font-size:.9rem}.mini small.mini-footer-note{bottom:44px!important}.mini .progress{bottom:10px!important}}
-@media(max-width:760px){.seller-dist-card{min-height:148px;padding-top:18px!important;padding-bottom:16px!important}.seller-dist-card strong{font-size:clamp(1.5rem,5.9vw,2rem);white-space:nowrap}.seller-dist-card small.dist-footer-note{font-size:.76rem;padding-top:4px!important}.mini{min-height:250px}.mini>span{white-space:nowrap;font-size:clamp(.68rem,2.6vw,.82rem)}.mini>strong{white-space:nowrap;font-size:clamp(1.7rem,6vw,2.25rem)}.metric-status-head{gap:5px}.metric-status-label{flex-basis:96px}.metric-trend-badge{padding:3px 6px;font-size:.58rem}.metric-trend-badge b{font-size:.76rem}}
+@media(max-width:760px){.rhythm-group-grid,.seller-dist-group-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.rhythm-group,.seller-dist-group,.weekly-indicator-group{padding:10px;border-radius:16px}.seller-dist-grid{grid-template-columns:1fr!important}.seller-dist-card{min-height:148px;padding-top:18px!important;padding-bottom:16px!important}.seller-dist-card strong{font-size:clamp(1.5rem,5.9vw,2rem);white-space:nowrap}.seller-dist-card small.dist-footer-note{font-size:.76rem;padding-top:4px!important}.mini{min-height:250px}.mini>span{white-space:nowrap;font-size:clamp(.68rem,2.6vw,.82rem)}.mini>strong{white-space:nowrap;font-size:clamp(1.7rem,6vw,2.25rem)}.metric-status-head{gap:5px}.metric-status-label{flex-basis:96px}.metric-trend-badge{padding:3px 6px;font-size:.58rem}.metric-trend-badge b{font-size:.76rem}}
 `;
 document.head.appendChild(st)}
 applyV52VisualPolish();

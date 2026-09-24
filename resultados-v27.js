@@ -679,8 +679,43 @@
     return issues;
   }
 
+  function ensureOverviewOrganization() {
+    const root = document.querySelector('#overview .kpis');
+    if (!root || root.dataset.organized === '1') return;
+    const cardOf = (id) => document.getElementById(id)?.closest('.kpi');
+    const mercCards = [cardOf('eligibleKpi'), cardOf('grossProfitKpi')].filter(Boolean);
+    const servicesCards = [cardOf('servicesKpi')].filter(Boolean);
+    const indicatorCards = [cardOf('conversionKpi'), cardOf('ticketKpi'), cardOf('efficiencyKpi')].filter(Boolean);
+    let invoiceCard = document.getElementById('invoiceCountKpi')?.closest('.kpi');
+    if (!invoiceCard) {
+      invoiceCard = document.createElement('article');
+      invoiceCard.className = 'kpi overview-invoice-card';
+      invoiceCard.innerHTML = '<div class="label">Notas fiscais total</div><div class="value" id="invoiceCountKpi">0</div><div class="sub">Quantidade total de notas fiscais</div>';
+    }
+    const group = (cls,title,subtitle,cards) => {
+      const section = document.createElement('section');
+      section.className = `overview-kpi-group ${cls}`;
+      section.innerHTML = `<header><strong>${title}</strong><small>${subtitle}</small></header><div class="overview-kpi-grid"></div>`;
+      const grid = section.querySelector('.overview-kpi-grid');
+      cards.filter(Boolean).forEach(card => grid.appendChild(card));
+      return section;
+    };
+    root.innerHTML = '';
+    root.classList.add('overview-kpi-organized');
+    root.appendChild(group('merc','1 🛒 Mercantil','Vendas e resultado mercantil',mercCards));
+    root.appendChild(group('indicators','2 📄 Notas Fiscais e Indicadores','Quantidade, conversão, eficiência e ticket médio',[invoiceCard,...indicatorCards]));
+    const servicesGroup = group('services','3 🔧 Serviços','Garantia, outros serviços e presta-mista',servicesCards);
+    const note = document.createElement('div');
+    note.id = 'servicesEfficiencyNote';
+    note.className = 'overview-service-note';
+    servicesGroup.appendChild(note);
+    root.appendChild(servicesGroup);
+    root.dataset.organized = '1';
+  }
+
   function renderOverview() {
     const scope = currentScope(), result = scope.result, goalSource = scope.goals;
+    ensureOverviewOrganization();
     const grossAvailable = scope.type !== 'branch' || hasCompleteGrossProfit();
     setText('heroEyebrow', scope.type === 'branch' ? 'Venda mercantil total da filial' : scope.type === 'all' ? 'Venda mercantil total dos vendedores' : `Venda mercantil total — ${scope.label}`);
     setText('revenueHero', brl.format(result.revenue)); setText('workedHero', result.worked); setText('remainingHero', result.remaining);
@@ -691,7 +726,10 @@
     setText('grossProfitKpiSub', scope.type === 'branch' ? (grossAvailable ? `${pct.format(num(goalSource.grossProfitGoal) ? result.grossProfit / num(goalSource.grossProfitGoal) : 0)} da meta de lucro` : 'Não interfere no percentual mercantil') : `${pct2.format(grossProfitRate())} da venda mercantil`);
     const conversion = result.nfs ? result.warrantyQty / result.nfs : 0;
     setText('efficiencyKpi', efficiencyPct.format(result.efficiency)); setText('conversionKpi', result.nfs ? efficiencyPct.format(conversion) : 'Não calculada'); setText('ticketKpi', brl.format(result.ticket));
-    setText('nfKpi', `${result.invoiceCount.toLocaleString('pt-BR')} notas fiscais • média dos tickets diários`);
+    setText('invoiceCountKpi', result.invoiceCount.toLocaleString('pt-BR'));
+    setText('nfKpi', 'Venda mercantil ÷ notas fiscais');
+    const servicesEfficiencyNote=document.getElementById('servicesEfficiencyNote');
+    if(servicesEfficiencyNote)servicesEfficiencyNote.innerHTML=`<span>Representatividade sobre a venda elegível</span><strong>${result.eligible ? efficiencyPct.format(result.efficiency) : 'Não calculada'}</strong><small>Mesma base do indicador oficial de Eficiência</small>`;
     const tiers = tierGoals(goalSource), firstGoal = tiers[0].mercantile;
     const projectedRate = firstGoal ? result.projection / firstGoal : 0;
     const projectedGrossRate = tiers[0].grossProfit ? result.grossProfitProjection / tiers[0].grossProfit : 0;
@@ -717,16 +755,19 @@
     const mercantileGap = Math.max(0, firstGoal - result.revenue);
     const servicesGap = Math.max(0, num(goalSource.servicesGoal) - result.services);
     const gapMetric = (label, value, note, type = 'mercantile') => `<div class="monthly-gap-metric ${type}"><span>${label}</span><strong class="${value ? 'negative' : 'positive'}">${brl.format(value)}</strong><small>${note}</small></div>`;
-    document.getElementById('monthlyGapGrid').innerHTML = [
+    const mercGapCards = [
       gapMetric('Falta mercantil total', mercantileGap, `Meta 1: ${brl.format(firstGoal)}`),
       gapMetric('Mercantil / dia da filial', remainingDays ? mercantileGap / remainingDays : 0, `${remainingDays} dia(s) restante(s)`),
       gapMetric('Mercantil / vendedor', sellerCount ? mercantileGap / sellerCount : 0, sellerCount ? `${sellerCount} vendedor(es)` : 'Configure a equipe'),
-      gapMetric('Mercantil / dia / vendedor', sellerCount && remainingDays ? mercantileGap / remainingDays / sellerCount : 0, sellerCount ? `Divisão diária para ${sellerCount}` : 'Configure a equipe'),
+      gapMetric('Mercantil / dia / vendedor', sellerCount && remainingDays ? mercantileGap / remainingDays / sellerCount : 0, sellerCount ? `Divisão diária para ${sellerCount}` : 'Configure a equipe')
+    ].join('');
+    const servicesGapCards = [
       gapMetric('Falta serviços total', servicesGap, `Meta: ${brl.format(num(goalSource.servicesGoal))}`, 'services'),
       gapMetric('Serviços / dia da filial', remainingDays ? servicesGap / remainingDays : 0, `${remainingDays} dia(s) restante(s)`, 'services'),
       gapMetric('Serviços / vendedor', sellerCount ? servicesGap / sellerCount : 0, sellerCount ? `${sellerCount} vendedor(es)` : 'Configure a equipe', 'services'),
       gapMetric('Serviços / dia / vendedor', sellerCount && remainingDays ? servicesGap / remainingDays / sellerCount : 0, sellerCount ? `Divisão diária para ${sellerCount}` : 'Configure a equipe', 'services')
     ].join('');
+    document.getElementById('monthlyGapGrid').innerHTML = `<section class="monthly-gap-group merc"><header><strong>🛒 MERCANTIL</strong><small>Falta total → necessário por dia → por vendedor → dia/vendedor</small></header><div class="monthly-gap-group-grid">${mercGapCards}</div></section><section class="monthly-gap-group services"><header><strong>🔐 SERVIÇOS</strong><small>Falta total → necessário por dia → por vendedor → dia/vendedor</small></header><div class="monthly-gap-group-grid">${servicesGapCards}</div></section>`;
     const detailLayout = document.getElementById('overviewDetailLayout');
     const ecommercePanel = document.getElementById('ecommerceOverview');
     const showEcommerce = scope.type === 'branch';
@@ -910,7 +951,7 @@
       const averageDay = result.worked ? result.general / result.worked : 0, serviceAverageDay = result.worked ? result.services / result.worked : 0;
       const targetDay = plannedDays ? primaryTarget / plannedDays : 0, targetServiceDay = plannedDays ? serviceTarget / plannedDays : 0;
       const salesDailyDelta = averageDay - targetDay, serviceDailyDelta = serviceAverageDay - targetServiceDay;
-      const paceProjection = averageDay * plannedDays, ticket = result.invoiceCount ? result.general / result.invoiceCount : 0;
+      const paceProjection = averageDay * plannedDays, paceServiceProjection = serviceAverageDay * plannedDays, ticket = result.invoiceCount ? result.general / result.invoiceCount : 0;
       const goals = tierGoals().map((tier) => {
         const target = weeklyTierTarget(tier, targetContext, weeks), mercTarget = target.mercantile, grossTarget = target.grossProfit;
         const rates = tierRate(target, result.general, result.grossProfit, grossAvailable);
@@ -946,15 +987,35 @@
       const invoiceAverage = result.worked ? result.invoiceCount / result.worked : 0;
       const invoicePerSeller = sellerCount ? result.invoiceCount / sellerCount : 0;
       const formatCount = (value) => Number(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: Number.isInteger(Number(value || 0)) ? 0 : 1, maximumFractionDigits: 1 });
-      return `<article class="week ${visualClass}"><div class="week-top"><div><div class="week-title">${index + 1}ª semana</div><div class="week-date">${items[0].date.toLocaleDateString('pt-BR')} a ${items.at(-1).date.toLocaleDateString('pt-BR')}</div></div><div class="week-head-actions">${result.pendingDays && phase !== 'future' ? `<span class="week-pending-chip ${phase === 'current' ? 'current' : ''}">${pendingLabel}</span>` : ''}<button type="button" class="week-status-toggle ${toggleStatus}" data-week-toggle="${index}" aria-expanded="${expanded}"><span>${hasResults || phase === 'closed' ? pct.format(primary.overall) : 'Sem dados'}</span><span class="chevron">⌄</span></button></div></div>${chart}<div class="week-metrics"><div class="metric result-status ${mercantileStatus}"><span>VENDA MERCANTIL</span><strong>${brl.format(result.general)} · ${pct.format(primary.mercRate)}</strong></div><div class="metric"><span>LUCRO BRUTO</span><strong>${grossAvailable ? brl.format(result.grossProfit) : 'Não informado'}</strong></div><div class="metric"><span>SERVIÇOS</span><strong class="${statusClass(serviceRate)}">${brl.format(result.services)} · ${pct.format(serviceRate)}</strong></div><div class="metric result-status ${efficiencyStatus}"><span>EFICIÊNCIA</span><strong>${result.eligible > 0 ? efficiencyPct.format(result.efficiency) : 'Não calculada'}</strong></div><div class="metric result-status ${conversionStatus}"><span>TAXA DE CONVERSÃO</span><strong>${result.nfs ? efficiencyPct.format(conversion) : 'Não calculada'}</strong><small>Qtd. garantias ÷ qtd. elegível</small></div></div><div class="week-analysis"><div class="metric"><span>MÉDIA MERCANTIL / DIA</span><strong>${brl.format(averageDay)}</strong><small>Meta/dia: ${brl.format(targetDay)}</small></div><div class="metric"><span>SALDO MERCANTIL / DIA</span><strong class="${salesDailyDelta >= 0 ? 'positive' : 'negative'}">${signedBrl(salesDailyDelta)}</strong><small>Meta/dia: ${brl.format(targetDay)} • ${salesDailyDelta >= 0 ? 'acima' : 'abaixo'} ${brl.format(Math.abs(salesDailyDelta))}</small></div><div class="metric"><span>SALDO MERCANTIL / VENDEDOR</span><strong class="${perSellerSales >= 0 ? 'positive' : 'negative'}">${signedBrl(perSellerSales)}</strong><small>${sellerNote} • ${perSellerSales >= 0 ? 'acima' : 'abaixo'} ${brl.format(Math.abs(perSellerSales))}</small></div><div class="metric emphasized"><span>SALDO MERCANTIL / DIA / VENDEDOR</span><strong class="${perDaySellerSales >= 0 ? 'positive' : 'negative'}">${signedBrl(perDaySellerSales)}</strong><small>${sellerNote} • ${perDaySellerSales >= 0 ? 'acima' : 'abaixo'} ${brl.format(Math.abs(perDaySellerSales))}</small></div><div class="metric"><span>PROJEÇÃO PELO RITMO</span><strong>${brl.format(paceProjection)}</strong><small>Ticket: ${brl.format(ticket)}</small></div><div class="metric"><span>MÉDIA SERVIÇOS / DIA</span><strong>${brl.format(serviceAverageDay)}</strong><small>Meta/dia: ${brl.format(targetServiceDay)}</small></div><div class="metric"><span>SALDO SERVIÇOS / DIA</span><strong class="${serviceDailyDelta >= 0 ? 'positive' : 'negative'}">${signedBrl(serviceDailyDelta)}</strong><small>Meta/dia: ${brl.format(targetServiceDay)} • ${serviceDailyDelta >= 0 ? 'acima' : 'abaixo'} ${brl.format(Math.abs(serviceDailyDelta))}</small></div><div class="metric"><span>SALDO SERVIÇOS / VENDEDOR</span><strong class="${perSellerService >= 0 ? 'positive' : 'negative'}">${signedBrl(perSellerService)}</strong><small>${sellerNote} • ${perSellerService >= 0 ? 'acima' : 'abaixo'} ${brl.format(Math.abs(perSellerService))}</small></div><div class="metric emphasized services"><span>SALDO SERVIÇOS / DIA / VENDEDOR</span><strong class="${perDaySellerService >= 0 ? 'positive' : 'negative'}">${signedBrl(perDaySellerService)}</strong><small>${sellerNote} • ${perDaySellerService >= 0 ? 'acima' : 'abaixo'} ${brl.format(Math.abs(perDaySellerService))}</small></div><div class="metric"><span>NOTAS FISCAIS TOTAL</span><strong>${result.invoiceCount}</strong><small>${result.worked} dia(s) lançado(s)</small></div><div class="metric"><span>MÉDIA NOTAS FISCAIS / DIA</span><strong>${formatCount(invoiceAverage)}</strong><small>${result.worked} dia(s) considerado(s)</small></div><div class="metric"><span>NOTAS FISCAIS / VENDEDOR</span><strong>${formatCount(invoicePerSeller)}</strong><small>${sellerNote}</small></div></div><div class="hint">${targetNote}${grossAvailable ? ' • Lucro bruto mensal distribuído pela participação da semana nas vendas.' : ' • Lucro bruto não informado; percentual calculado somente pelo mercantil.'}</div><div class="week-goals">${goals}</div></article>`;
+      const serviceProjectionRate = serviceTarget ? paceServiceProjection / serviceTarget : 0;
+      const weekMetric = (label, value, note = '', cls = '') => `<div class="metric ${cls}"><span>${label}</span><strong>${value}</strong>${note ? `<small>${note}</small>` : ''}</div>`;
+      const mercGroup = [
+        weekMetric('VENDA MERCANTIL', `${brl.format(result.general)} · ${pct.format(primary.mercRate)}`, primaryTarget ? `Meta ${brl.format(primaryTarget)} • ${salesBalance >= 0 ? 'acima' : 'abaixo'} ${brl.format(Math.abs(salesBalance))}` : '', `result-status ${mercantileStatus}`),
+        weekMetric('LUCRO BRUTO', grossAvailable ? brl.format(result.grossProfit) : 'Não informado', grossAvailable ? 'Resultado proporcional da semana' : 'Sem informação cadastrada'),
+        weekMetric('MÉDIA MERCANTIL / DIA', brl.format(averageDay), `Meta/dia: ${brl.format(targetDay)}`),
+        weekMetric('SALDO MERCANTIL / DIA', `<span class="${salesDailyDelta >= 0 ? 'positive' : 'negative'}">${signedBrl(salesDailyDelta)}</span>`, `Meta/dia: ${brl.format(targetDay)} • ${salesDailyDelta >= 0 ? 'acima' : 'abaixo'} ${brl.format(Math.abs(salesDailyDelta))}`),
+        weekMetric('SALDO MERCANTIL / VENDEDOR', `<span class="${perSellerSales >= 0 ? 'positive' : 'negative'}">${signedBrl(perSellerSales)}</span>`, `${sellerNote} • ${perSellerSales >= 0 ? 'acima' : 'abaixo'} ${brl.format(Math.abs(perSellerSales))}`),
+        weekMetric('SALDO MERCANTIL / DIA / VENDEDOR', `<span class="${perDaySellerSales >= 0 ? 'positive' : 'negative'}">${signedBrl(perDaySellerSales)}</span>`, `${sellerNote} • ${perDaySellerSales >= 0 ? 'acima' : 'abaixo'} ${brl.format(Math.abs(perDaySellerSales))}`, 'emphasized'),
+        weekMetric('PROJEÇÃO PELO RITMO', brl.format(paceProjection), primaryTarget ? `${pct.format(projectionRate)} da meta` : 'Sem meta definida')
+      ].join('');
+      const indicatorGroup = [
+        weekMetric('NOTAS FISCAIS TOTAL', String(result.invoiceCount), `${result.worked} dia(s) lançado(s)`),
+        weekMetric('MÉDIA NOTAS FISCAIS / DIA', formatCount(invoiceAverage), `${result.worked} dia(s) considerado(s)`),
+        weekMetric('NOTAS FISCAIS / VENDEDOR', formatCount(invoicePerSeller), sellerNote),
+        weekMetric('TAXA DE CONVERSÃO', result.nfs ? efficiencyPct.format(conversion) : 'Não calculada', result.nfs ? `${result.warrantyQty} garantia(s) ÷ ${result.nfs} elegível(is) • Meta 35%` : 'Meta 35%', `result-status ${conversionStatus}`),
+        weekMetric('TICKET MÉDIO', result.invoiceCount ? brl.format(ticket) : '—', `${result.invoiceCount || 0} nota(s) fiscal(is)`),
+        weekMetric('EFICIÊNCIA', result.eligible > 0 ? efficiencyPct.format(result.efficiency) : 'Não calculada', 'Meta 7%', `result-status ${efficiencyStatus}`)
+      ].join('');
+      const servicesGroup = [
+        weekMetric('SERVIÇOS', `${brl.format(result.services)} · ${pct.format(serviceRate)}`, serviceTarget ? `Meta ${brl.format(serviceTarget)} • ${serviceBalance >= 0 ? 'acima' : 'abaixo'} ${brl.format(Math.abs(serviceBalance))}` : '', serviceRate >= 1 ? 'result-status passed' : 'result-status failed'),
+        weekMetric('MÉDIA SERVIÇOS / DIA', brl.format(serviceAverageDay), `Meta/dia: ${brl.format(targetServiceDay)}`),
+        weekMetric('SALDO SERVIÇOS / DIA', `<span class="${serviceDailyDelta >= 0 ? 'positive' : 'negative'}">${signedBrl(serviceDailyDelta)}</span>`, `Meta/dia: ${brl.format(targetServiceDay)} • ${serviceDailyDelta >= 0 ? 'acima' : 'abaixo'} ${brl.format(Math.abs(serviceDailyDelta))}`),
+        weekMetric('SALDO SERVIÇOS / VENDEDOR', `<span class="${perSellerService >= 0 ? 'positive' : 'negative'}">${signedBrl(perSellerService)}</span>`, `${sellerNote} • ${perSellerService >= 0 ? 'acima' : 'abaixo'} ${brl.format(Math.abs(perSellerService))}`),
+        weekMetric('SALDO SERVIÇOS / DIA / VENDEDOR', `<span class="${perDaySellerService >= 0 ? 'positive' : 'negative'}">${signedBrl(perDaySellerService)}</span>`, `${sellerNote} • ${perDaySellerService >= 0 ? 'acima' : 'abaixo'} ${brl.format(Math.abs(perDaySellerService))}`, 'emphasized services'),
+        weekMetric('PROJEÇÃO DE SERVIÇOS', brl.format(paceServiceProjection), serviceTarget ? `${pct.format(serviceProjectionRate)} da meta` : 'Sem meta definida')
+      ].join('');
+      return `<article class="week ${visualClass}"><div class="week-top"><div><div class="week-title">${index + 1}ª semana</div><div class="week-date">${items[0].date.toLocaleDateString('pt-BR')} a ${items.at(-1).date.toLocaleDateString('pt-BR')}</div></div><div class="week-head-actions">${result.pendingDays && phase !== 'future' ? `<span class="week-pending-chip ${phase === 'current' ? 'current' : ''}">${pendingLabel}</span>` : ''}<button type="button" class="week-status-toggle ${toggleStatus}" data-week-toggle="${index}" aria-expanded="${expanded}"><span>${hasResults || phase === 'closed' ? pct.format(primary.overall) : 'Sem dados'}</span><span class="chevron">⌄</span></button></div></div>${chart}<div class="week-indicator-groups"><section class="week-indicator-group merc"><header><strong>1 🛒 Mercantil</strong><small>Vendas, médias, saldos e projeção</small></header><div class="week-indicator-grid">${mercGroup}</div></section><section class="week-indicator-group indicators"><header><strong>2 📄 Notas Fiscais e Indicadores</strong><small>Quantidade, médias, conversão, eficiência e ticket médio</small></header><div class="week-indicator-grid">${indicatorGroup}</div></section><section class="week-indicator-group services"><header><strong>3 🔧 Serviços</strong><small>Serviços, médias, saldos e projeção</small></header><div class="week-indicator-grid">${servicesGroup}</div></section></div><div class="hint">${targetNote}${grossAvailable ? ' • Lucro bruto mensal distribuído pela participação da semana nas vendas.' : ' • Lucro bruto não informado; percentual calculado somente pelo mercantil.'}</div><div class="week-goals">${goals}</div></article>`;
     }).join('');
-    grid.querySelectorAll('.week').forEach((week, index) => {
-      const stats = weekStats(weekBuckets()[index]);
-      const metric = week.querySelector('.week-metrics .metric:last-child');
-      if (!metric) return;
-      metric.querySelector('strong').textContent = stats.nfs ? efficiencyPct.format(stats.warrantyQty / stats.nfs) : 'Não calculada';
-      metric.querySelector('small').textContent = stats.nfs ? `${stats.warrantyQty} garantia(s) ÷ ${stats.nfs} elegível(is)` : 'Informe quantidade elegível e de garantias';
-    });
     grid.querySelectorAll('[data-week-toggle]').forEach((button) => {
       button.addEventListener('click', () => {
         const index = Number(button.dataset.weekToggle);
@@ -1459,24 +1520,29 @@
     },0);
     const range = w.first && w.last ? `${w.first.toLocaleDateString('pt-BR')} a ${w.last.toLocaleDateString('pt-BR')}` : '';
     const badge = w.phase==='future'?'Futura':w.phase==='current'?'Em andamento':w.pending>0?'Encerrada com pendências':w.tone==='good'?'Meta atingida':'Encerrada abaixo da meta';
-    return `<article class="seller-week-card ${w.tone}"><header><div><strong>${w.index+1}ª semana</strong><small>${range}</small></div><span>${badge}</span></header><div class="seller-week-grid">
-      <div><span>💰 Mercantil</span><strong>${brl.format(w.a.general)}</strong><small>${w.mercGoal?`${pct.format(w.mercRate)} da meta • falta ${brl.format(missingMerc)}`:'Meta não cadastrada'}</small></div>
-      <div><span>🛡️ Serviços</span><strong>${brl.format(w.a.services)}</strong><small>${w.serviceGoal?`${pct.format(w.serviceRate)} da meta • falta ${brl.format(missingServ)}`:'Meta não cadastrada'}</small></div>
-      <div><span>🎯 Conversão</span><strong>${conv}</strong><small>Meta 35%</small></div>
-      <div><span>⚡ Eficiência</span><strong>${eff}</strong><small>Meta 7%</small></div>
-      <div><span>🧾 Ticket médio</span><strong>${w.a.invoiceCount?brl.format(ticket):'—'}</strong><small>${w.a.invoiceCount||0} nota(s) fiscal(is)</small></div>
-      <div><span>📄 Notas fiscais total</span><strong>${w.a.invoiceCount||0}</strong><small>${w.launched} dia(s) lançado(s)</small></div>
-      <div><span>📊 Média notas fiscais/dia</span><strong>${w.launched?(w.a.invoiceCount/w.launched).toLocaleString('pt-BR',{minimumFractionDigits:Number.isInteger(w.a.invoiceCount/w.launched)?0:1,maximumFractionDigits:1}):'0'}</strong><small>${w.launched} dia(s) considerado(s)</small></div>
-      <div><span>💵 Comissões</span><strong>${brl.format(commissions)}</strong><small>Mercantil + serviços</small></div>
-      <div><span>📈 Projeção mercantil</span><strong>${brl.format(projMerc)}</strong><small>${w.mercGoal?pct.format(projMerc/w.mercGoal)+' projetado':'Sem meta'}</small></div>
-      <div><span>📈 Projeção serviços</span><strong>${brl.format(projServ)}</strong><small>${w.serviceGoal?pct.format(projServ/w.serviceGoal)+' projetado':'Sem meta'}</small></div>
-      <div><span>⚡ Média mercantil/dia</span><strong>${brl.format(avgMerc)}</strong><small>${w.launched} dia(s) lançado(s)</small></div>
-      <div><span>↕ Saldo mercantil/dia</span><strong class="${deltaMercDay>=0?'positive':'negative'}">${signedBrl(deltaMercDay)}</strong><small>Meta/dia ${brl.format(targetMercDay)}</small></div>
-      <div><span>⚡ Média serviços/dia</span><strong>${brl.format(avgServ)}</strong><small>${w.working} dia(s) planejado(s)</small></div>
-      <div><span>↕ Saldo serviços/dia</span><strong class="${deltaServDay>=0?'positive':'negative'}">${signedBrl(deltaServDay)}</strong><small>Meta/dia ${brl.format(targetServDay)}</small></div>
-      <div><span>📅 Dias da semana</span><strong>${w.launched}/${w.working}</strong><small>${w.pending} pendente(s)</small></div>
-      <div><span>📊 Distribuição</span><strong>${pct2.format(w.share)}</strong><small>da meta mensal</small></div>
-    </div><footer>Semana sincronizada com a configuração gerencial e com a distribuição diária da competência.</footer></article>`;
+    const card=(label,value,note='',cls='')=>`<div class="${cls}"><span>${label}</span><strong>${value}</strong>${note?`<small>${note}</small>`:''}</div>`;
+    const invoiceAvg=w.launched?w.a.invoiceCount/w.launched:0;
+    const mercGroup=[
+      card('💰 Mercantil',brl.format(w.a.general),w.mercGoal?`${pct.format(w.mercRate)} da meta • falta ${brl.format(missingMerc)}`:'Meta não cadastrada'),
+      card('⚡ Média mercantil/dia',brl.format(avgMerc),`${w.launched} dia(s) lançado(s)`),
+      card('↕ Saldo mercantil/dia',signedBrl(deltaMercDay),`Meta/dia ${brl.format(targetMercDay)}`,deltaMercDay>=0?'positive':'negative'),
+      card('📈 Projeção mercantil',brl.format(projMerc),w.mercGoal?pct.format(projMerc/w.mercGoal)+' projetado':'Sem meta')
+    ].join('');
+    const indicatorGroup=[
+      card('📄 Notas fiscais total',String(w.a.invoiceCount||0),`${w.launched} dia(s) lançado(s)`),
+      card('📊 Média notas fiscais/dia',invoiceAvg.toLocaleString('pt-BR',{minimumFractionDigits:Number.isInteger(invoiceAvg)?0:1,maximumFractionDigits:1}),`${w.launched} dia(s) considerado(s)`),
+      card('🎯 Conversão',conv,w.a.nfs?`${w.a.warrantyQty} garantia(s) ÷ ${w.a.nfs} elegível(is) • Meta 35%`:'Meta 35%'),
+      card('⚡ Eficiência',eff,'Meta 7%'),
+      card('🧾 Ticket médio',w.a.invoiceCount?brl.format(ticket):'—',`${w.a.invoiceCount||0} nota(s) fiscal(is)`)
+    ].join('');
+    const servicesGroup=[
+      card('🛡️ Serviços',brl.format(w.a.services),w.serviceGoal?`${pct.format(w.serviceRate)} da meta • falta ${brl.format(missingServ)}`:'Meta não cadastrada'),
+      card('⚡ Média serviços/dia',brl.format(avgServ),`${w.working} dia(s) planejado(s)`),
+      card('↕ Saldo serviços/dia',signedBrl(deltaServDay),`Meta/dia ${brl.format(targetServDay)}`,deltaServDay>=0?'positive':'negative'),
+      card('📈 Projeção serviços',brl.format(projServ),w.serviceGoal?pct.format(projServ/w.serviceGoal)+' projetado':'Sem meta')
+    ].join('');
+    const auxGroup=`<div class="seller-week-aux">${card('💵 Comissões',brl.format(commissions),'Mercantil + serviços')}${card('📅 Dias da semana',`${w.launched}/${w.working}`,`${w.pending} pendente(s)`)}${card('📊 Distribuição',pct2.format(w.share),'da meta mensal')}</div>`;
+    return `<article class="seller-week-card ${w.tone}"><header><div><strong>${w.index+1}ª semana</strong><small>${range}</small></div><span>${badge}</span></header><div class="seller-week-indicator-groups"><section class="seller-week-indicator-group merc"><header><strong>1 🛒 Mercantil</strong><small>Vendas, médias, saldos e projeção</small></header><div class="seller-week-grid">${mercGroup}</div></section><section class="seller-week-indicator-group indicators"><header><strong>2 📄 Notas Fiscais e Indicadores</strong><small>Quantidade, médias, conversão, eficiência e ticket</small></header><div class="seller-week-grid">${indicatorGroup}</div></section><section class="seller-week-indicator-group services"><header><strong>3 🔧 Serviços</strong><small>Serviços, médias, saldos e projeção</small></header><div class="seller-week-grid">${servicesGroup}</div></section></div>${auxGroup}<footer>Semana sincronizada com a configuração gerencial e com a distribuição diária da competência.</footer></article>`;
   }
   function sellerWorkspacePeriodCard(label, aggregateData={}, mercGoal=0, serviceGoal=0) {
     const a = aggregateData || {};
@@ -3206,11 +3272,49 @@
     st.textContent = `
       .seller-card-rank{display:none!important}
       .seller-directory-card .seller-card-head{gap:10px!important}
+      #overview .overview-kpi-organized{display:flex!important;flex-direction:column!important;gap:12px!important;margin:16px 0!important}
+      .overview-kpi-group,.week-indicator-group,.seller-week-indicator-group,.monthly-gap-group{border:1px solid #e0e8f1;border-radius:18px;background:#fff;padding:12px}
+      .overview-kpi-group>header,.week-indicator-group>header,.seller-week-indicator-group>header,.monthly-gap-group>header{display:flex;flex-direction:column;gap:2px;margin-bottom:10px}
+      .overview-kpi-group>header strong,.week-indicator-group>header strong,.seller-week-indicator-group>header strong,.monthly-gap-group>header strong{font-size:14px;color:#17324d}
+      .overview-kpi-group>header small,.week-indicator-group>header small,.seller-week-indicator-group>header small,.monthly-gap-group>header small{font-size:11px;color:#7b8796}
+      .overview-kpi-group.merc,.week-indicator-group.merc,.seller-week-indicator-group.merc{background:linear-gradient(180deg,#fbfdff,#fff)}
+      .overview-kpi-group.indicators,.week-indicator-group.indicators,.seller-week-indicator-group.indicators{background:linear-gradient(180deg,#f8fbff,#fff)}
+      .overview-kpi-group.services,.week-indicator-group.services,.seller-week-indicator-group.services{background:linear-gradient(180deg,#f7fcf9,#fff)}
+      .overview-kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+      .overview-kpi-group.merc .overview-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .overview-kpi-group.services .overview-kpi-grid{grid-template-columns:minmax(0,1fr)}
+      .overview-service-note{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center;margin-top:10px;padding:10px 12px;border-radius:12px;background:#eef8f2;border:1px solid #d8eadf;color:#486b58}
+      .overview-service-note strong{color:#176c45}.overview-service-note small{grid-column:1/-1;color:#75847a;font-size:11px}
+      .monthly-gap-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}
+      .monthly-gap-group{min-width:0}.monthly-gap-group.services{background:#fbfaff}
+      .monthly-gap-group-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+      .week-indicator-groups,.seller-week-indicator-groups{display:flex;flex-direction:column;gap:12px;margin-top:12px}
+      .week-indicator-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+      .week-indicator-grid .metric{min-width:0}
+      .seller-week-indicator-group .seller-week-grid{margin:0!important}
+      .seller-week-aux{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}
+      .seller-week-aux>div{border:1px solid #e3e9f0;border-radius:14px;padding:12px;background:#fafcff;display:flex;flex-direction:column;min-width:0}
+      .seller-week-aux span{font-size:11px;font-weight:800;color:#6d7b8d}.seller-week-aux strong{font-size:18px;color:#17324d;margin:5px 0}.seller-week-aux small{font-size:11px;color:#8190a2}
       @media (min-width:761px) and (max-width:1180px){
         .goal-grid{grid-template-columns:1fr!important}
         .goal dl.goal-dual{grid-template-columns:minmax(110px,1fr) minmax(128px,auto) minmax(128px,auto)!important;column-gap:16px!important}
         .goal dl.goal-dual dd{min-width:0!important;white-space:nowrap!important;font-size:clamp(11px,1.25vw,13px)!important}
         .goal-col-head{font-size:8px!important}
+        .overview-kpi-grid,.week-indicator-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+        .overview-kpi-group.services .overview-kpi-grid{grid-template-columns:1fr!important}
+        .monthly-gap-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+        .monthly-gap-group-grid{grid-template-columns:1fr!important}
+        .seller-week-aux{grid-template-columns:repeat(3,minmax(0,1fr))}
+      }
+      @media (max-width:760px){
+        .overview-kpi-group,.week-indicator-group,.seller-week-indicator-group,.monthly-gap-group{padding:10px;border-radius:16px}
+        .overview-kpi-grid,.week-indicator-grid,.seller-week-indicator-group .seller-week-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+        .overview-kpi-group.services .overview-kpi-grid{grid-template-columns:1fr!important}
+        .monthly-gap-grid{grid-template-columns:1fr!important}
+        .monthly-gap-group-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+        .seller-week-aux{grid-template-columns:1fr!important}
+        .overview-service-note{grid-template-columns:1fr!important}
+        .overview-service-note small{grid-column:auto}
       }
     `;
     document.head.appendChild(st);
