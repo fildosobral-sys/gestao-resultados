@@ -102,18 +102,18 @@ function renderHome(){
   }
   if(distNote){distNote.innerHTML='';distNote.hidden=true;}
   const cards=[
-    ['💰 Mercantil no mês',brl.format(mercTotal),mg?`${pct.format(mercRate)} da meta`:'Cadastre sua meta','strong-card','note-footer note-emphasis note-blue',mg?mercRate:null],
-    ['🛡️ Serviços no mês',brl.format(a.services),sg?`${pct.format(servRate)} da meta`:'Cadastre sua meta','strong-card','note-footer note-emphasis note-purple',sg?servRate:null],
-    ['🎯 Conversão',a.nfs?pct.format(a.conversion):'—','Meta 35,00%',a.conversion>=.35?'good':a.nfs?'attention':'','note-footer note-emphasis note-red',a.nfs?a.conversion/.35:null],
-    ['⚡ Eficiência',a.eligible?pct.format(a.efficiency):'—','Meta 7,00%',a.efficiency>=.07?'good':a.eligible?'attention':'','note-footer note-emphasis note-green',a.eligible?a.efficiency/.07:null],
-    ['📈 Projeção mercantil',brl.format(projMerc),mg?progressText(projMerc,mg):'Meta não definida',projMerc>=mg&&mg?'good':'','note-footer note-emphasis '+(projMerc>=mg&&mg?'note-green':'note-gold'),mg?projMercRate:null],
-    ['📈 Projeção serviços',brl.format(projServ),sg?progressText(projServ,sg):'Meta não definida',projServ>=sg&&sg?'good':'','note-footer note-emphasis '+(projServ>=sg&&sg?'note-green':'note-gold'),sg?projServRate:null],
-    ['⚡ Média mercantil/dia',brl.format(avgMerc),`Necessário ${brl.format(needMerc)}/dia`,'','note-footer note-gold',mg&&planned?avgMerc/(mg/planned):null ],
-    ['⚡ Média serviços/dia',brl.format(avgServ),`Necessário ${brl.format(needServ)}/dia`,'','note-footer note-gold',sg&&planned?avgServ/(sg/planned):null ],
-    ['📅 Dias considerados',String(worked),`${remaining} restante(s) de ${planned}`,'','note-footer' ],
-    ['🌐 E-commerce',brl.format(ecom),'Acumulado da competência','','note-footer']
+    ['💰 Mercantil no mês',brl.format(mercTotal),mg?`${pct.format(mercRate)} da meta`:'Cadastre sua meta','strong-card','note-footer note-emphasis note-blue',mg?mercRate:null,'meta'],
+    ['🛡️ Serviços no mês',brl.format(a.services),sg?`${pct.format(servRate)} da meta`:'Cadastre sua meta','strong-card','note-footer note-emphasis note-purple',sg?servRate:null,'meta'],
+    ['🎯 Conversão',a.nfs?pct.format(a.conversion):'—','Meta 35,00%',a.conversion>=.35?'good':a.nfs?'attention':'','note-footer note-emphasis note-red',a.nfs?a.conversion/.35:null,'meta'],
+    ['⚡ Eficiência',a.eligible?pct.format(a.efficiency):'—','Meta 7,00%',a.efficiency>=.07?'good':a.eligible?'attention':'','note-footer note-emphasis note-green',a.eligible?a.efficiency/.07:null,'meta'],
+    ['📈 Projeção mercantil',brl.format(projMerc),mg?progressText(projMerc,mg):'Meta não definida',projMerc>=mg&&mg?'good':'','note-footer note-emphasis '+(projMerc>=mg&&mg?'note-green':'note-gold'),mg?projMercRate:null,'meta'],
+    ['📈 Projeção serviços',brl.format(projServ),sg?progressText(projServ,sg):'Meta não definida',projServ>=sg&&sg?'good':'','note-footer note-emphasis '+(projServ>=sg&&sg?'note-green':'note-gold'),sg?projServRate:null,'meta'],
+    ['⚡ Média mercantil/dia',brl.format(avgMerc),`Necessário ${brl.format(needMerc)}/dia`,'','note-footer note-gold',mg&&planned?avgMerc/(mg/planned):null,'pace'],
+    ['⚡ Média serviços/dia',brl.format(avgServ),`Necessário ${brl.format(needServ)}/dia`,'','note-footer note-gold',sg&&planned?avgServ/(sg/planned):null,'pace'],
+    ['📅 Dias considerados',String(worked),`${remaining} restante(s) de ${planned}`,'','note-footer',null,'none'],
+    ['🌐 E-commerce',brl.format(ecom),'Acumulado da competência','','note-footer',null,'none']
   ];
-  document.getElementById('homeMetrics').innerHTML=cards.map(x=>`<div class="metric ${x[3]||''}"><span>${x[0]}</span>${metricTrendArrow(x[5])}<strong>${x[1]}</strong><small class="${x[4]||''}">${x[2]}</small></div>`).join('');
+  document.getElementById('homeMetrics').innerHTML=cards.map(x=>`<div class="metric ${x[3]||''}"><div class="metric-status-head"><span class="metric-status-label">${x[0]}</span>${metricTrendArrow(x[5],x[6])}</div><strong>${x[1]}</strong><small class="${x[4]||''}">${x[2]}</small></div>`).join('');
   const finance=document.getElementById('financeMetrics'); if(finance) finance.innerHTML=`<div class="finance-hero"><span>🚀 PROJEÇÃO DE GANHO TOTAL</span><strong>${brl.format(fin.projectedTotal)}</strong><small>Comissões projetadas + DSR estimado</small></div>${[
     ['💵 Comissão mercantil atual',brl.format(a.mercCommission+ecomCommission),ecomCommission?'Diário + e-commerce':'Valor informado nos lançamentos','note-footer'],
     ['🛡️ Comissão serviços atual',brl.format(a.serviceCommission),'Valor informado nos lançamentos','note-footer'],
@@ -219,7 +219,7 @@ function dashFmt(v,m){if(m==='invoice')return Number(v||0).toLocaleString('pt-BR
 function dashAxisFmt(v,m){if(['conversion','efficiency'].includes(m))return `${Number(v||0).toFixed(v>=10?0:1).replace('.',',')}%`;if(m==='invoice')return Number(v||0).toFixed(Number(v||0)>=10?0:1).replace('.',',');const n=Number(v||0);if(n>=1e6)return `R$ ${(n/1e6).toFixed(1).replace('.',',')} mi`;if(n>=1000)return `R$ ${(n/1000).toFixed(n>=10000?0:1).replace('.',',')} mil`;return `R$ ${n.toFixed(0).replace('.',',')}`}
 function dashName(m){return({merc:'Venda mercantil',services:'Serviços',conversion:'Conversão',efficiency:'Eficiência',ticket:'Ticket médio',gain:'Ganhos'})[m]||'Venda mercantil'}
 function signedBrl(v){const n=Number(v||0);return `${n>0?'+ ':n<0?'− ':''}${brl.format(Math.abs(n))}`}
-function metricTrendArrow(rate){if(rate==null||!Number.isFinite(Number(rate)))return'';const r=Number(rate);return `<span class="metric-trend-arrow ${r>1.01?'up':r<.99?'down':'flat'}" aria-label="${r>1.01?'Acima da meta':r<.99?'Abaixo da meta':'Na meta'}">${r>1.01?'↑':r<.99?'↓':'→'}</span>`}
+function metricTrendArrow(rate,context='meta'){if(context==='none'||rate==null||!Number.isFinite(Number(rate)))return'';const r=Number(rate),state=r>1.01?'up':r<.99?'down':'flat',pace=context==='pace';const label=state==='up'?(pace?'Acima do ritmo':'Acima da meta'):state==='down'?(pace?'Abaixo do ritmo':'Abaixo da meta'):(pace?'No ritmo':'Na média'),arrow=state==='up'?'↑':state==='down'?'↓':'→';return `<span class="metric-trend-badge ${state}" aria-label="${label}"><b aria-hidden="true">${arrow}</b><em>${label}</em></span>`}
 let dashSvgRenderSeq=0;
 function dashSvg(values,labels,type='bar',metric='merc',expanded=false,hitFlags=[]){
   const W=expanded?Math.max(960,Math.min(1500,100+Math.max(1,values.length)*44)):720,H=expanded?340:250,left=68,right=18,top=16,bottom=expanded?44:34,maxValue=Math.max(...values,0),axisMax=maxValue>0?maxValue*1.1:1,gradId=`dg-${metric}-${type}-${++dashSvgRenderSeq}`;
@@ -376,10 +376,10 @@ function applyV52VisualPolish(){if(document.getElementById('fs-v53-polish'))retu
 .note-blue{color:#4169b2!important}.note-purple{color:#7250bd!important}.note-red{color:#c73f57!important}.note-green{color:#288a59!important}.note-gold{color:#9b7419!important}
 .seller-dist-card small,.metric small,.mini small{transition:color .18s ease}
 
-.metric-trend-arrow{position:absolute;top:12px;right:14px;font-size:1.2rem;font-weight:950;line-height:1;z-index:2}.metric-trend-arrow.up{color:#15915d}.metric-trend-arrow.down{color:#c83d53}.metric-trend-arrow.flat{color:#c58b17}
+.metric-status-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap;width:100%;min-width:0}.metric-status-label{min-width:0;flex:1 1 110px}.metric-trend-badge{display:inline-flex;align-items:center;gap:4px;flex:0 0 auto;max-width:100%;padding:4px 8px;border-radius:999px;font-size:.66rem;font-weight:850;line-height:1;white-space:nowrap;letter-spacing:.01em}.metric-trend-badge b{font-size:.86rem;line-height:1}.metric-trend-badge em{font-style:normal;font-weight:800}.metric-trend-badge.up{color:#16734c;background:rgba(22,145,93,.10);border:1px solid rgba(22,145,93,.16)}.metric-trend-badge.down{color:#b83249;background:rgba(200,61,83,.09);border:1px solid rgba(200,61,83,.15)}.metric-trend-badge.flat{color:#93690d;background:rgba(197,139,23,.11);border:1px solid rgba(197,139,23,.18)}
 .metric.metric-positive strong{color:#15915d!important}.metric.metric-negative strong{color:#c83d53!important}
 @media(min-width:761px) and (max-width:1180px){.dash-pie-wrap{grid-template-columns:minmax(120px,150px) minmax(0,1fr)!important}.dash-legend{min-width:0}.dash-legend div{grid-template-columns:10px minmax(0,1fr) minmax(82px,auto)!important}.dash-legend b{white-space:nowrap;text-align:right;font-size:.9rem}.mini small.mini-footer-note{bottom:44px!important}.mini .progress{bottom:10px!important}}
-@media(max-width:760px){.seller-dist-card{min-height:148px;padding-top:18px!important;padding-bottom:16px!important}.seller-dist-card strong{font-size:clamp(1.5rem,5.9vw,2rem);white-space:nowrap}.seller-dist-card small.dist-footer-note{font-size:.76rem;padding-top:4px!important}.mini{min-height:250px}.mini>span{white-space:nowrap;font-size:clamp(.68rem,2.6vw,.82rem)}.mini>strong{white-space:nowrap;font-size:clamp(1.7rem,6vw,2.25rem)}}
+@media(max-width:760px){.seller-dist-card{min-height:148px;padding-top:18px!important;padding-bottom:16px!important}.seller-dist-card strong{font-size:clamp(1.5rem,5.9vw,2rem);white-space:nowrap}.seller-dist-card small.dist-footer-note{font-size:.76rem;padding-top:4px!important}.mini{min-height:250px}.mini>span{white-space:nowrap;font-size:clamp(.68rem,2.6vw,.82rem)}.mini>strong{white-space:nowrap;font-size:clamp(1.7rem,6vw,2.25rem)}.metric-status-head{gap:5px}.metric-status-label{flex-basis:96px}.metric-trend-badge{padding:3px 6px;font-size:.58rem}.metric-trend-badge b{font-size:.76rem}}
 `;
 document.head.appendChild(st)}
 applyV52VisualPolish();
