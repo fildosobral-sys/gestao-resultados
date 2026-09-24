@@ -20,6 +20,7 @@
     const parsed = Number(text);
     return Math.max(0, Number.isFinite(parsed) ? parsed : 0);
   };
+  const signedBrl = (value) => { const n = Number(value || 0); return `${n > 0 ? '+ ' : n < 0 ? '− ' : ''}${brl.format(Math.abs(n))}`; };
   const esc = (value) => String(value ?? '').replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
   const sellerIdentity = (seller = {}, index = 0) => {
     if (seller.id) return String(seller.id);
@@ -678,8 +679,56 @@
     return issues;
   }
 
+  function ensureOverviewOrganization() {
+    const root = document.querySelector('#overview .kpis');
+    if (!root || root.dataset.organized === '1') return;
+    const cardOf = (id) => document.getElementById(id)?.closest('.kpi');
+    const mercCards = [cardOf('eligibleKpi'), cardOf('grossProfitKpi')].filter(Boolean);
+    const ticketCard = cardOf('ticketKpi');
+    let serviceAverageCard = document.getElementById('serviceAverageKpi')?.closest('.kpi');
+    if (!serviceAverageCard) {
+      serviceAverageCard = document.createElement('article');
+      serviceAverageCard.className = 'kpi overview-service-average-card';
+      serviceAverageCard.innerHTML = '<div class="label">Média serviços / dia</div><div class="value" id="serviceAverageKpi">R$ 0,00</div><div class="sub" id="serviceAverageKpiSub">Média do período</div>';
+    }
+    const servicesCards = [cardOf('servicesKpi'), serviceAverageCard, cardOf('conversionKpi'), cardOf('efficiencyKpi')].filter(Boolean);
+    let invoiceCard = document.getElementById('invoiceCountKpi')?.closest('.kpi');
+    if (!invoiceCard) {
+      invoiceCard = document.createElement('article');
+      invoiceCard.className = 'kpi overview-invoice-card';
+      invoiceCard.innerHTML = '<div class="label">Notas fiscais total</div><div class="value" id="invoiceCountKpi">0</div><div class="sub">Quantidade total de notas fiscais</div>';
+    }
+    let invoiceAvgCard = document.getElementById('invoiceAverageKpi')?.closest('.kpi');
+    if (!invoiceAvgCard) {
+      invoiceAvgCard = document.createElement('article');
+      invoiceAvgCard.className = 'kpi overview-invoice-average-card';
+      invoiceAvgCard.innerHTML = '<div class="label">Média notas fiscais / dia</div><div class="value" id="invoiceAverageKpi">0</div><div class="sub" id="invoiceAverageKpiSub">Média do período</div>';
+    }
+    let invoiceSellerCard = document.getElementById('invoicePerSellerKpi')?.closest('.kpi');
+    if (!invoiceSellerCard) {
+      invoiceSellerCard = document.createElement('article');
+      invoiceSellerCard.className = 'kpi overview-invoice-seller-card';
+      invoiceSellerCard.innerHTML = '<div class="label">Notas fiscais / vendedor</div><div class="value" id="invoicePerSellerKpi">0</div><div class="sub" id="invoicePerSellerKpiSub">Média da equipe</div>';
+    }
+    const group = (cls,title,subtitle,cards) => {
+      const section = document.createElement('section');
+      section.className = `overview-kpi-group ${cls}`;
+      section.innerHTML = `<header><strong>${title}</strong><small>${subtitle}</small></header><div class="overview-kpi-grid"></div>`;
+      const grid = section.querySelector('.overview-kpi-grid');
+      cards.filter(Boolean).forEach(card => grid.appendChild(card));
+      return section;
+    };
+    root.innerHTML = '';
+    root.classList.add('overview-kpi-organized');
+    root.appendChild(group('merc','1 🛒 Mercantil','Vendas e resultado mercantil',mercCards));
+    root.appendChild(group('indicators','2 📄 Notas Fiscais e Ticket Médio','Quantidade, média, por vendedor e ticket médio',[invoiceCard,invoiceAvgCard,invoiceSellerCard,ticketCard]));
+    root.appendChild(group('services','3 🔐 Serviços','Serviços, conversão e eficiência',servicesCards));
+    root.dataset.organized = '1';
+  }
+
   function renderOverview() {
     const scope = currentScope(), result = scope.result, goalSource = scope.goals;
+    ensureOverviewOrganization();
     const grossAvailable = scope.type !== 'branch' || hasCompleteGrossProfit();
     setText('heroEyebrow', scope.type === 'branch' ? 'Venda mercantil total da filial' : scope.type === 'all' ? 'Venda mercantil total dos vendedores' : `Venda mercantil total — ${scope.label}`);
     setText('revenueHero', brl.format(result.revenue)); setText('workedHero', result.worked); setText('remainingHero', result.remaining);
@@ -690,7 +739,32 @@
     setText('grossProfitKpiSub', scope.type === 'branch' ? (grossAvailable ? `${pct.format(num(goalSource.grossProfitGoal) ? result.grossProfit / num(goalSource.grossProfitGoal) : 0)} da meta de lucro` : 'Não interfere no percentual mercantil') : `${pct2.format(grossProfitRate())} da venda mercantil`);
     const conversion = result.nfs ? result.warrantyQty / result.nfs : 0;
     setText('efficiencyKpi', efficiencyPct.format(result.efficiency)); setText('conversionKpi', result.nfs ? efficiencyPct.format(conversion) : 'Não calculada'); setText('ticketKpi', brl.format(result.ticket));
-    setText('nfKpi', `${result.invoiceCount.toLocaleString('pt-BR')} notas fiscais • média dos tickets diários`);
+    setText('invoiceCountKpi', result.invoiceCount.toLocaleString('pt-BR'));
+    setText('nfKpi', 'Venda mercantil ÷ notas fiscais');
+    const invoiceAverage = result.worked ? result.invoiceCount / result.worked : 0;
+    const overviewSellerCount = configuredSellerCount();
+    const invoicePerSeller = overviewSellerCount ? result.invoiceCount / overviewSellerCount : 0;
+    const formatOverviewCount = (value) => Number(value || 0).toLocaleString('pt-BR', {
+      minimumFractionDigits: Number.isInteger(Number(value || 0)) ? 0 : 1,
+      maximumFractionDigits: 1
+    });
+    setText('invoiceAverageKpi', formatOverviewCount(invoiceAverage));
+    setText('invoiceAverageKpiSub', `${result.worked || 0} dia(s) considerado(s)`);
+    setText('invoicePerSellerKpi', overviewSellerCount ? formatOverviewCount(invoicePerSeller) : '—');
+    setText('invoicePerSellerKpiSub', overviewSellerCount ? `${overviewSellerCount} vendedor(es)` : 'Equipe não configurada');
+    const serviceAverage = result.worked ? result.services / result.worked : 0;
+    setText('serviceAverageKpi', brl.format(serviceAverage));
+    setText('serviceAverageKpiSub', `${result.worked || 0} dia(s) considerado(s)`);
+    const setOverviewTone = (id, tone = '') => {
+      const card = document.getElementById(id)?.closest('.kpi');
+      if (!card) return;
+      card.classList.remove('status-positive','status-warning','status-negative');
+      if (tone) card.classList.add(`status-${tone}`);
+    };
+    if (result.nfs > 0) setOverviewTone('conversionKpi', conversion >= .30 ? 'positive' : conversion >= .20 ? 'warning' : 'negative');
+    else setOverviewTone('conversionKpi');
+    if (result.eligible > 0) setOverviewTone('efficiencyKpi', result.efficiency >= .07 ? 'positive' : result.efficiency >= .05 ? 'warning' : 'negative');
+    else setOverviewTone('efficiencyKpi');
     const tiers = tierGoals(goalSource), firstGoal = tiers[0].mercantile;
     const projectedRate = firstGoal ? result.projection / firstGoal : 0;
     const projectedGrossRate = tiers[0].grossProfit ? result.grossProfitProjection / tiers[0].grossProfit : 0;
@@ -716,16 +790,19 @@
     const mercantileGap = Math.max(0, firstGoal - result.revenue);
     const servicesGap = Math.max(0, num(goalSource.servicesGoal) - result.services);
     const gapMetric = (label, value, note, type = 'mercantile') => `<div class="monthly-gap-metric ${type}"><span>${label}</span><strong class="${value ? 'negative' : 'positive'}">${brl.format(value)}</strong><small>${note}</small></div>`;
-    document.getElementById('monthlyGapGrid').innerHTML = [
+    const mercGapCards = [
       gapMetric('Falta mercantil total', mercantileGap, `Meta 1: ${brl.format(firstGoal)}`),
       gapMetric('Mercantil / dia da filial', remainingDays ? mercantileGap / remainingDays : 0, `${remainingDays} dia(s) restante(s)`),
       gapMetric('Mercantil / vendedor', sellerCount ? mercantileGap / sellerCount : 0, sellerCount ? `${sellerCount} vendedor(es)` : 'Configure a equipe'),
-      gapMetric('Mercantil / dia / vendedor', sellerCount && remainingDays ? mercantileGap / remainingDays / sellerCount : 0, sellerCount ? `Divisão diária para ${sellerCount}` : 'Configure a equipe'),
+      gapMetric('Mercantil / dia / vendedor', sellerCount && remainingDays ? mercantileGap / remainingDays / sellerCount : 0, sellerCount ? `Divisão diária para ${sellerCount}` : 'Configure a equipe')
+    ].join('');
+    const servicesGapCards = [
       gapMetric('Falta serviços total', servicesGap, `Meta: ${brl.format(num(goalSource.servicesGoal))}`, 'services'),
       gapMetric('Serviços / dia da filial', remainingDays ? servicesGap / remainingDays : 0, `${remainingDays} dia(s) restante(s)`, 'services'),
       gapMetric('Serviços / vendedor', sellerCount ? servicesGap / sellerCount : 0, sellerCount ? `${sellerCount} vendedor(es)` : 'Configure a equipe', 'services'),
       gapMetric('Serviços / dia / vendedor', sellerCount && remainingDays ? servicesGap / remainingDays / sellerCount : 0, sellerCount ? `Divisão diária para ${sellerCount}` : 'Configure a equipe', 'services')
     ].join('');
+    document.getElementById('monthlyGapGrid').innerHTML = `<section class="monthly-gap-group merc"><header><strong>🛒 MERCANTIL</strong><small>Falta total → necessário por dia → por vendedor → dia/vendedor</small></header><div class="monthly-gap-group-grid">${mercGapCards}</div></section><section class="monthly-gap-group services"><header><strong>🔐 SERVIÇOS</strong><small>Falta total → necessário por dia → por vendedor → dia/vendedor</small></header><div class="monthly-gap-group-grid">${servicesGapCards}</div></section>`;
     const detailLayout = document.getElementById('overviewDetailLayout');
     const ecommercePanel = document.getElementById('ecommerceOverview');
     const showEcommerce = scope.type === 'branch';
@@ -905,9 +982,11 @@
       const plannedDays = items.filter((item) => item.data.status !== 'off').length;
       const sellerCount = configuredSellerCount();
       const salesGap = Math.max(0, primaryTarget - result.general), serviceGap = Math.max(0, serviceTarget - result.services);
+      const salesBalance = result.general - primaryTarget, serviceBalance = result.services - serviceTarget;
       const averageDay = result.worked ? result.general / result.worked : 0, serviceAverageDay = result.worked ? result.services / result.worked : 0;
       const targetDay = plannedDays ? primaryTarget / plannedDays : 0, targetServiceDay = plannedDays ? serviceTarget / plannedDays : 0;
-      const paceProjection = averageDay * plannedDays, ticket = result.invoiceCount ? result.general / result.invoiceCount : 0;
+      const salesDailyDelta = averageDay - targetDay, serviceDailyDelta = serviceAverageDay - targetServiceDay;
+      const paceProjection = averageDay * plannedDays, paceServiceProjection = serviceAverageDay * plannedDays, ticket = result.invoiceCount ? result.general / result.invoiceCount : 0;
       const goals = tierGoals().map((tier) => {
         const target = weeklyTierTarget(tier, targetContext, weeks), mercTarget = target.mercantile, grossTarget = target.grossProfit;
         const rates = tierRate(target, result.general, result.grossProfit, grossAvailable);
@@ -925,7 +1004,7 @@
           : 'Meta proporcional aos dias úteis da semana, sempre de segunda-feira a domingo.';
       const efficiencyRate = num(db.efficiencyGoal) ? result.efficiency / num(db.efficiencyGoal) : 0;
       const mercantileStatus = hasResults ? (result.general >= primaryTarget ? 'passed' : 'failed') : '';
-      const efficiencyStatus = result.eligible > 0 ? (efficiencyRate >= 1 ? 'passed' : 'failed') : '';
+      const efficiencyStatus = result.eligible > 0 ? (result.efficiency >= .07 ? 'passed' : result.efficiency >= .05 ? 'attention' : 'failed') : '';
       const projectionRate = primaryTarget ? paceProjection / primaryTarget : 0;
       const expanded = openWeeklyIndex === index;
       const toggleStatus = phase === 'future' ? '' : phase === 'current' ? 'warning' : primary.passed ? 'positive' : 'negative';
@@ -934,21 +1013,44 @@
       const chart = `<div class="week-chart-panel" ${expanded ? '' : 'hidden'}><div class="week-chart-title"><strong>Percentuais e projeção da semana</strong><span>Comparação com as metas do período</span></div><div class="week-donut-grid">${donut('Mercantil', primary.mercRate, `${brl.format(result.general)} de ${brl.format(primaryTarget)}`, primary.mercRate >= 1 ? '#169b62' : '#df4053')}${donut('Serviços', serviceRate, `${brl.format(result.services)} de ${brl.format(serviceTarget)}`, serviceRate >= 1 ? '#169b62' : '#df4053')}${donut('Projeção', projectionRate, brl.format(paceProjection), projectionRate >= 1 ? '#169b62' : '#0879e8')}</div></div>`;
       const conversion = result.nfs ? result.warrantyQty / result.nfs : 0;
       const conversionTarget = 0.35;
-      const conversionStatus = result.nfs ? (conversion >= conversionTarget ? 'passed' : 'failed') : '';
+      const conversionStatus = result.nfs ? (conversion >= .30 ? 'passed' : conversion >= .20 ? 'attention' : 'failed') : '';
       const sellerNote = sellerCount ? `${sellerCount} vendedor(es)` : 'Configure a equipe';
-      const perSellerSales = sellerCount ? salesGap / sellerCount : 0;
-      const perSellerService = sellerCount ? serviceGap / sellerCount : 0;
-      const perDaySellerSales = sellerCount && plannedDays ? salesGap / plannedDays / sellerCount : 0;
-      const perDaySellerService = sellerCount && plannedDays ? serviceGap / plannedDays / sellerCount : 0;
-      return `<article class="week ${visualClass}"><div class="week-top"><div><div class="week-title">${index + 1}ª semana</div><div class="week-date">${items[0].date.toLocaleDateString('pt-BR')} a ${items.at(-1).date.toLocaleDateString('pt-BR')}</div></div><div class="week-head-actions">${result.pendingDays && phase !== 'future' ? `<span class="week-pending-chip ${phase === 'current' ? 'current' : ''}">${pendingLabel}</span>` : ''}<button type="button" class="week-status-toggle ${toggleStatus}" data-week-toggle="${index}" aria-expanded="${expanded}"><span>${hasResults || phase === 'closed' ? pct.format(primary.overall) : 'Sem dados'}</span><span class="chevron">⌄</span></button></div></div>${chart}<div class="week-metrics"><div class="metric result-status ${mercantileStatus}"><span>VENDA MERCANTIL</span><strong>${brl.format(result.general)} · ${pct.format(primary.mercRate)}</strong></div><div class="metric"><span>LUCRO BRUTO</span><strong>${grossAvailable ? brl.format(result.grossProfit) : 'Não informado'}</strong></div><div class="metric"><span>SERVIÇOS</span><strong class="${statusClass(serviceRate)}">${brl.format(result.services)} · ${pct.format(serviceRate)}</strong></div><div class="metric result-status ${efficiencyStatus}"><span>EFICIÊNCIA</span><strong>${result.eligible > 0 ? efficiencyPct.format(result.efficiency) : 'Não calculada'}</strong></div><div class="metric result-status ${conversionStatus}"><span>TAXA DE CONVERSÃO</span><strong>${result.nfs ? efficiencyPct.format(conversion) : 'Não calculada'}</strong><small>Qtd. garantias ÷ qtd. elegível</small></div></div><div class="week-analysis"><div class="metric"><span>MÉDIA MERCANTIL / DIA</span><strong>${brl.format(averageDay)}</strong><small>Meta/dia: ${brl.format(targetDay)}</small></div><div class="metric"><span>FALTA MERCANTIL / DIA</span><strong class="${salesGap ? 'negative' : 'positive'}">${brl.format(plannedDays ? salesGap / plannedDays : 0)}</strong><small>Total: ${brl.format(salesGap)}</small></div><div class="metric"><span>FALTA MERCANTIL / VENDEDOR</span><strong class="${salesGap ? 'negative' : 'positive'}">${brl.format(perSellerSales)}</strong><small>${sellerNote}</small></div><div class="metric emphasized"><span>MERCANTIL / DIA / VENDEDOR</span><strong class="${salesGap ? 'negative' : 'positive'}">${brl.format(perDaySellerSales)}</strong><small>${sellerNote}</small></div><div class="metric"><span>PROJEÇÃO PELO RITMO</span><strong>${brl.format(paceProjection)}</strong><small>Ticket: ${brl.format(ticket)}</small></div><div class="metric"><span>MÉDIA SERVIÇOS / DIA</span><strong>${brl.format(serviceAverageDay)}</strong><small>Meta/dia: ${brl.format(targetServiceDay)}</small></div><div class="metric"><span>FALTA SERVIÇOS / DIA</span><strong class="${serviceGap ? 'negative' : 'positive'}">${brl.format(plannedDays ? serviceGap / plannedDays : 0)}</strong><small>Total: ${brl.format(serviceGap)}</small></div><div class="metric"><span>FALTA SERVIÇOS / VENDEDOR</span><strong class="${serviceGap ? 'negative' : 'positive'}">${brl.format(perSellerService)}</strong><small>${sellerNote}</small></div><div class="metric emphasized services"><span>SERVIÇOS / DIA / VENDEDOR</span><strong class="${serviceGap ? 'negative' : 'positive'}">${brl.format(perDaySellerService)}</strong><small>${sellerNote}</small></div><div class="metric"><span>NOTAS FISCAIS</span><strong>${result.invoiceCount}</strong><small>${result.worked} dia(s) lançado(s)</small></div></div><div class="hint">${targetNote}${grossAvailable ? ' • Lucro bruto mensal distribuído pela participação da semana nas vendas.' : ' • Lucro bruto não informado; percentual calculado somente pelo mercantil.'}</div><div class="week-goals">${goals}</div></article>`;
+      const perSellerSales = sellerCount ? salesBalance / sellerCount : 0;
+      const perSellerService = sellerCount ? serviceBalance / sellerCount : 0;
+      const perDaySellerSales = sellerCount && plannedDays ? salesBalance / plannedDays / sellerCount : 0;
+      const perDaySellerService = sellerCount && plannedDays ? serviceBalance / plannedDays / sellerCount : 0;
+      const invoiceAverage = result.worked ? result.invoiceCount / result.worked : 0;
+      const invoicePerSeller = sellerCount ? result.invoiceCount / sellerCount : 0;
+      const formatCount = (value) => Number(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: Number.isInteger(Number(value || 0)) ? 0 : 1, maximumFractionDigits: 1 });
+      const serviceProjectionRate = serviceTarget ? paceServiceProjection / serviceTarget : 0;
+      const weekMetric = (label, value, note = '', cls = '') => `<div class="metric ${cls}"><span>${label}</span><strong>${value}</strong>${note ? `<small>${note}</small>` : ''}</div>`;
+      const mercGroup = [
+        weekMetric('VENDA MERCANTIL', `${brl.format(result.general)} · ${pct.format(primary.mercRate)}`, primaryTarget ? `Meta ${brl.format(primaryTarget)} • ${salesBalance >= 0 ? 'acima' : 'abaixo'} ${brl.format(Math.abs(salesBalance))}` : '', `result-status ${mercantileStatus}`),
+        weekMetric('LUCRO BRUTO', grossAvailable ? brl.format(result.grossProfit) : 'Não informado', grossAvailable ? 'Resultado proporcional da semana' : 'Sem informação cadastrada'),
+        weekMetric('MÉDIA MERCANTIL / DIA', brl.format(averageDay), `Meta/dia: ${brl.format(targetDay)}`),
+        weekMetric('SALDO MERCANTIL / DIA', `<span class="${salesDailyDelta >= 0 ? 'positive' : 'negative'}">${signedBrl(salesDailyDelta)}</span>`, `Meta/dia: ${brl.format(targetDay)} • ${salesDailyDelta >= 0 ? 'acima' : 'abaixo'} ${brl.format(Math.abs(salesDailyDelta))}`),
+        weekMetric('SALDO MERCANTIL / VENDEDOR', `<span class="${perSellerSales >= 0 ? 'positive' : 'negative'}">${signedBrl(perSellerSales)}</span>`, `${sellerNote} • ${perSellerSales >= 0 ? 'acima' : 'abaixo'} ${brl.format(Math.abs(perSellerSales))}`),
+        weekMetric('SALDO MERCANTIL / DIA / VENDEDOR', `<span class="${perDaySellerSales >= 0 ? 'positive' : 'negative'}">${signedBrl(perDaySellerSales)}</span>`, `${sellerNote} • ${perDaySellerSales >= 0 ? 'acima' : 'abaixo'} ${brl.format(Math.abs(perDaySellerSales))}`, 'emphasized'),
+        weekMetric('PROJEÇÃO PELO RITMO', brl.format(paceProjection), primaryTarget ? `${pct.format(projectionRate)} da meta` : 'Sem meta definida')
+      ].join('');
+      const indicatorGroup = [
+        weekMetric('NOTAS FISCAIS TOTAL', String(result.invoiceCount), `${result.worked} dia(s) lançado(s)`),
+        weekMetric('MÉDIA NOTAS FISCAIS / DIA', formatCount(invoiceAverage), `${result.worked} dia(s) considerado(s)`),
+        weekMetric('NOTAS FISCAIS / VENDEDOR', formatCount(invoicePerSeller), sellerNote),
+        weekMetric('TICKET MÉDIO', result.invoiceCount ? brl.format(ticket) : '—', `${result.invoiceCount || 0} nota(s) fiscal(is)`)
+      ].join('');
+      const servicesGroup = [
+        weekMetric('SERVIÇOS', `${brl.format(result.services)} · ${pct.format(serviceRate)}`, serviceTarget ? `Meta ${brl.format(serviceTarget)} • ${serviceBalance >= 0 ? 'acima' : 'abaixo'} ${brl.format(Math.abs(serviceBalance))}` : '', serviceRate >= 1 ? 'result-status passed' : 'result-status failed'),
+        weekMetric('MÉDIA SERVIÇOS / DIA', brl.format(serviceAverageDay), `Meta/dia: ${brl.format(targetServiceDay)}`),
+        weekMetric('SALDO SERVIÇOS / DIA', `<span class="${serviceDailyDelta >= 0 ? 'positive' : 'negative'}">${signedBrl(serviceDailyDelta)}</span>`, `Meta/dia: ${brl.format(targetServiceDay)} • ${serviceDailyDelta >= 0 ? 'acima' : 'abaixo'} ${brl.format(Math.abs(serviceDailyDelta))}`),
+        weekMetric('SALDO SERVIÇOS / VENDEDOR', `<span class="${perSellerService >= 0 ? 'positive' : 'negative'}">${signedBrl(perSellerService)}</span>`, `${sellerNote} • ${perSellerService >= 0 ? 'acima' : 'abaixo'} ${brl.format(Math.abs(perSellerService))}`),
+        weekMetric('SALDO SERVIÇOS / DIA / VENDEDOR', `<span class="${perDaySellerService >= 0 ? 'positive' : 'negative'}">${signedBrl(perDaySellerService)}</span>`, `${sellerNote} • ${perDaySellerService >= 0 ? 'acima' : 'abaixo'} ${brl.format(Math.abs(perDaySellerService))}`, 'emphasized services'),
+        weekMetric('TAXA DE CONVERSÃO', result.nfs ? efficiencyPct.format(conversion) : 'Não calculada', result.nfs ? `${result.warrantyQty} garantia(s) ÷ ${result.nfs} elegível(is) • Meta 35%` : 'Meta 35%', `result-status ${conversionStatus}`),
+        weekMetric('EFICIÊNCIA', result.eligible > 0 ? efficiencyPct.format(result.efficiency) : 'Não calculada', 'Meta 7%', `result-status ${efficiencyStatus}`),
+        weekMetric('PROJEÇÃO DE SERVIÇOS', brl.format(paceServiceProjection), serviceTarget ? `${pct.format(serviceProjectionRate)} da meta` : 'Sem meta definida')
+      ].join('');
+      return `<article class="week ${visualClass}"><div class="week-top"><div><div class="week-title">${index + 1}ª semana</div><div class="week-date">${items[0].date.toLocaleDateString('pt-BR')} a ${items.at(-1).date.toLocaleDateString('pt-BR')}</div></div><div class="week-head-actions">${result.pendingDays && phase !== 'future' ? `<span class="week-pending-chip ${phase === 'current' ? 'current' : ''}">${pendingLabel}</span>` : ''}<button type="button" class="week-status-toggle ${toggleStatus}" data-week-toggle="${index}" aria-expanded="${expanded}"><span>${hasResults || phase === 'closed' ? pct.format(primary.overall) : 'Sem dados'}</span><span class="chevron">⌄</span></button></div></div>${chart}<div class="week-indicator-groups"><section class="week-indicator-group merc"><header><strong>1 🛒 Mercantil</strong><small>Vendas, médias, saldos e projeção</small></header><div class="week-indicator-grid">${mercGroup}</div></section><section class="week-indicator-group indicators"><header><strong>2 📄 Notas Fiscais e Ticket Médio</strong><small>Quantidade, média, por vendedor e ticket médio</small></header><div class="week-indicator-grid">${indicatorGroup}</div></section><section class="week-indicator-group services"><header><strong>3 🔐 Serviços</strong><small>Serviços, conversão, eficiência, saldos e projeção</small></header><div class="week-indicator-grid">${servicesGroup}</div></section></div><div class="hint">${targetNote}${grossAvailable ? ' • Lucro bruto mensal distribuído pela participação da semana nas vendas.' : ' • Lucro bruto não informado; percentual calculado somente pelo mercantil.'}</div><div class="week-goals">${goals}</div></article>`;
     }).join('');
-    grid.querySelectorAll('.week').forEach((week, index) => {
-      const stats = weekStats(weekBuckets()[index]);
-      const metric = week.querySelector('.week-metrics .metric:last-child');
-      if (!metric) return;
-      metric.querySelector('strong').textContent = stats.nfs ? efficiencyPct.format(stats.warrantyQty / stats.nfs) : 'Não calculada';
-      metric.querySelector('small').textContent = stats.nfs ? `${stats.warrantyQty} garantia(s) ÷ ${stats.nfs} elegível(is)` : 'Informe quantidade elegível e de garantias';
-    });
     grid.querySelectorAll('[data-week-toggle]').forEach((button) => {
       button.addEventListener('click', () => {
         const index = Number(button.dataset.weekToggle);
@@ -1441,7 +1543,7 @@
   function sellerWorkspaceWeekCard(w) {
     const conv = w.a.nfs ? efficiencyPct.format(w.a.conversion) : '—', eff = w.a.eligible ? efficiencyPct.format(w.a.efficiency) : '—';
     const missingMerc = Math.max(0,w.mercGoal-w.a.general), missingServ = Math.max(0,w.serviceGoal-w.a.services);
-    const avgMerc = w.launched ? w.a.general/w.launched : 0, avgServ = w.launched ? w.a.services/w.launched : 0;
+    const avgMerc = w.launched ? w.a.general/w.launched : 0, avgServ = w.launched ? w.a.services/w.launched : 0, targetMercDay=w.working?w.mercGoal/w.working:0, targetServDay=w.working?w.serviceGoal/w.working:0, deltaMercDay=avgMerc-targetMercDay, deltaServDay=avgServ-targetServDay;
     const projMerc = w.launched ? avgMerc*w.working : 0, projServ = w.launched ? avgServ*w.working : 0;
     const ticket = w.a.invoiceCount ? w.a.general/w.a.invoiceCount : 0;
     const commissions = w.items.reduce((sum,item) => {
@@ -1453,20 +1555,29 @@
     },0);
     const range = w.first && w.last ? `${w.first.toLocaleDateString('pt-BR')} a ${w.last.toLocaleDateString('pt-BR')}` : '';
     const badge = w.phase==='future'?'Futura':w.phase==='current'?'Em andamento':w.pending>0?'Encerrada com pendências':w.tone==='good'?'Meta atingida':'Encerrada abaixo da meta';
-    return `<article class="seller-week-card ${w.tone}"><header><div><strong>${w.index+1}ª semana</strong><small>${range}</small></div><span>${badge}</span></header><div class="seller-week-grid">
-      <div><span>💰 Mercantil</span><strong>${brl.format(w.a.general)}</strong><small>${w.mercGoal?`${pct.format(w.mercRate)} da meta • falta ${brl.format(missingMerc)}`:'Meta não cadastrada'}</small></div>
-      <div><span>🛡️ Serviços</span><strong>${brl.format(w.a.services)}</strong><small>${w.serviceGoal?`${pct.format(w.serviceRate)} da meta • falta ${brl.format(missingServ)}`:'Meta não cadastrada'}</small></div>
-      <div><span>🎯 Conversão</span><strong>${conv}</strong><small>Meta 35%</small></div>
-      <div><span>⚡ Eficiência</span><strong>${eff}</strong><small>Meta 7%</small></div>
-      <div><span>🧾 Ticket médio</span><strong>${w.a.invoiceCount?brl.format(ticket):'—'}</strong><small>${w.a.invoiceCount||0} nota(s) fiscal(is)</small></div>
-      <div><span>💵 Comissões</span><strong>${brl.format(commissions)}</strong><small>Mercantil + serviços</small></div>
-      <div><span>📈 Projeção mercantil</span><strong>${brl.format(projMerc)}</strong><small>${w.mercGoal?pct.format(projMerc/w.mercGoal)+' projetado':'Sem meta'}</small></div>
-      <div><span>📈 Projeção serviços</span><strong>${brl.format(projServ)}</strong><small>${w.serviceGoal?pct.format(projServ/w.serviceGoal)+' projetado':'Sem meta'}</small></div>
-      <div><span>⚡ Média mercantil/dia</span><strong>${brl.format(avgMerc)}</strong><small>${w.launched} dia(s) lançado(s)</small></div>
-      <div><span>⚡ Média serviços/dia</span><strong>${brl.format(avgServ)}</strong><small>${w.working} dia(s) planejado(s)</small></div>
-      <div><span>📅 Dias da semana</span><strong>${w.launched}/${w.working}</strong><small>${w.pending} pendente(s)</small></div>
-      <div><span>📊 Distribuição</span><strong>${pct2.format(w.share)}</strong><small>da meta mensal</small></div>
-    </div><footer>Semana sincronizada com a configuração gerencial e com a distribuição diária da competência.</footer></article>`;
+    const card=(label,value,note='',cls='')=>`<div class="${cls}"><span>${label}</span><strong>${value}</strong>${note?`<small>${note}</small>`:''}</div>`;
+    const invoiceAvg=w.launched?w.a.invoiceCount/w.launched:0;
+    const mercGroup=[
+      card('💰 Mercantil',brl.format(w.a.general),w.mercGoal?`${pct.format(w.mercRate)} da meta • falta ${brl.format(missingMerc)}`:'Meta não cadastrada'),
+      card('⚡ Média mercantil/dia',brl.format(avgMerc),`${w.launched} dia(s) lançado(s)`),
+      card('↕ Saldo mercantil/dia',signedBrl(deltaMercDay),`Meta/dia ${brl.format(targetMercDay)}`,deltaMercDay>=0?'positive':'negative'),
+      card('📈 Projeção mercantil',brl.format(projMerc),w.mercGoal?pct.format(projMerc/w.mercGoal)+' projetado':'Sem meta')
+    ].join('');
+    const indicatorGroup=[
+      card('📄 Notas fiscais total',String(w.a.invoiceCount||0),`${w.launched} dia(s) lançado(s)`),
+      card('📊 Média notas fiscais/dia',invoiceAvg.toLocaleString('pt-BR',{minimumFractionDigits:Number.isInteger(invoiceAvg)?0:1,maximumFractionDigits:1}),`${w.launched} dia(s) considerado(s)`),
+      card('🎯 Conversão',conv,w.a.nfs?`${w.a.warrantyQty} garantia(s) ÷ ${w.a.nfs} elegível(is) • Meta 35%`:'Meta 35%'),
+      card('⚡ Eficiência',eff,'Meta 7%'),
+      card('🧾 Ticket médio',w.a.invoiceCount?brl.format(ticket):'—',`${w.a.invoiceCount||0} nota(s) fiscal(is)`)
+    ].join('');
+    const servicesGroup=[
+      card('🛡️ Serviços',brl.format(w.a.services),w.serviceGoal?`${pct.format(w.serviceRate)} da meta • falta ${brl.format(missingServ)}`:'Meta não cadastrada'),
+      card('⚡ Média serviços/dia',brl.format(avgServ),`${w.working} dia(s) planejado(s)`),
+      card('↕ Saldo serviços/dia',signedBrl(deltaServDay),`Meta/dia ${brl.format(targetServDay)}`,deltaServDay>=0?'positive':'negative'),
+      card('📈 Projeção serviços',brl.format(projServ),w.serviceGoal?pct.format(projServ/w.serviceGoal)+' projetado':'Sem meta')
+    ].join('');
+    const auxGroup=`<div class="seller-week-aux">${card('💵 Comissões',brl.format(commissions),'Mercantil + serviços')}${card('📅 Dias da semana',`${w.launched}/${w.working}`,`${w.pending} pendente(s)`)}${card('📊 Distribuição',pct2.format(w.share),'da meta mensal')}</div>`;
+    return `<article class="seller-week-card ${w.tone}"><header><div><strong>${w.index+1}ª semana</strong><small>${range}</small></div><span>${badge}</span></header><div class="seller-week-indicator-groups"><section class="seller-week-indicator-group merc"><header><strong>1 🛒 Mercantil</strong><small>Vendas, médias, saldos e projeção</small></header><div class="seller-week-grid">${mercGroup}</div></section><section class="seller-week-indicator-group indicators"><header><strong>2 📄 Notas Fiscais e Indicadores</strong><small>Quantidade, médias, conversão, eficiência e ticket</small></header><div class="seller-week-grid">${indicatorGroup}</div></section><section class="seller-week-indicator-group services"><header><strong>3 🔧 Serviços</strong><small>Serviços, médias, saldos e projeção</small></header><div class="seller-week-grid">${servicesGroup}</div></section></div>${auxGroup}<footer>Semana sincronizada com a configuração gerencial e com a distribuição diária da competência.</footer></article>`;
   }
   function sellerWorkspacePeriodCard(label, aggregateData={}, mercGoal=0, serviceGoal=0) {
     const a = aggregateData || {};
@@ -1488,10 +1599,41 @@
     return all;
   }
   function sellerDashboardAggregateRows(rows) { const tmp={daily:Object.fromEntries(rows)}; return sellerDailyAggregate(tmp); }
-  function dashboardMetricValue(day, metric) { const services=num(day.warranty)+num(day.other)+num(day.mixed); if(metric==='services')return services;if(metric==='conversion')return num(day.nfs)?num(day.warrantyQty)/num(day.nfs)*100:0;if(metric==='efficiency')return num(day.eligible)?services/num(day.eligible)*100:0;if(metric==='ticket')return num(day.invoiceCount)?num(day.general)/num(day.invoiceCount):0;if(metric==='gain'){const mc=Object.prototype.hasOwnProperty.call(day,'commissionMercantile')?num(day.commissionMercantile):num(day.general)*num(day.commissionMercantileRate)/100;const sc=Object.prototype.hasOwnProperty.call(day,'commissionService')?num(day.commissionService):services*.05;return mc+sc;}return num(day.general); }
-  function dashboardFormat(value, metric){ return ['conversion','efficiency'].includes(metric)?`${Number(value||0).toFixed(1).replace('.',',')}%`:brl.format(value||0); }
-  function dashboardLabel(metric){ return ({merc:'Venda mercantil',services:'Serviços',conversion:'Conversão',efficiency:'Eficiência',ticket:'Ticket médio',gain:'Ganhos'})[metric]||'Venda mercantil'; }
-  function dashboardSvg(values, labels, metric, type='bar') { const W=760,H=280,pad=44,max=Math.max(...values,1), min=Math.min(...values,0), range=Math.max(1,max-min), x=i=>pad+i*((W-pad*2)/Math.max(1,values.length-1)), y=v=>H-pad-(v-min)/range*(H-pad*2); const grid=[0,.25,.5,.75,1].map(t=>`<line x1="${pad}" y1="${pad+t*(H-pad*2)}" x2="${W-pad}" y2="${pad+t*(H-pad*2)}" stroke="#e8edf4" stroke-width="1"/>`).join(''); if(!values.length)return '<div class="empty">Sem dados no período selecionado.</div>'; let marks=''; if(type==='line'){const pts=values.map((v,i)=>`${x(i)},${y(v)}`).join(' ');marks=`<polyline points="${pts}" fill="none" stroke="#237eea" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`+values.map((v,i)=>`<circle cx="${x(i)}" cy="${y(v)}" r="4" fill="#644de8"/>`).join('');}else{const bw=Math.max(6,(W-pad*2)/Math.max(1,values.length)*.58);marks=values.map((v,i)=>{const xx=pad+i*((W-pad*2)/values.length)+(W-pad*2)/values.length*.21,yy=y(v),hh=Math.max(2,H-pad-yy);return `<rect x="${xx}" y="${yy}" width="${bw}" height="${hh}" rx="5" fill="url(#g)"/>`;}).join('');} const step=Math.max(1,Math.ceil(labels.length/8)); const xs=labels.map((l,i)=>i%step===0?`<text x="${type==='bar'?pad+(i+.5)*((W-pad*2)/labels.length):x(i)}" y="${H-12}" text-anchor="middle" fill="#6c7c90" font-size="11">${esc(l)}</text>`:'').join('');return `<svg class="svg-chart" viewBox="0 0 ${W} ${H}" role="img"><defs><linearGradient id="g" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#1688ec"/><stop offset="1" stop-color="#6550e8"/></linearGradient></defs>${grid}${marks}${xs}</svg>`; }
+  function dashboardMetricValue(day, metric) { const services=num(day.warranty)+num(day.other)+num(day.mixed); if(metric==='services')return services;if(metric==='conversion')return num(day.nfs)?num(day.warrantyQty)/num(day.nfs)*100:0;if(metric==='efficiency')return num(day.eligible)?services/num(day.eligible)*100:0;if(metric==='ticket')return num(day.invoiceCount)?num(day.general)/num(day.invoiceCount):0;if(metric==='invoice')return num(day.invoiceCount);if(metric==='gain'){const mc=Object.prototype.hasOwnProperty.call(day,'commissionMercantile')?num(day.commissionMercantile):num(day.general)*num(day.commissionMercantileRate)/100;const sc=Object.prototype.hasOwnProperty.call(day,'commissionService')?num(day.commissionService):services*.05;return mc+sc;}return num(day.general); }
+  function dashboardFormat(value, metric){ if(metric==='invoice')return Number(value||0).toLocaleString('pt-BR',{minimumFractionDigits:Number.isInteger(Number(value||0))?0:1,maximumFractionDigits:1}); return ['conversion','efficiency'].includes(metric)?`${Number(value||0).toFixed(1).replace('.',',')}%`:brl.format(value||0); }
+  function dashboardLabel(metric){ return ({merc:'Venda mercantil',services:'Serviços',conversion:'Conversão',efficiency:'Eficiência',ticket:'Ticket médio',invoice:'Notas fiscais',gain:'Ganhos'})[metric]||'Venda mercantil'; }
+  function dashboardAxisFormat(value, metric){
+    const numValue = Number(value || 0);
+    if (['conversion','efficiency'].includes(metric)) return `${numValue.toFixed(numValue >= 10 ? 0 : 1).replace('.',',')}%`;
+    if (metric === 'invoice') return numValue.toFixed(numValue >= 10 ? 0 : 1).replace('.',',');
+    if (numValue >= 1e6) return `R$ ${(numValue / 1e6).toFixed(1).replace('.',',')} mi`;
+    if (numValue >= 1000) return `R$ ${(numValue / 1000).toFixed(numValue >= 10000 ? 0 : 1).replace('.',',')} mil`;
+    return `R$ ${numValue.toFixed(0).replace('.',',')}`;
+  }
+  function dashboardSvg(values, labels, metric, type='bar', expanded=false) {
+    const W=expanded?Math.max(960,Math.min(1500,100+Math.max(1,values.length)*44)):760,H=expanded?340:280,left=68,right=18,top=16,bottom=expanded?44:34,maxValue=Math.max(...values,0),axisMax=maxValue>0?maxValue*1.1:1;
+    const dense=values.length>12, veryDense=values.length>22;
+    const x=i=>type==='bar'?left+(i+.5)*((W-left-right)/Math.max(1,values.length)):left+i*((W-left-right)/Math.max(1,values.length-1));
+    const y=v=>H-bottom-(Math.max(0,v)/axisMax)*(H-top-bottom);
+    if(!values.length)return '<div class="empty">Sem dados no período selecionado.</div>';
+    const ticks=5;
+    const tickValues=Array.from({length:ticks},(_,i)=>axisMax-(axisMax/(ticks-1))*i);
+    const grid=tickValues.map(v=>{const yy=y(v);return `<line x1="${left}" y1="${yy}" x2="${W-right}" y2="${yy}" stroke="#e7edf4" stroke-width="1"/><text x="8" y="${yy+4}" fill="#718096" font-size="10">${dashboardAxisFormat(v,metric)}</text>`;}).join('');
+    const step=expanded?1:Math.max(1,Math.ceil(labels.length/8));
+    const axisLabels=labels.map((label,i)=>i%step===0?`<text x="${x(i)}" y="${H-10}" text-anchor="middle" fill="#718096" font-size="${expanded?11:10}" font-weight="${expanded?700:400}">${esc(label)}</text>`:'').join('');
+    let marks='';
+    if(type==='line'){
+      const points=values.map((v,i)=>`${x(i)},${y(v)}`).join(' ');
+      const fontSize=veryDense?7:dense?8:10;
+      marks=`<polyline points="${points}" fill="none" stroke="#1688ec" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`+
+        values.map((v,i)=>{const labelY=Math.max(top+9,Math.min(H-bottom-5,y(v)+(dense&&i%2?12:-8)));return `<circle cx="${x(i)}" cy="${y(v)}" r="4" fill="#644de8"/><text x="${x(i)}" y="${labelY}" text-anchor="middle" fill="#516174" font-size="${fontSize}" font-weight="700">${dashboardAxisFormat(v,metric)}</text>`;}).join('');
+    } else {
+      const unit=(W-left-right)/Math.max(1,values.length),barWidth=Math.max(5,unit*.58),fontSize=veryDense?7:dense?8:10;
+      marks=values.map((v,i)=>{const xx=left+i*unit+unit*.21,yy=y(v),hh=Math.max(2,H-bottom-yy);if(dense){const tx=xx+barWidth/2,ty=Math.max(top+20,Math.min(H-bottom-7,yy+Math.min(hh-4,Math.max(18,hh*.6))));return `<rect x="${xx}" y="${yy}" width="${barWidth}" height="${hh}" rx="5" fill="url(#g)"/><text x="${tx}" y="${ty}" text-anchor="middle" fill="${hh>38?'#fff':'#516174'}" font-size="${fontSize}" font-weight="800" transform="rotate(-90 ${tx} ${ty})">${dashboardAxisFormat(v,metric)}</text>`;}const labelY=Math.max(top+12,yy-6);return `<rect x="${xx}" y="${yy}" width="${barWidth}" height="${hh}" rx="5" fill="url(#g)"/><text x="${xx+barWidth/2}" y="${labelY}" text-anchor="middle" fill="#516174" font-size="${fontSize}" font-weight="700">${dashboardAxisFormat(v,metric)}</text>`;}).join('');
+    }
+    return `<svg class="svg-chart" viewBox="0 0 ${W} ${H}" role="img"><defs><linearGradient id="g" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#1688ec"/><stop offset="1" stop-color="#6550e8"/></linearGradient></defs>${grid}<line x1="${left}" y1="${H-bottom}" x2="${W-right}" y2="${H-bottom}" stroke="#dce5f0"/>${marks}${axisLabels}</svg>`;
+  }
+  function dashboardPieLabels(parts,total){let start=0;return parts.map(part=>{const val=Math.max(0,Number(part||0)),percent=total?val/total*100:0;if(percent<7){start+=percent;return '';}const mid=(start+percent/2)*3.6-90,rad=mid*Math.PI/180,cx=50+Math.cos(rad)*27,cy=50+Math.sin(rad)*27;start+=percent;return `<span class="dashboard-pie-label" style="left:${cx}%;top:${cy}%">${percent.toFixed(0).replace('.',',')}%</span>`;}).join('');}
   function sellerDashboardCompareRows(seller, period='month', compare='none') {
     if(compare==='none') return [];
     const rows=sellerDashboardPeriodRows(seller,period);
@@ -1512,10 +1654,12 @@
   }
   function dashboardSection(seller, rows, metric, title, subtitle, compareRows=[]){
     const vals=rows.map(([,d])=>dashboardMetricValue(d,metric)), labels=rows.map(([k])=>String(Number(k.slice(-2)))), agg=sellerDashboardAggregateRows(rows);
-    const total=metric==='services'?agg.services:metric==='conversion'?(agg.nfs?agg.warrantyQty/agg.nfs*100:0):metric==='efficiency'?(agg.eligible?agg.services/agg.eligible*100:0):metric==='ticket'?(agg.invoiceCount?agg.general/agg.invoiceCount:0):metric==='gain'?rows.reduce((a,[,d])=>a+dashboardMetricValue(d,'gain'),0):agg.general;
-    const cagg=sellerDashboardAggregateRows(compareRows), ctotal=!compareRows.length?0:metric==='services'?cagg.services:metric==='conversion'?(cagg.nfs?cagg.warrantyQty/cagg.nfs*100:0):metric==='efficiency'?(cagg.eligible?cagg.services/cagg.eligible*100:0):metric==='ticket'?(cagg.invoiceCount?cagg.general/cagg.invoiceCount:0):metric==='gain'?compareRows.reduce((a,[,d])=>a+dashboardMetricValue(d,'gain'),0):cagg.general;
+    const total=metric==='services'?agg.services:metric==='conversion'?(agg.nfs?agg.warrantyQty/agg.nfs*100:0):metric==='efficiency'?(agg.eligible?agg.services/agg.eligible*100:0):metric==='ticket'?(agg.invoiceCount?agg.general/agg.invoiceCount:0):metric==='invoice'?agg.invoiceCount:metric==='gain'?rows.reduce((a,[,d])=>a+dashboardMetricValue(d,'gain'),0):agg.general;
+    const cagg=sellerDashboardAggregateRows(compareRows), ctotal=!compareRows.length?0:metric==='services'?cagg.services:metric==='conversion'?(cagg.nfs?cagg.warrantyQty/cagg.nfs*100:0):metric==='efficiency'?(cagg.eligible?cagg.services/cagg.eligible*100:0):metric==='ticket'?(cagg.invoiceCount?cagg.general/cagg.invoiceCount:0):metric==='invoice'?cagg.invoiceCount:metric==='gain'?compareRows.reduce((a,[,d])=>a+dashboardMetricValue(d,'gain'),0):cagg.general;
     const nz=vals.filter(v=>v>0), best=nz.length?Math.max(...nz):0, worst=nz.length?Math.min(...nz):0, half=Math.max(1,Math.floor(vals.length/2)), fa=vals.slice(0,half), qa=vals.slice(half), f=fa.length?fa.reduce((a,b)=>a+b,0)/fa.length:0, q=qa.length?qa.reduce((a,b)=>a+b,0)/qa.length:0, trend=f?(q-f)/f:0, delta=ctotal?(total-ctotal)/ctotal:0;
-    return `<section class="dashboard-section" id="seller-dash-${metric}"><div class="dashboard-section-head"><div><h3>${title}</h3><p>${subtitle}</p></div><span class="dashboard-section-total">${dashboardFormat(total,metric)}</span></div><div class="dashboard-kpis"><div class="dashboard-kpi"><span>Resultado</span><strong>${dashboardFormat(total,metric)}</strong></div><div class="dashboard-kpi"><span>Melhor dia</span><strong>${dashboardFormat(best,metric)}</strong></div><div class="dashboard-kpi"><span>Menor dia</span><strong>${dashboardFormat(worst,metric)}</strong></div><div class="dashboard-kpi"><span>Tendência</span><strong class="${trend>.02?'trend-up':trend<-.02?'trend-down':'trend-flat'}">${trend>.02?'▲ Ascendente':trend<-.02?'▼ Descendente':'→ Estável'}</strong></div>${compareRows.length?`<div class="dashboard-kpi"><span>Comparativo</span><strong class="${delta>0?'trend-up':delta<0?'trend-down':'trend-flat'}">${(delta>=0?'▲ ':'▼ ')+Math.abs(delta*100).toFixed(1).replace('.',',')}%</strong><small>${dashboardFormat(ctotal,metric)} no período comparado</small></div>`:''}</div><div class="dashboard-chart-grid"><div class="dashboard-card"><h4>${title} por dia</h4><div class="hint">Somente dias com lançamento. Até 31 barras no mês.</div>${dashboardSvg(vals,labels,metric,'bar')}</div><div class="dashboard-card"><h4>Tendência</h4><div class="hint">Evolução do indicador ao longo do período selecionado.</div>${dashboardSvg(vals,labels,metric,'line')}</div></div></section>`;
+    const invoiceDays = agg.days || rows.length || 0, invoiceAverage = metric==='invoice' && invoiceDays ? agg.invoiceCount / invoiceDays : 0, invoicePerSeller = metric==='invoice' && !seller ? (configuredSellerCount() ? agg.invoiceCount / configuredSellerCount() : 0) : 0;
+    const invoiceKpis = metric==='invoice' ? `<div class="dashboard-kpi"><span>Média / dia</span><strong>${dashboardFormat(invoiceAverage,'invoice')}</strong><small>${invoiceDays} dia(s) considerado(s)</small></div>${!seller?`<div class="dashboard-kpi"><span>Por vendedor</span><strong>${dashboardFormat(invoicePerSeller,'invoice')}</strong><small>${configuredSellerCount()||0} vendedor(es)</small></div>`:''}` : '';
+    return `<section class="dashboard-section" id="seller-dash-${metric}"><div class="dashboard-section-head"><div><h3>${title}</h3><p>${subtitle}</p></div><span class="dashboard-section-total">${dashboardFormat(total,metric)}</span></div><div class="dashboard-kpis"><div class="dashboard-kpi"><span>Resultado</span><strong>${dashboardFormat(total,metric)}</strong></div>${invoiceKpis}<div class="dashboard-kpi"><span>Melhor dia</span><strong>${dashboardFormat(best,metric)}</strong></div><div class="dashboard-kpi"><span>Menor dia</span><strong>${dashboardFormat(worst,metric)}</strong></div><div class="dashboard-kpi"><span>Tendência</span><strong class="${trend>.02?'trend-up':trend<-.02?'trend-down':'trend-flat'}">${trend>.02?'▲ Ascendente':trend<-.02?'▼ Descendente':'→ Estável'}</strong></div>${compareRows.length?`<div class="dashboard-kpi"><span>Comparativo</span><strong class="${delta>0?'trend-up':delta<0?'trend-down':'trend-flat'}">${(delta>=0?'▲ ':'▼ ')+Math.abs(delta*100).toFixed(1).replace('.',',')}%</strong><small>${dashboardFormat(ctotal,metric)} no período comparado</small></div>`:''}</div><div class="dashboard-chart-grid"><div class="dashboard-card" data-chart-values="${vals.join(',')}" data-chart-labels="${labels.join(',')}" data-chart-metric="${metric}" data-chart-type="bar"><button class="dashboard-chart-expand" type="button" data-chart-expand aria-label="Ampliar gráfico">⛶</button><h4>${title} por dia</h4><div class="hint">Somente dias com lançamento. Até 31 barras no mês.</div>${dashboardSvg(vals,labels,metric,'bar')}</div><div class="dashboard-card" data-chart-values="${vals.join(',')}" data-chart-labels="${labels.join(',')}" data-chart-metric="${metric}" data-chart-type="line"><button class="dashboard-chart-expand" type="button" data-chart-expand aria-label="Ampliar gráfico">⛶</button><h4>Tendência</h4><div class="hint">Evolução do indicador ao longo do período selecionado.</div>${dashboardSvg(vals,labels,metric,'line')}</div></div></section>`;
   }
   function dashboardPrint(title, html){
     const win=window.open('','_blank'); if(!win){alert('Permita pop-ups para gerar o relatório.');return;}
@@ -1525,20 +1669,105 @@
     if(period==='year'){
       const history=sellerProfileHistory(seller).slice().sort((a,b)=>a.month.localeCompare(b.month)), year=Number(String(db.month).slice(0,4)), prevYear=year-1;
       const current=history.filter(h=>Number(h.month.slice(0,4))===year), previous=history.filter(h=>Number(h.month.slice(0,4))===prevYear), monthNames=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-      const series=(metric,set)=>monthNames.map((_,i)=>{const h=set.find(x=>Number(x.month.slice(5,7))===i+1);if(!h)return 0; if(metric==='services')return h.services;if(metric==='gain')return h.financial.total;if(metric==='conversion'){const a=h.seller.daily?sellerDailyAggregate(h.seller):null;return a?.nfs?a.conversion*100:0}if(metric==='efficiency'){const a=h.seller.daily?sellerDailyAggregate(h.seller):null;return a?.eligible?a.efficiency*100:0}if(metric==='ticket'){const a=h.seller.daily?sellerDailyAggregate(h.seller):null;return a?.invoiceCount?a.general/a.invoiceCount:0}return num(h.seller.general)+num(h.seller.ecommerce)});
-      const metrics=[['merc','💰 Mercantil'],['services','🛡️ Serviços'],['conversion','🎯 Conversão'],['efficiency','⚡ Eficiência'],['ticket','🧾 Ticket médio'],['gain','💵 Ganhos']];
-      return `<div class="seller-dashboard-shell"><div class="dashboard-controls"><div><label>Período</label><select data-dash-period><option value="week">Semana</option><option value="fortnight">15 dias</option><option value="month">Mês</option><option value="year" selected>Ano</option></select></div><div><label>Comparação</label><select data-dash-compare><option value="none" ${compare==='none'?'selected':''}>Somente ${year}</option><option value="lastYear" ${compare==='lastYear'?'selected':''}>${year} × ${prevYear}</option></select></div><div class="dashboard-report-actions"><label>Relatório</label><button class="btn primary" type="button" data-dash-print>🧾 Baixar / imprimir A4</button></div></div>${metrics.map(([m,t])=>{const v=series(m,current),pv=series(m,previous),ct=v.reduce((a,b)=>a+b,0),pt=pv.reduce((a,b)=>a+b,0),delta=pt?(ct-pt)/pt:0;return `<section class="dashboard-section" id="seller-dash-${m}"><div class="dashboard-section-head"><div><h3>${t}</h3><p>${year}${compare==='lastYear'?` comparado com ${prevYear}`:''}</p></div><span class="dashboard-section-total">${dashboardFormat(ct,m)}</span></div><div class="dashboard-kpis"><div class="dashboard-kpi"><span>${year}</span><strong>${dashboardFormat(ct,m)}</strong></div><div class="dashboard-kpi"><span>${prevYear}</span><strong>${compare==='lastYear'?dashboardFormat(pt,m):'—'}</strong></div><div class="dashboard-kpi"><span>Evolução</span><strong class="${delta>0?'trend-up':delta<0?'trend-down':'trend-flat'}">${compare==='lastYear'&&pt?(delta>=0?'▲ ':'▼ ')+Math.abs(delta*100).toFixed(1).replace('.',',')+'%':'—'}</strong></div></div><div class="dashboard-card"><h4>Mês a mês</h4>${dashboardSvg(v,monthNames,m,'bar')}${compare==='lastYear'?`<div class="dashboard-year-note">Ano anterior disponível para comparação: ${pt?dashboardFormat(pt,m):'sem dados'}.</div>`:''}</div></section>`}).join('')}</div>`;
+      const series=(metric,set)=>monthNames.map((_,i)=>{const h=set.find(x=>Number(x.month.slice(5,7))===i+1);if(!h)return 0; if(metric==='services')return h.services;if(metric==='gain')return h.financial.total;if(metric==='conversion'){const a=h.seller.daily?sellerDailyAggregate(h.seller):null;return a?.nfs?a.conversion*100:0}if(metric==='efficiency'){const a=h.seller.daily?sellerDailyAggregate(h.seller):null;return a?.eligible?a.efficiency*100:0}if(metric==='ticket'){const a=h.seller.daily?sellerDailyAggregate(h.seller):null;return a?.invoiceCount?a.general/a.invoiceCount:0}if(metric==='invoice'){const a=h.seller.daily?sellerDailyAggregate(h.seller):null;return a?.invoiceCount||0}return num(h.seller.general)+num(h.seller.ecommerce)});
+      const metrics=[['merc','💰 Mercantil'],['services','🛡️ Serviços'],['conversion','🎯 Conversão'],['efficiency','⚡ Eficiência'],['ticket','🧾 Ticket médio'],['invoice','📄 Notas fiscais'],['gain','💵 Ganhos']];
+      return `<div class="seller-dashboard-shell"><div class="dashboard-controls"><div><label>Período</label><select data-dash-period><option value="week">Semana</option><option value="fortnight">15 dias</option><option value="month">Mês</option><option value="year" selected>Ano</option></select></div><div><label>Comparação</label><select data-dash-compare><option value="none" ${compare==='none'?'selected':''}>Somente ${year}</option><option value="lastYear" ${compare==='lastYear'?'selected':''}>${year} × ${prevYear}</option></select></div><div class="dashboard-report-actions"><label>Relatório</label><button class="btn primary" type="button" data-dash-print>🧾 Baixar / imprimir A4</button></div></div>${metrics.map(([m,t])=>{const v=series(m,current),pv=series(m,previous),ct=v.reduce((a,b)=>a+b,0),pt=pv.reduce((a,b)=>a+b,0),delta=pt?(ct-pt)/pt:0;return `<section class="dashboard-section" id="seller-dash-${m}"><div class="dashboard-section-head"><div><h3>${t}</h3><p>${year}${compare==='lastYear'?` comparado com ${prevYear}`:''}</p></div><span class="dashboard-section-total">${dashboardFormat(ct,m)}</span></div><div class="dashboard-kpis"><div class="dashboard-kpi"><span>${year}</span><strong>${dashboardFormat(ct,m)}</strong></div><div class="dashboard-kpi"><span>${prevYear}</span><strong>${compare==='lastYear'?dashboardFormat(pt,m):'—'}</strong></div><div class="dashboard-kpi"><span>Evolução</span><strong class="${delta>0?'trend-up':delta<0?'trend-down':'trend-flat'}">${compare==='lastYear'&&pt?(delta>=0?'▲ ':'▼ ')+Math.abs(delta*100).toFixed(1).replace('.',',')+'%':'—'}</strong></div></div><div class="dashboard-card" data-chart-values="${v.join(',')}" data-chart-labels="${monthNames.join(',')}" data-chart-metric="${m}" data-chart-type="bar"><button class="dashboard-chart-expand" type="button" data-chart-expand aria-label="Ampliar gráfico">⛶</button><h4>Mês a mês</h4>${dashboardSvg(v,monthNames,m,'bar')}${compare==='lastYear'?`<div class="dashboard-year-note">Ano anterior disponível para comparação: ${pt?dashboardFormat(pt,m):'sem dados'}.</div>`:''}</div></section>`}).join('')}</div>`;
     }
     const rows=sellerDashboardPeriodRows(seller,period).filter(([,d])=>hasSellerDayValue(d)).slice(0,31), compareRows=sellerDashboardCompareRows(seller,period,compare), agg=sellerDashboardAggregateRows(rows), w=num(agg.warranty),m=num(agg.mixed),o=num(agg.other),mix=w+m+o||1,pie=`conic-gradient(#668ce8 0 ${w/mix*100}%,#57d6c5 ${w/mix*100}% ${(w+m)/mix*100}%,#f5b84f ${(w+m)/mix*100}% 100%)`;
     const label=period==='week'?'Semana':period==='fortnight'?'15 dias':'Mês';
-    return `<div class="seller-dashboard-shell"><div class="dashboard-controls"><div><label>Período</label><select data-dash-period><option value="week" ${period==='week'?'selected':''}>Semana</option><option value="fortnight" ${period==='fortnight'?'selected':''}>15 dias</option><option value="month" ${period==='month'?'selected':''}>Mês</option><option value="year">Ano</option></select></div><div><label>Comparação</label><select data-dash-compare><option value="none" ${compare==='none'?'selected':''}>Somente atual</option><option value="previous" ${compare==='previous'?'selected':''}>Atual × período anterior</option><option value="lastYear" ${compare==='lastYear'?'selected':''}>Atual × mesmo período ano anterior</option></select></div><div class="dashboard-report-actions"><label>Relatório</label><button class="btn primary" type="button" data-dash-print>🧾 Baixar / imprimir A4</button></div></div><div class="dashboard-overview-note">📅 ${label} • ${rows.length} dia(s) com lançamento • filtros aplicados a todos os gráficos abaixo</div>${dashboardSection(seller,rows,'merc','💰 Venda mercantil','Volume vendido e comportamento diário.',compareRows)}${dashboardSection(seller,rows,'services','🛡️ Serviços','Garantias, presta-mista e outros serviços.',compareRows)}<section class="dashboard-section"><div class="dashboard-section-head"><div><h3>🧩 Composição dos serviços</h3><p>Participação de cada tipo de serviço no período.</p></div><span class="dashboard-section-total">${brl.format(agg.services)}</span></div><div class="dashboard-pie-wrap"><div class="dashboard-pie" style="background:${pie}"></div><div class="dashboard-legend"><div><i style="background:#668ce8"></i><span>Garantia</span><strong>${brl.format(w)}</strong></div><div><i style="background:#57d6c5"></i><span>Presta-mista</span><strong>${brl.format(m)}</strong></div><div><i style="background:#f5b84f"></i><span>Outros</span><strong>${brl.format(o)}</strong></div></div></div></section>${dashboardSection(seller,rows,'conversion','🎯 Conversão','Garantias vendidas ÷ quantidade elegível. Meta 35%.',compareRows)}${dashboardSection(seller,rows,'efficiency','⚡ Eficiência','Serviços ÷ venda elegível. Meta 7%.',compareRows)}${dashboardSection(seller,rows,'ticket','🧾 Ticket médio','Venda mercantil ÷ notas fiscais.',compareRows)}${dashboardSection(seller,rows,'gain','💵 Ganhos','Comissões em R$ informadas nos lançamentos.',compareRows)}</div>`;
+    return `<div class="seller-dashboard-shell"><div class="dashboard-controls"><div><label>Período</label><select data-dash-period><option value="week" ${period==='week'?'selected':''}>Semana</option><option value="fortnight" ${period==='fortnight'?'selected':''}>15 dias</option><option value="month" ${period==='month'?'selected':''}>Mês</option><option value="year">Ano</option></select></div><div><label>Comparação</label><select data-dash-compare><option value="none" ${compare==='none'?'selected':''}>Somente atual</option><option value="previous" ${compare==='previous'?'selected':''}>Atual × período anterior</option><option value="lastYear" ${compare==='lastYear'?'selected':''}>Atual × mesmo período ano anterior</option></select></div><div class="dashboard-report-actions"><label>Relatório</label><button class="btn primary" type="button" data-dash-print>🧾 Baixar / imprimir A4</button></div></div><div class="dashboard-overview-note">📅 ${label} • ${rows.length} dia(s) com lançamento • filtros aplicados a todos os gráficos abaixo</div>${dashboardSection(seller,rows,'merc','💰 Venda mercantil','Volume vendido e comportamento diário.',compareRows)}${dashboardSection(seller,rows,'services','🛡️ Serviços','Garantias, presta-mista e outros serviços.',compareRows)}<section class="dashboard-section"><div class="dashboard-section-head"><div><h3>🧩 Composição dos serviços</h3><p>Participação de cada tipo de serviço no período.</p></div><span class="dashboard-section-total">${brl.format(agg.services)}</span></div><div class="dashboard-pie-wrap"><div class="dashboard-pie" style="background:${pie}">${dashboardPieLabels([w,m,o],mix)}</div><div class="dashboard-legend"><div><i style="background:#668ce8"></i><span>Garantia</span><strong>${brl.format(w)}</strong></div><div><i style="background:#57d6c5"></i><span>Presta-mista</span><strong>${brl.format(m)}</strong></div><div><i style="background:#f5b84f"></i><span>Outros</span><strong>${brl.format(o)}</strong></div></div></div></section>${dashboardSection(seller,rows,'conversion','🎯 Conversão','Garantias vendidas ÷ quantidade elegível. Meta 35%.',compareRows)}${dashboardSection(seller,rows,'efficiency','⚡ Eficiência','Serviços ÷ venda elegível. Meta 7%.',compareRows)}${dashboardSection(seller,rows,'ticket','🧾 Ticket médio','Venda mercantil ÷ notas fiscais.',compareRows)}${dashboardSection(seller,rows,'invoice','📄 Notas fiscais','Total de notas fiscais e média diária do vendedor.',compareRows)}${dashboardSection(seller,rows,'gain','💵 Ganhos','Comissões em R$ informadas nos lançamentos.',compareRows)}</div>`;
   }
   function mountSellerDashboard(seller, root){ if(!root)return; let period=root.dataset.period||'month',compare=root.dataset.compare||'none'; const draw=()=>{root.innerHTML=sellerDashboardMarkup(seller,period,compare); const p=root.querySelector('[data-dash-period]'),c=root.querySelector('[data-dash-compare]'),print=root.querySelector('[data-dash-print]'); if(p)p.onchange=()=>{period=p.value;root.dataset.period=period;draw()};if(c)c.onchange=()=>{compare=c.value;root.dataset.compare=compare;draw()};if(print)print.onclick=()=>dashboardPrint(`${seller.name||'Vendedor'} — Dashboard`,root.innerHTML);};draw(); }
   function ensureTeamDashboardModal(){let layer=document.getElementById('teamDashboardLayer');if(layer)return layer;layer=document.createElement('section');layer.id='teamDashboardLayer';layer.className='team-dashboard-layer';layer.setAttribute('aria-hidden','true');layer.innerHTML=`<div class="team-dashboard-modal"><header><div><small>GESTÃO DE RESULTADOS</small><h2>📊 Dashboard da equipe</h2><p>Visão consolidada e comparativa de todos os vendedores.</p></div><button class="btn" type="button" data-team-close>✕ Fechar</button></header><div class="team-dashboard-modal-content" id="teamDashboardModalContent"></div></div>`;document.body.appendChild(layer);layer.querySelector('[data-team-close]').onclick=closeTeamDashboard;layer.addEventListener('click',e=>{if(e.target===layer)closeTeamDashboard()});return layer;}
   function closeTeamDashboard(){const l=document.getElementById('teamDashboardLayer');if(!l)return;l.classList.remove('open');l.setAttribute('aria-hidden','true');document.body.style.overflow='';}
-  function renderTeamMetric(period, metric){const items=db.sellers.map((seller,index)=>{const rows=sellerDashboardPeriodRows(seller,period).filter(([,d])=>hasSellerDayValue(d)),a=sellerDashboardAggregateRows(rows),value=metric==='services'?a.services:metric==='conversion'?(a.nfs?a.conversion*100:0):metric==='efficiency'?(a.eligible?a.efficiency*100:0):metric==='ticket'?(a.invoiceCount?a.general/a.invoiceCount:0):metric==='gain'?rows.reduce((z,[,d])=>z+dashboardMetricValue(d,'gain'),0):a.general+(period==='month'?num(seller.ecommerce):0);return{name:seller.name||`Vendedor ${index+1}`,value}}).sort((a,b)=>b.value-a.value);const max=Math.max(...items.map(x=>x.value),1);return `<section class="team-metric-section"><div class="dashboard-section-head"><div><h3>${dashboardLabel(metric)}</h3><p>Comparativo entre vendedores no período selecionado.</p></div></div><div class="team-seller-bars">${items.map((r,i)=>`<div class="team-seller-bar"><span class="rank">${i+1}</span><b>${esc(r.name)}</b><div class="team-track"><i style="width:${Math.max(2,r.value/max*100)}%"></i></div><strong>${dashboardFormat(r.value,metric)}</strong></div>`).join('')||'<div class="empty">Sem vendedores cadastrados.</div>'}</div></section>`;}
-  function renderTeamDashboard(){const layer=ensureTeamDashboardModal(),host=layer.querySelector('#teamDashboardModalContent');if(!layer.classList.contains('open'))return;const period=host.dataset.period||'month',compare=host.dataset.compare||'none';const metrics=['merc','services','conversion','efficiency','ticket','gain'];host.innerHTML=`<div class="dashboard-controls"><div><label>Período</label><select id="teamDashPeriod"><option value="week" ${period==='week'?'selected':''}>Semana</option><option value="fortnight" ${period==='fortnight'?'selected':''}>15 dias</option><option value="month" ${period==='month'?'selected':''}>Mês</option></select></div><div><label>Comparação</label><select id="teamDashCompare"><option value="none" ${compare==='none'?'selected':''}>Somente atual</option><option value="previous" ${compare==='previous'?'selected':''}>Atual × período anterior</option></select></div><div class="dashboard-report-actions"><label>Relatório</label><button class="btn primary" id="teamDashPrint" type="button">🧾 Baixar / imprimir A4</button></div></div><div class="team-dashboard-summary"><div><span>Vendedores</span><strong>${db.sellers.length}</strong></div><div><span>Atualizados hoje</span><strong>${db.sellers.filter(s=>sellerDailyStatus(s).cls!=='bad').length}</strong></div><div><span>Pendentes</span><strong>${db.sellers.filter(s=>sellerDailyStatus(s).cls==='bad').length}</strong></div></div>${metrics.map(m=>renderTeamMetric(period,m)).join('')}`;host.querySelector('#teamDashPeriod').onchange=e=>{host.dataset.period=e.target.value;renderTeamDashboard()};host.querySelector('#teamDashCompare').onchange=e=>{host.dataset.compare=e.target.value;renderTeamDashboard()};host.querySelector('#teamDashPrint').onclick=()=>dashboardPrint('Dashboard da equipe',host.innerHTML);}
+  function renderTeamMetric(period, metric){const items=db.sellers.map((seller,index)=>{const rows=sellerDashboardPeriodRows(seller,period).filter(([,d])=>hasSellerDayValue(d)),a=sellerDashboardAggregateRows(rows),value=metric==='services'?a.services:metric==='conversion'?(a.nfs?a.conversion*100:0):metric==='efficiency'?(a.eligible?a.efficiency*100:0):metric==='ticket'?(a.invoiceCount?a.general/a.invoiceCount:0):metric==='invoice'?a.invoiceCount:metric==='gain'?rows.reduce((z,[,d])=>z+dashboardMetricValue(d,'gain'),0):a.general+(period==='month'?num(seller.ecommerce):0);return{name:seller.name||`Vendedor ${index+1}`,value}}).sort((a,b)=>b.value-a.value);const max=Math.max(...items.map(x=>x.value),1);return `<section class="team-metric-section"><div class="dashboard-section-head"><div><h3>${dashboardLabel(metric)}</h3><p>Comparativo entre vendedores no período selecionado.</p></div></div><div class="team-seller-bars">${items.map((r,i)=>`<div class="team-seller-bar"><span class="rank">${i+1}</span><b>${esc(r.name)}</b><div class="team-track"><i style="width:${Math.max(2,r.value/max*100)}%"></i></div><strong>${dashboardFormat(r.value,metric)}</strong></div>`).join('')||'<div class="empty">Sem vendedores cadastrados.</div>'}</div></section>`;}
+  function renderTeamDashboard(){const layer=ensureTeamDashboardModal(),host=layer.querySelector('#teamDashboardModalContent');if(!layer.classList.contains('open'))return;const period=host.dataset.period||'month',compare=host.dataset.compare||'none';const metrics=['merc','services','conversion','efficiency','ticket','invoice','gain'];host.innerHTML=`<div class="dashboard-controls"><div><label>Período</label><select id="teamDashPeriod"><option value="week" ${period==='week'?'selected':''}>Semana</option><option value="fortnight" ${period==='fortnight'?'selected':''}>15 dias</option><option value="month" ${period==='month'?'selected':''}>Mês</option></select></div><div><label>Comparação</label><select id="teamDashCompare"><option value="none" ${compare==='none'?'selected':''}>Somente atual</option><option value="previous" ${compare==='previous'?'selected':''}>Atual × período anterior</option></select></div><div class="dashboard-report-actions"><label>Relatório</label><button class="btn primary" id="teamDashPrint" type="button">🧾 Baixar / imprimir A4</button></div></div><div class="team-dashboard-summary"><div><span>Vendedores</span><strong>${db.sellers.length}</strong></div><div><span>Atualizados hoje</span><strong>${db.sellers.filter(s=>sellerDailyStatus(s).cls!=='bad').length}</strong></div><div><span>Pendentes</span><strong>${db.sellers.filter(s=>sellerDailyStatus(s).cls==='bad').length}</strong></div></div>${metrics.map(m=>renderTeamMetric(period,m)).join('')}`;host.querySelector('#teamDashPeriod').onchange=e=>{host.dataset.period=e.target.value;renderTeamDashboard()};host.querySelector('#teamDashCompare').onchange=e=>{host.dataset.compare=e.target.value;renderTeamDashboard()};host.querySelector('#teamDashPrint').onclick=()=>dashboardPrint('Dashboard da equipe',host.innerHTML);}
   function openTeamDashboard(){const layer=ensureTeamDashboardModal();layer.classList.add('open');layer.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';renderTeamDashboard();}
+
+  function branchDashboardRows(period='month') {
+    const all = Object.entries(db.daily || {}).filter(([, day]) => day && ['general','eligible','warranty','other','mixed','invoiceCount','nfs','warrantyQty'].some((field) => num(day[field]) > 0)).sort(([a],[b]) => a.localeCompare(b));
+    if (period === 'month') return all;
+    const [yy, mm] = String(db.month || '').split('-').map(Number);
+    const last = new Date(yy, mm, 0).getDate();
+    let anchorDay = (yy === today.getFullYear() && mm === today.getMonth() + 1) ? today.getDate() : last;
+    if (period === 'week') {
+      const d = new Date(yy, mm - 1, anchorDay), dow = (d.getDay() + 6) % 7, start = Math.max(1, anchorDay - dow), end = Math.min(last, start + 6);
+      return all.filter(([key]) => { const day = Number(key.slice(-2)); return day >= start && day <= end; });
+    }
+    if (period === 'fortnight') {
+      const start = anchorDay <= 15 ? 1 : 16, end = anchorDay <= 15 ? 15 : last;
+      return all.filter(([key]) => { const day = Number(key.slice(-2)); return day >= start && day <= end; });
+    }
+    return all;
+  }
+  function branchDashboardCompareRows(period='month', compare='none') {
+    const rows = branchDashboardRows(period);
+    if (!rows.length || compare === 'none') return [];
+    if (compare === 'previous' && period !== 'year') {
+      const dates = rows.map(([key]) => Number(key.slice(-2))), lo = Math.min(...dates), hi = Math.max(...dates), span = hi - lo + 1;
+      const prevStart = Math.max(1, lo - span), prevEnd = Math.max(0, lo - 1);
+      if (prevEnd < 1) return [];
+      return Object.entries(db.daily || {}).filter(([key, day]) => {
+        const numDay = Number(key.slice(-2));
+        return numDay >= prevStart && numDay <= prevEnd && day && ['general','eligible','warranty','other','mixed','invoiceCount','nfs','warrantyQty'].some((field) => num(day[field]) > 0);
+      }).sort(([a],[b]) => a.localeCompare(b));
+    }
+    if (compare === 'lastYear') {
+      const targetMonth = `${Number(String(db.month).slice(0, 4)) - 1}-${String(db.month).slice(5, 7)}`;
+      const targetBranch = String(db.branch || '').trim().toLocaleUpperCase('pt-BR');
+      const record = Object.values(vault.records || {}).find((item) => item && item.month === targetMonth && String(item.branch || '').trim().toLocaleUpperCase('pt-BR') === targetBranch);
+      if (!record?.daily) return [];
+      return Object.entries(record.daily).filter(([, day]) => day && ['general','eligible','warranty','other','mixed','invoiceCount','nfs','warrantyQty'].some((field) => num(day[field]) > 0)).sort(([a],[b]) => a.localeCompare(b)).slice(0, 31);
+    }
+    return [];
+  }
+  function branchDashboardYearSeries(metric, year) {
+    const months = Array.from({ length: 12 }, (_, index) => `${year}-${String(index + 1).padStart(2, '0')}`);
+    const targetBranch = String(db.branch || '').trim().toLocaleUpperCase('pt-BR');
+    return months.map((monthKey) => {
+      const record = monthKey === db.month ? db : Object.values(vault.records || {}).find((item) => item && item.month === monthKey && String(item.branch || '').trim().toLocaleUpperCase('pt-BR') === targetBranch);
+      if (!record) return 0;
+      const a = aggregate(Object.values(record.daily || {}));
+      const services = a.warranty + a.other + a.mixed;
+      if (metric === 'services') return services;
+      if (metric === 'conversion') return a.nfs ? a.warrantyQty / a.nfs * 100 : 0;
+      if (metric === 'efficiency') return a.eligible ? services / a.eligible * 100 : 0;
+      if (metric === 'ticket') return a.invoiceCount ? a.general / a.invoiceCount : 0;
+      if (metric === 'invoice') return a.invoiceCount;
+      return a.general + num(record.ecommerce);
+    });
+  }
+  function branchDashboardMarkup(period='month', compare='none') {
+    const metrics = [['merc','💰 Venda mercantil'], ['services','🛡️ Serviços'], ['conversion','🎯 Conversão'], ['efficiency','⚡ Eficiência'], ['ticket','🧾 Ticket médio'], ['invoice','📄 Notas fiscais']];
+    if (period === 'year') {
+      const year = Number(String(db.month).slice(0, 4)), previousYear = year - 1, monthNames = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+      return `<div class="seller-dashboard-shell"><div class="dashboard-controls"><div><label>Período</label><select data-branch-dash-period><option value="week">Semana</option><option value="fortnight">15 dias</option><option value="month">Mês</option><option value="year" selected>Ano</option></select></div><div><label>Comparação</label><select data-branch-dash-compare><option value="none" ${compare==='none'?'selected':''}>Somente ${year}</option><option value="lastYear" ${compare==='lastYear'?'selected':''}>${year} × ${previousYear}</option></select></div><div class="dashboard-report-actions"><label>Relatório</label><button class="btn primary" type="button" data-branch-dash-print>🧾 Baixar / imprimir A4</button></div></div>${metrics.map(([metric, title]) => { const vals = branchDashboardYearSeries(metric, year), prevVals = branchDashboardYearSeries(metric, previousYear), currentTotal = vals.reduce((sum, value) => sum + value, 0), previousTotal = prevVals.reduce((sum, value) => sum + value, 0), delta = previousTotal ? (currentTotal - previousTotal) / previousTotal : 0; return `<section class="dashboard-section branch-theme-${metric}"><div class="dashboard-section-head"><div><h3>${title}</h3><p>${year}${compare === 'lastYear' ? ` comparado com ${previousYear}` : ''}.</p></div><span class="dashboard-section-total">${dashboardFormat(currentTotal, metric)}</span></div><div class="dashboard-kpis"><div class="dashboard-kpi"><span>${year}</span><strong>${dashboardFormat(currentTotal, metric)}</strong></div><div class="dashboard-kpi"><span>${previousYear}</span><strong>${compare === 'lastYear' ? dashboardFormat(previousTotal, metric) : '—'}</strong></div><div class="dashboard-kpi"><span>Evolução</span><strong class="${delta > 0 ? 'trend-up' : delta < 0 ? 'trend-down' : 'trend-flat'}">${compare === 'lastYear' && previousTotal ? (delta >= 0 ? '▲ ' : '▼ ') + Math.abs(delta * 100).toFixed(1).replace('.', ',') + '%' : '—'}</strong></div></div><div class="dashboard-card" data-chart-values="${vals.join(',')}" data-chart-labels="${monthNames.join(',')}" data-chart-metric="${metric}" data-chart-type="bar"><button class="dashboard-chart-expand" type="button" data-chart-expand aria-label="Ampliar gráfico">⛶</button><h4>Mês a mês</h4>${dashboardSvg(vals, monthNames, metric, 'bar')}${compare === 'lastYear' ? `<div class="dashboard-year-note">Ano anterior disponível para comparação: ${previousTotal ? dashboardFormat(previousTotal, metric) : 'sem dados'}.</div>` : ''}</div></section>`; }).join('')}</div>`;
+    }
+    const rows = branchDashboardRows(period).slice(0, 31), compareRows = branchDashboardCompareRows(period, compare), agg = sellerDashboardAggregateRows(rows), w = num(agg.warranty), m = num(agg.mixed), o = num(agg.other), mix = w + m + o || 1, pie = `conic-gradient(#668ce8 0 ${w / mix * 100}%,#57d6c5 ${w / mix * 100}% ${(w + m) / mix * 100}%,#f5b84f ${(w + m) / mix * 100}% 100%)`, label = period === 'week' ? 'Semana' : period === 'fortnight' ? '15 dias' : 'Mês';
+    return `<div class="seller-dashboard-shell"><div class="dashboard-controls"><div><label>Período</label><select data-branch-dash-period><option value="week" ${period==='week'?'selected':''}>Semana</option><option value="fortnight" ${period==='fortnight'?'selected':''}>15 dias</option><option value="month" ${period==='month'?'selected':''}>Mês</option><option value="year">Ano</option></select></div><div><label>Comparação</label><select data-branch-dash-compare><option value="none" ${compare==='none'?'selected':''}>Somente atual</option><option value="previous" ${compare==='previous'?'selected':''}>Atual × período anterior</option><option value="lastYear" ${compare==='lastYear'?'selected':''}>Atual × mesmo período ano anterior</option></select></div><div class="dashboard-report-actions"><label>Relatório</label><button class="btn primary" type="button" data-branch-dash-print>🧾 Baixar / imprimir A4</button></div></div><div class="dashboard-overview-note">📅 ${label} • ${rows.length} dia(s) com lançamento • visão do gestor consolidada na filial</div>${dashboardSection(null, rows, 'merc', '💰 Venda mercantil', 'Volume vendido e comportamento diário da filial.', compareRows)}${dashboardSection(null, rows, 'services', '🛡️ Serviços', 'Garantias, presta-mista e outros serviços da filial.', compareRows)}<section class="dashboard-section branch-theme-services"><div class="dashboard-section-head"><div><h3>🧩 Composição dos serviços</h3><p>Participação de cada tipo de serviço no período.</p></div><span class="dashboard-section-total">${brl.format(agg.services)}</span></div><div class="dashboard-pie-wrap"><div class="dashboard-pie" style="background:${pie}">${dashboardPieLabels([w,m,o],mix)}</div><div class="dashboard-legend"><div><i style="background:#668ce8"></i><span>Garantia</span><strong>${brl.format(w)}</strong></div><div><i style="background:#57d6c5"></i><span>Presta-mista</span><strong>${brl.format(m)}</strong></div><div><i style="background:#f5b84f"></i><span>Outros</span><strong>${brl.format(o)}</strong></div></div></div></section>${dashboardSection(null, rows, 'conversion', '🎯 Conversão', 'Garantias vendidas ÷ quantidade elegível. Meta 35%.', compareRows)}${dashboardSection(null, rows, 'efficiency', '⚡ Eficiência', 'Serviços ÷ venda elegível. Meta 7%.', compareRows)}${dashboardSection(null, rows, 'ticket', '🧾 Ticket médio', 'Venda mercantil ÷ notas fiscais.', compareRows)}${dashboardSection(null, rows, 'invoice', '📄 Notas fiscais', 'Total de notas fiscais, média diária e referência por vendedor.', compareRows)}</div>`;
+  }
+  function mountBranchDashboard(root) {
+    if (!root) return;
+    let period = root.dataset.period || 'month', compare = root.dataset.compare || 'none';
+    const draw = () => {
+      root.innerHTML = branchDashboardMarkup(period, compare);
+      const p = root.querySelector('[data-branch-dash-period]'), c = root.querySelector('[data-branch-dash-compare]'), print = root.querySelector('[data-branch-dash-print]');
+      if (p) p.onchange = () => { period = p.value; root.dataset.period = period; draw(); };
+      if (c) c.onchange = () => { compare = c.value; root.dataset.compare = compare; draw(); };
+      if (print) print.onclick = () => dashboardPrint(`Dashboard da filial — ${db.branch || 'Filial'}`, root.innerHTML);
+    };
+    draw();
+  }
+  function renderBranchDashboard() {
+    const root = document.getElementById('branchDashboardRoot');
+    if (!root) return;
+    try {
+      mountBranchDashboard(root);
+    } catch (error) {
+      console.error('Falha ao renderizar dashboard da filial:', error);
+      root.innerHTML = '<div class="empty">O dashboard consolidado da filial está temporariamente indisponível. As demais áreas continuam acessíveis.</div>';
+    }
+  }
   
   function renderSellerWorkspace(seller) {
     const host=document.getElementById('sellerWorkspace'); if(!host)return;
@@ -1752,32 +1981,60 @@
     params.set('viewVersion','33'); location.href = `./vendedor.html?${params.toString()}&v=33`;
   }
 
+  function sellerDirectorySeverity(seller) {
+    const pendingInfo = sellerPendingInfo(seller);
+    const overdue = Math.max(0, num(pendingInfo.overdue));
+    if (overdue > 3) return { tone:'bad', label:'Atraso crítico', note:`${overdue} dia(s) pendente(s)` };
+    if (overdue > 0) return { tone:'warn', label:'Atenção', note:`${overdue} dia(s) pendente(s)` };
+    return { tone:'good', label:'Em dia', note:'Lançamentos dentro do prazo' };
+  }
+  function sellerDirectoryScore(seller) {
+    const daily = sellerDailyAggregate(seller);
+    const metrics = sellerMetrics(seller);
+    const mercRate = num(metrics.individualGoal) ? (daily.general + num(seller.ecommerce)) / Math.max(1, num(metrics.individualGoal)) : 0;
+    const servRate = num(metrics.serviceGoal) ? daily.services / Math.max(1, num(metrics.serviceGoal)) : 0;
+    const conv = num(daily.conversion);
+    const eff = num(daily.efficiency);
+    const overdue = sellerPendingInfo(seller).overdue;
+    return mercRate * 1000 + servRate * 400 + conv * 120 + eff * 90 - overdue * 35;
+  }
   function renderSellers() {
-    const branch = calculate();
-    const sellerSales = db.sellers.reduce((sum, seller) => sum + num(seller.general), 0);
-    const sellerServices = db.sellers.reduce((sum, seller) => sum + num(seller.warranty)+num(seller.other)+num(seller.mixed), 0);
-    const pending = db.sellers.filter((seller) => sellerDailyStatus(seller).cls === 'bad').length;
-    const updated = Math.max(0, db.sellers.length - pending);
-    const goalsHit=db.sellers.filter((seller)=>{const a=sellerDailyAggregate(seller),merc=a.general+num(seller.ecommerce),mg=num(seller.assignedGoal),sg=num(seller.serviceGoal);return (mg&&merc>=mg)||(sg&&a.services>=sg)}).length;
+    const updatedToday = db.sellers.filter((seller) => sellerDailyStatus(seller).cls !== 'bad').length;
+    const pendingToday = db.sellers.filter((seller) => sellerDailyStatus(seller).cls === 'bad').length;
+    const goalsHit = db.sellers.filter((seller) => {
+      const a = sellerDailyAggregate(seller), merc = a.general + num(seller.ecommerce), mg = num(seller.assignedGoal), sg = num(seller.serviceGoal);
+      return (mg && merc >= mg) || (sg && a.services >= sg);
+    }).length;
     document.getElementById('sellerSummary').innerHTML = [
-      ['👥 Vendedores', db.sellers.length], ['✅ Atualizados hoje', updated], ['⚠️ Pendentes hoje', pending], ['🏆 Metas batidas', goalsHit]
+      ['👥 Vendedores', db.sellers.length], ['✅ Atualizados hoje', updatedToday], ['⚠️ Pendentes hoje', pendingToday], ['🏆 Metas batidas', goalsHit]
     ].map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`).join('');
     const list = document.getElementById('sellerList');
     renderSellerBackupPanel();
-    if (!db.sellers.length) { list.innerHTML = '<div class="empty">Nenhum vendedor cadastrado. Toque em “+ Vendedor” para começar.</div>'; return; }
-    list.innerHTML = db.sellers.map((seller, index) => {
-      const metrics = sellerMetrics(seller), daily = sellerDailyAggregate(seller), status = sellerDailyStatus(seller);
-      const commission = sellerFinancials(seller);
-      const launchedCount = Object.values(seller.daily||{}).filter(d=>d&&(d.status==='done'||d.status==='partial'||hasSellerDayValue(d))).length;
+    if (!db.sellers.length) {
+      list.innerHTML = '<div class="empty">Nenhum vendedor cadastrado. Toque em “+ Vendedor” para começar.</div>';
+      return;
+    }
+    const ordered = db.sellers.map((seller, index) => ({ seller, index }))
+      .sort((a, b) => {
+        const scoreDiff = sellerDirectoryScore(b.seller) - sellerDirectoryScore(a.seller);
+        if (Math.abs(scoreDiff) > 1e-9) return scoreDiff;
+        const overdueDiff = sellerPendingInfo(a.seller).overdue - sellerPendingInfo(b.seller).overdue;
+        if (overdueDiff) return overdueDiff;
+        return String(a.seller.name || '').localeCompare(String(b.seller.name || ''), 'pt-BR');
+      });
+    list.innerHTML = ordered.map(({ seller, index }, orderIndex) => {
+      const metrics = sellerMetrics(seller), daily = sellerDailyAggregate(seller), status = sellerDailyStatus(seller), severity = sellerDirectorySeverity(seller);
+      const launchedCount = Object.values(seller.daily || {}).filter((d) => d && (d.status === 'done' || d.status === 'partial' || hasSellerDayValue(d))).length;
       const monthPending = Math.max(0, metrics.plannedDays - launchedCount);
-      return `<article class="seller-directory-card" data-i="${index}">
-        <div class="seller-person"><strong>${esc(seller.name || `Vendedor ${index + 1}`)}</strong><span>${metrics.plannedDays} dias planejados • ${launchedCount} lançados • ${Math.max(0,metrics.plannedDays-launchedCount)} sem lançamento</span></div>
-        <div class="seller-mini-kpi"><span>Mercantil</span><strong>${brl.format(daily.general+num(seller.ecommerce))}</strong></div>
+      const syncLabel = seller.updatedAt ? new Date(seller.updatedAt).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) : '—';
+      return `<article class="seller-directory-card status-${severity.tone}" data-i="${index}">
+        <div class="seller-card-head tone-${severity.tone}"><span class="seller-card-rank">#${orderIndex + 1}</span><span class="seller-card-avatar">${seller.profilePhoto?`<img src="${esc(seller.profilePhoto)}" alt="Foto de ${esc(seller.name||'vendedor')}">`:esc((seller.name||'V').charAt(0).toUpperCase())}</span><div class="seller-card-head-copy"><strong>${esc(seller.name || `Vendedor ${index + 1}`)}</strong><small>${severity.label} • ${severity.note}</small></div></div>
+        <div class="seller-person"><strong>${esc(seller.name || `Vendedor ${index + 1}`)}</strong><span>${metrics.plannedDays} dias planejados • ${launchedCount} lançados • ${Math.max(0, metrics.plannedDays - launchedCount)} sem lançamento</span></div>
+        <div class="seller-mini-kpi"><span>Mercantil</span><strong>${brl.format(daily.general + num(seller.ecommerce))}</strong></div>
         <div class="seller-mini-kpi"><span>Serviços</span><strong>${brl.format(daily.services)}</strong></div>
         <div class="seller-mini-kpi"><span>Conversão</span><strong>${daily.nfs ? efficiencyPct.format(daily.conversion) : '—'}</strong></div>
         <div class="seller-mini-kpi"><span>Eficiência</span><strong>${daily.eligible ? efficiencyPct.format(daily.efficiency) : '—'}</strong></div>
-        <div class="seller-card-footer"><div class="seller-card-status"><span class="seller-pending ${status.cls}">${status.label}${monthPending?` • ${monthPending} no mês`:''}</span>${status.overdue?`<span class="seller-overdue">📅 ${status.overdue} dia(s) pendente(s)</span>`:''}<small class="seller-updated"><span class="updated-full">${seller.updatedAt?'🕐 '+new Date(seller.updatedAt).toLocaleString('pt-BR'):'🕐 Sem atualização'}</span><span class="updated-short">${seller.updatedAt?'🕐 '+new Date(seller.updatedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'🕐 —'}</span></small></div>
-        <div class="seller-directory-actions"><button type="button" class="btn primary small seller-open-btn" data-open-seller="${index}"><span class="action-icon">👁️</span><span class="action-label">Ver</span></button><button type="button" class="btn secondary small seller-edit-btn" data-edit-seller="${index}"><span class="action-icon">✏️</span><span class="action-label">Editar</span></button><button type="button" class="btn danger small seller-delete-btn" data-delete-seller="${index}"><span class="action-icon">🗑️</span><span class="action-label">Excluir</span></button></div></div>
+        <div class="seller-card-footer"><div class="seller-card-status"><span class="seller-pending ${severity.tone}">${status.label}${monthPending ? ` • ${monthPending} no mês` : ''}</span>${severity.note ? `<span class="seller-overdue tone-${severity.tone}">📅 ${severity.note}</span>` : ''}<small class="seller-updated"><span class="updated-full">🕐 ${seller.updatedAt ? new Date(seller.updatedAt).toLocaleString('pt-BR') : 'Sem atualização'}</span><span class="updated-short">🕐 ${syncLabel}</span></small></div><div class="seller-card-footer-actions"><div class="seller-card-updated-mobile">🕐 ${syncLabel}</div><div class="seller-directory-actions"><button type="button" class="btn primary small seller-open-btn" data-open-seller="${index}"><span class="action-icon">👁️</span><span class="action-label">Ver</span></button><button type="button" class="btn secondary small seller-edit-btn" data-edit-seller="${index}"><span class="action-icon">✏️</span><span class="action-label">Editar</span></button><button type="button" class="btn danger small seller-delete-btn" data-delete-seller="${index}"><span class="action-icon">🗑️</span><span class="action-label">Excluir</span></button></div></div></div>
       </article>`;
     }).join('');
     list.querySelectorAll('[data-open-seller]').forEach((button) => button.addEventListener('click', (event) => {
@@ -1795,10 +2052,14 @@
         openSellerManagerProfile(Number(button.dataset.openSeller));
       }, true);
     }
-    const teamBtn=document.getElementById('teamDashboardBtn'); if(teamBtn&&!teamBtn.dataset.bound){teamBtn.dataset.bound='1';teamBtn.addEventListener('click',openTeamDashboard);}
-    const oldHost=document.getElementById('teamDashboardHost');if(oldHost)oldHost.hidden=true;
+    const teamBtn = document.getElementById('teamDashboardBtn');
+    if (teamBtn && !teamBtn.dataset.bound) {
+      teamBtn.dataset.bound = '1';
+      teamBtn.addEventListener('click', openTeamDashboard);
+    }
+    const oldHost = document.getElementById('teamDashboardHost');
+    if (oldHost) oldHost.hidden = true;
   }
-
   const sellerResultFields = ['general', 'eligible', 'warranty', 'warrantyQty', 'other', 'mixed', 'nfs', 'invoiceCount', 'days', 'justifiedDays'];
   function renderSellerBackupPanel(message = '') {
     const select = document.getElementById('sellerBackupTarget'); if (!select) return;
@@ -2321,13 +2582,83 @@
     else document.getElementById('printReport').insertAdjacentHTML('beforeend', compiledPage + sellerFinancialPages);
   }
 
-  function renderAll() { if (dailyExportGesture) { dailyRenderDeferred=true; return; } if (document.getElementById("biCharts")) renderBI(); fillSettings(); renderScopeSelector(); renderOverview(); renderDaily(); renderWeekly(); renderSellers(); renderGoalsHistory(); renderCompiled(); renderSellerProfile(); renderPrint(); }
-  function showView(id) {
+  function renderAll() { if (dailyExportGesture) { dailyRenderDeferred=true; return; } if (document.getElementById("biCharts")) renderBI(); fillSettings(); renderScopeSelector(); renderOverview(); renderDaily(); renderWeekly(); renderSellers(); renderGoalsHistory(); renderCompiled(); renderBranchDashboard(); renderSellerProfile(); renderPrint(); }
+
+  function ensureDashboardChartModal() {
+    let modal = document.getElementById('dashboardChartModal');
+    if (modal) return modal;
+    modal = document.createElement('div');
+    modal.id = 'dashboardChartModal';
+    modal.className = 'dashboard-chart-modal';
+    modal.hidden = true;
+    modal.innerHTML = '<div class="dashboard-chart-modal-dialog" role="dialog" aria-modal="true" aria-label="Gráfico ampliado"><div class="dashboard-chart-modal-head"><strong id="dashboardChartModalTitle">Gráfico</strong><button type="button" class="dashboard-chart-modal-close" aria-label="Fechar">×</button></div><div class="dashboard-chart-modal-body"></div></div>';
+    document.body.appendChild(modal);
+    const close = () => { modal.hidden = true; document.body.classList.remove('dashboard-chart-modal-open'); };
+    modal.querySelector('.dashboard-chart-modal-close').addEventListener('click', close);
+    modal.addEventListener('click', e => { if (e.target === modal) close(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.hidden) close(); });
+    return modal;
+  }
+  function openDashboardChartModal(card) {
+    if (!card || !window.matchMedia('(min-width: 761px)').matches) return;
+    const modal = ensureDashboardChartModal();
+    const title = card.querySelector('h4')?.textContent?.trim() || 'Gráfico';
+    modal.querySelector('#dashboardChartModalTitle').textContent = title;
+    const body = modal.querySelector('.dashboard-chart-modal-body');
+    body.innerHTML = '';
+    const clone = card.cloneNode(true);
+    clone.querySelectorAll('[data-chart-expand]').forEach(el => el.remove());
+    clone.classList.add('dashboard-card-expanded');
+    let values = String(card.dataset.chartValues || '').split(',').filter(Boolean).map(Number);
+    let labels = String(card.dataset.chartLabels || '').split(',').filter(Boolean);
+    const metric = card.dataset.chartMetric || 'merc';
+    const type = card.dataset.chartType || 'bar';
+    if (values.length && labels.length && labels.every(label => /^\d+$/.test(label))) {
+      const valueByDay = new Map(labels.map((label,index) => [Number(label), Number(values[index] || 0)]));
+      const lastDay = Math.max(...labels.map(Number));
+      labels = Array.from({length:lastDay}, (_,index) => String(index + 1));
+      values = labels.map(label => valueByDay.get(Number(label)) || 0);
+    }
+    const oldSvg = clone.querySelector('.svg-chart');
+    if (oldSvg && values.length && labels.length) {
+      const wrap = document.createElement('div');
+      wrap.innerHTML = dashboardSvg(values, labels, metric, type, true);
+      const newSvg = wrap.firstElementChild;
+      if (newSvg) oldSvg.replaceWith(newSvg);
+    }
+    body.appendChild(clone);
+    modal.hidden = false;
+    document.body.classList.add('dashboard-chart-modal-open');
+  }
+  document.addEventListener('click', event => {
+    const trigger = event.target.closest('[data-chart-expand]');
+    if (!trigger) return;
+    event.preventDefault(); event.stopPropagation();
+    openDashboardChartModal(trigger.closest('.dashboard-card'));
+  });
+  window.addEventListener('results-cloud-updated', event => {
+    try {
+      const incoming = event.detail?.vault || JSON.parse(localStorage.getItem(STORE) || 'null');
+      if (!incoming?.records) return;
+      const activeId = document.querySelector('.view.active')?.id || 'overview';
+      const scrollY = window.scrollY || 0;
+      vault = incoming;
+      if (!Array.isArray(vault.historyEntries)) vault.historyEntries = [];
+      const key = recordKey(db.branch, db.month);
+      db = normalizeRecord(vault.records[key] || vault.records[vault.currentKey] || Object.values(vault.records)[0] || db);
+      renderAll();
+      if (document.getElementById(activeId)) showView(activeId, { keepScroll: true });
+      requestAnimationFrame(() => window.scrollTo({ top: scrollY, behavior: 'auto' }));
+    } catch (_) { /* sincronização nunca deve interromper a tela */ }
+  });
+  function showView(id, options = {}) {
     document.querySelectorAll('.view').forEach((view) => view.classList.toggle('active', view.id === id));
     document.querySelectorAll('.tab').forEach((tab) => tab.classList.toggle('active', tab.dataset.view === id));
+    try { sessionStorage.setItem('fs_resultados_active_view', id); } catch (_) {}
     if (id === 'goalsHistory') renderGoalsHistory();
     if (id === 'compiled') { renderCompiled(); renderBI(); }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (id === 'branchDashboard') renderBranchDashboard();
+    if (!options.keepScroll) window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   document.querySelectorAll('.tab').forEach((tab) => tab.addEventListener('click', () => showView(tab.dataset.view)));
@@ -2969,9 +3300,106 @@
     document.getElementById('biSaved').innerHTML=`<h3>Registros do BI · ${esc(db.branch||'filial não informada')}</h3>${all.length?`<div class="bi-saved-list">${[...all].sort((a,b)=>b.month.localeCompare(a.month)).map(record=>`<div><strong>${esc(monthLabel(record.month))}</strong><span>${esc(biTypes[record.type]||record.type)} · ${record.rows.length} categoria(s) · ${record.completeness==='partial'?'Parcial':'Fechado'}</span><small>${esc(record.source||'Importação')} · ${new Date(record.updatedAt).toLocaleDateString('pt-BR')}</small></div>`).join('')}</div>`:'<p>Nenhum registro importado para esta filial.</p>'}`;
   }
 
+  function applyV56TabletPolish() {
+    if (document.getElementById('fs-v56-tablet-polish')) return;
+    const st = document.createElement('style');
+    st.id = 'fs-v56-tablet-polish';
+    st.textContent = `
+      .seller-card-rank{display:none!important}
+      .seller-directory-card .seller-card-head{gap:10px!important}
+      #overview .overview-kpi-organized{display:flex!important;flex-direction:column!important;gap:12px!important;margin:16px 0!important}
+      .overview-kpi-group,.week-indicator-group,.seller-week-indicator-group,.monthly-gap-group{border:1px solid #e0e8f1;border-radius:18px;background:#fff;padding:12px}
+      .overview-kpi-group>header,.week-indicator-group>header,.seller-week-indicator-group>header,.monthly-gap-group>header{display:flex;flex-direction:column;gap:2px;margin-bottom:10px}
+      .overview-kpi-group>header strong,.week-indicator-group>header strong,.seller-week-indicator-group>header strong,.monthly-gap-group>header strong{font-size:14px;color:#17324d}
+      .overview-kpi-group>header small,.week-indicator-group>header small,.seller-week-indicator-group>header small,.monthly-gap-group>header small{font-size:11px;color:#7b8796}
+      .overview-kpi-group.merc,.week-indicator-group.merc,.seller-week-indicator-group.merc{background:linear-gradient(180deg,#fbfdff,#fff)}
+      .overview-kpi-group.indicators,.week-indicator-group.indicators,.seller-week-indicator-group.indicators{background:linear-gradient(180deg,#f8fbff,#fff)}
+      .overview-kpi-group.services,.week-indicator-group.services,.seller-week-indicator-group.services{background:linear-gradient(180deg,#f7fcf9,#fff)}
+      .overview-kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+      .overview-kpi-group.merc .overview-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .overview-kpi-group.services .overview-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .overview-service-note{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center;margin-top:10px;padding:10px 12px;border-radius:12px;background:#eef8f2;border:1px solid #d8eadf;color:#486b58}
+      .overview-service-note strong{color:#176c45}.overview-service-note small{grid-column:1/-1;color:#75847a;font-size:11px}
+      .monthly-gap-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}
+      .monthly-gap-group{min-width:0}.monthly-gap-group.services{background:#fbfaff}
+      .monthly-gap-group-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+      .week-indicator-groups,.seller-week-indicator-groups{display:flex;flex-direction:column;gap:12px;margin-top:12px}
+      .week-indicator-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+      .week-indicator-grid .metric{min-width:0;position:relative;display:flex;flex-direction:column;min-height:116px;padding:13px 14px 12px!important;border-radius:15px!important}
+      .week-indicator-grid .metric>span:first-child{font-size:10.5px!important;line-height:1.18!important;font-weight:900!important;letter-spacing:.015em;color:#5b6d82!important}
+      .week-indicator-grid .metric>strong{font-size:clamp(22px,2.15vw,30px)!important;line-height:1.08!important;font-weight:900!important;margin-top:8px!important;color:#17324d}
+      .week-indicator-grid .metric>small{margin-top:auto!important;padding-top:8px!important;font-size:9.5px!important;line-height:1.25!important;color:#7f8b99!important;text-align:right!important}
+      .week-indicator-grid .metric.result-status.passed>strong,.week-indicator-grid .metric .positive{color:#178b5b!important}
+      .week-indicator-grid .metric.result-status.failed>strong,.week-indicator-grid .metric .negative{color:#c83f54!important}
+      .week-indicator-grid .metric.result-status.attention{background:#fff9ea!important;border-color:#ead79a!important}
+      .week-indicator-grid .metric.result-status.attention>strong{color:#9a6b00!important}
+      .week-indicator-grid .metric.result-status.passed{background:#effaf4!important;border-color:#bfe3cf!important}
+      .week-indicator-grid .metric.result-status.failed{background:#fff2f4!important;border-color:#efc3cb!important}
+      .week-indicator-grid .metric{background:#fff!important;border:1px solid #e2e9f1!important;box-shadow:0 4px 12px rgba(20,50,80,.035)!important}
+      .week-indicator-grid .metric>strong>span{font-size:inherit!important;font-weight:inherit!important;line-height:inherit!important}
+      .week-indicator-grid .metric>small{background:#f4f8fc!important;border-radius:8px!important;padding:6px 8px!important;color:#557394!important;text-align:right!important}
+      .week-indicator-grid .metric.result-status.passed>small{background:#e8f6ee!important;color:#327355!important}
+      .week-indicator-grid .metric.result-status.attention>small{background:#fff4d8!important;color:#896a1b!important}
+      .week-indicator-grid .metric.result-status.failed>small{background:#fdebed!important;color:#a04d5b!important}
+      .overview-kpi-grid .kpi.status-positive{background:#effaf4!important;border-color:#bfe3cf!important}
+      .overview-kpi-grid .kpi.status-warning{background:#fff9ea!important;border-color:#ead79a!important}
+      .overview-kpi-grid .kpi.status-negative{background:#fff2f4!important;border-color:#efc3cb!important}
+      .overview-kpi-grid .kpi.status-positive .value{color:#178b5b!important}
+      .overview-kpi-grid .kpi.status-warning .value{color:#9a6b00!important}
+      .overview-kpi-grid .kpi.status-negative .value{color:#c83f54!important}
+      .overview-kpi-grid .kpi.status-positive .sub{color:#327355!important}
+      .overview-kpi-grid .kpi.status-warning .sub{color:#896a1b!important}
+      .overview-kpi-grid .kpi.status-negative .sub{color:#a04d5b!important}
+      .overview-kpi-grid .kpi{min-height:128px!important;display:flex!important;flex-direction:column!important;justify-content:flex-start!important}
+      .overview-kpi-grid .kpi .label{font-size:11px!important;font-weight:850!important;color:#687789!important}
+      .overview-kpi-grid .kpi .value{font-size:clamp(22px,2vw,30px)!important;line-height:1.08!important;font-weight:850!important;margin-top:7px!important}
+      .overview-kpi-grid .kpi .sub{font-size:10px!important;line-height:1.25!important;margin-top:auto!important;padding-top:8px!important;color:#7f8b99!important}
+      .seller-week-indicator-group .seller-week-grid{margin:0!important}
+      .seller-week-aux{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}
+      .seller-week-aux>div{border:1px solid #e3e9f0;border-radius:14px;padding:12px;background:#fafcff;display:flex;flex-direction:column;min-width:0}
+      .seller-week-aux span{font-size:11px;font-weight:800;color:#6d7b8d}.seller-week-aux strong{font-size:18px;color:#17324d;margin:5px 0}.seller-week-aux small{font-size:11px;color:#8190a2}
+      @media (min-width:761px) and (max-width:1180px){
+        .goal-grid{grid-template-columns:1fr!important}
+        .goal dl.goal-dual{grid-template-columns:minmax(110px,1fr) minmax(128px,auto) minmax(128px,auto)!important;column-gap:16px!important}
+        .goal dl.goal-dual dd{min-width:0!important;white-space:nowrap!important;font-size:clamp(11px,1.25vw,13px)!important}
+        .goal-col-head{font-size:8px!important}
+        .overview-kpi-grid,.week-indicator-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+        .overview-kpi-group.services .overview-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+        .monthly-gap-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+        .monthly-gap-group-grid{grid-template-columns:1fr!important}
+        .seller-week-aux{grid-template-columns:repeat(3,minmax(0,1fr))}
+      }
+      @media (max-width:760px){
+        .overview-kpi-group,.week-indicator-group,.seller-week-indicator-group,.monthly-gap-group{padding:10px;border-radius:16px}
+        .overview-kpi-grid,.week-indicator-grid,.seller-week-indicator-group .seller-week-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+        .overview-kpi-group.services .overview-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+        .monthly-gap-grid{grid-template-columns:1fr!important}
+        .monthly-gap-group-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+        .seller-week-aux{grid-template-columns:1fr!important}
+        .overview-service-note{grid-template-columns:1fr!important}
+        .overview-service-note small{grid-column:auto}
+      }
+    `;
+    document.head.appendChild(st);
+  }
+  applyV56TabletPolish();
+
   initBI();
 
   renderAll();
-  if(location.hash==='#sellers'){setTimeout(()=>{try{showView('sellers')}catch(e){console.warn('Não foi possível reabrir Vendedores:',e)}},0)}
+  let restoredView = '';
+  try { restoredView = sessionStorage.getItem('fs_resultados_active_view') || ''; } catch (_) {}
+  const validViews = new Set([...document.querySelectorAll('.view')].map(v => v.id));
+  if (location.hash === '#sellers') restoredView = 'sellers';
+  if (restoredView && validViews.has(restoredView)) {
+    setTimeout(() => {
+      try {
+        showView(restoredView, { keepScroll: true });
+        const y = Number(sessionStorage.getItem('fs_resultados_scroll_y') || 0);
+        if (Number.isFinite(y) && y > 0) window.scrollTo({ top: y, behavior: 'auto' });
+        sessionStorage.removeItem('fs_resultados_scroll_y');
+      } catch (e) { console.warn('Não foi possível restaurar a visualização:', e); }
+    }, 0);
+  }
 document.addEventListener('DOMContentLoaded',()=>{const b=document.getElementById('resultsInternalBack');if(b)b.hidden=true;});
 })();

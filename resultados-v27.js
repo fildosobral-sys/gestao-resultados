@@ -1611,7 +1611,7 @@
     return `R$ ${numValue.toFixed(0).replace('.',',')}`;
   }
   function dashboardSvg(values, labels, metric, type='bar', expanded=false) {
-    const W=expanded?Math.max(960,Math.min(1500,100+Math.max(1,values.length)*44)):760,H=expanded?340:280,left=68,right=18,top=16,bottom=expanded?44:34,maxValue=Math.max(...values,0),axisMax=maxValue>0?maxValue*1.1:1;
+    const W=expanded?Math.max(960,Math.min(1500,100+Math.max(1,values.length)*44)):760,H=expanded?352:292,left=68,right=18,top=28,bottom=expanded?44:34,maxValue=Math.max(...values,0),axisMax=maxValue>0?maxValue*1.16:1;
     const dense=values.length>12, veryDense=values.length>22;
     const x=i=>type==='bar'?left+(i+.5)*((W-left-right)/Math.max(1,values.length)):left+i*((W-left-right)/Math.max(1,values.length-1));
     const y=v=>H-bottom-(Math.max(0,v)/axisMax)*(H-top-bottom);
@@ -1629,7 +1629,20 @@
         values.map((v,i)=>{const labelY=Math.max(top+9,Math.min(H-bottom-5,y(v)+(dense&&i%2?12:-8)));return `<circle cx="${x(i)}" cy="${y(v)}" r="4" fill="#644de8"/><text x="${x(i)}" y="${labelY}" text-anchor="middle" fill="#516174" font-size="${fontSize}" font-weight="700">${dashboardAxisFormat(v,metric)}</text>`;}).join('');
     } else {
       const unit=(W-left-right)/Math.max(1,values.length),barWidth=Math.max(5,unit*.58),fontSize=veryDense?7:dense?8:10;
-      marks=values.map((v,i)=>{const xx=left+i*unit+unit*.21,yy=y(v),hh=Math.max(2,H-bottom-yy);if(dense){const tx=xx+barWidth/2,ty=Math.max(top+20,Math.min(H-bottom-7,yy+Math.min(hh-4,Math.max(18,hh*.6))));return `<rect x="${xx}" y="${yy}" width="${barWidth}" height="${hh}" rx="5" fill="url(#g)"/><text x="${tx}" y="${ty}" text-anchor="middle" fill="${hh>38?'#fff':'#516174'}" font-size="${fontSize}" font-weight="800" transform="rotate(-90 ${tx} ${ty})">${dashboardAxisFormat(v,metric)}</text>`;}const labelY=Math.max(top+12,yy-6);return `<rect x="${xx}" y="${yy}" width="${barWidth}" height="${hh}" rx="5" fill="url(#g)"/><text x="${xx+barWidth/2}" y="${labelY}" text-anchor="middle" fill="#516174" font-size="${fontSize}" font-weight="700">${dashboardAxisFormat(v,metric)}</text>`;}).join('');
+      const deltaThreshold=['conversion','efficiency'].includes(metric)?0.05:metric==='invoice'?0.25:1;
+      marks=values.map((v,i)=>{
+        const xx=left+i*unit+unit*.21,yy=y(v),hh=Math.max(2,H-bottom-yy),cx=xx+barWidth/2;
+        const previous=i>0?Number(values[i-1]||0):null,delta=previous===null?0:v-previous;
+        const hasArrow=previous!==null&&Math.abs(delta)>=deltaThreshold;
+        const arrowY=Math.max(top-2,yy-18);
+        const arrow=hasArrow?`<text x="${cx}" y="${arrowY}" text-anchor="middle" fill="${delta>=0?'#169b62':'#df4053'}" font-size="${expanded?13:12}" font-weight="900">${delta>=0?'▲':'▼'}</text>`:'';
+        if(dense){
+          const tx=cx,ty=Math.max(top+26,Math.min(H-bottom-7,yy+Math.min(hh-4,Math.max(18,hh*.6))));
+          return `${arrow}<rect x="${xx}" y="${yy}" width="${barWidth}" height="${hh}" rx="5" fill="url(#g)"/><text x="${tx}" y="${ty}" text-anchor="middle" fill="${hh>38?'#fff':'#516174'}" font-size="${fontSize}" font-weight="800" transform="rotate(-90 ${tx} ${ty})">${dashboardAxisFormat(v,metric)}</text>`;
+        }
+        const labelY=Math.max(top+16,yy-6);
+        return `${arrow}<rect x="${xx}" y="${yy}" width="${barWidth}" height="${hh}" rx="5" fill="url(#g)"/><text x="${cx}" y="${labelY}" text-anchor="middle" fill="#516174" font-size="${fontSize}" font-weight="700">${dashboardAxisFormat(v,metric)}</text>`;
+      }).join('');
     }
     return `<svg class="svg-chart" viewBox="0 0 ${W} ${H}" role="img"><defs><linearGradient id="g" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#1688ec"/><stop offset="1" stop-color="#6550e8"/></linearGradient></defs>${grid}<line x1="${left}" y1="${H-bottom}" x2="${W-right}" y2="${H-bottom}" stroke="#dce5f0"/>${marks}${axisLabels}</svg>`;
   }
@@ -2600,7 +2613,7 @@
     return modal;
   }
   function openDashboardChartModal(card) {
-    if (!card || !window.matchMedia('(min-width: 761px)').matches) return;
+    if (!card) return;
     const modal = ensureDashboardChartModal();
     const title = card.querySelector('h4')?.textContent?.trim() || 'Gráfico';
     modal.querySelector('#dashboardChartModalTitle').textContent = title;
@@ -3378,6 +3391,37 @@
         .seller-week-aux{grid-template-columns:1fr!important}
         .overview-service-note{grid-template-columns:1fr!important}
         .overview-service-note small{grid-column:auto}
+      }
+      .seller-dashboard-shell .dashboard-section .dashboard-card{position:relative;overflow:hidden}
+      .seller-dashboard-shell .dashboard-section .dashboard-card h4{padding-right:44px}
+      .seller-dashboard-shell .dashboard-section .dashboard-chart-expand{position:absolute;top:14px;right:14px;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:12px;border:1px solid rgba(100,93,255,.18);background:rgba(255,255,255,.92);box-shadow:0 10px 24px rgba(17,24,39,.10);color:#4f46e5;font-size:16px;font-weight:800;cursor:pointer;z-index:2}
+      .seller-dashboard-shell .dashboard-section .dashboard-chart-expand:hover{transform:translateY(-1px);box-shadow:0 14px 28px rgba(17,24,39,.14)}
+      .seller-dashboard-shell .dashboard-kpis{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+      .seller-dashboard-shell .dashboard-kpi,.seller-dashboard-shell .dashboard-section-total,.week-indicator-grid .metric,.week-goals .week-goal{min-width:0}
+      .seller-dashboard-shell .dashboard-kpi strong{display:block;font-size:clamp(1.18rem,2.6vw,2.1rem);line-height:1.06;letter-spacing:-.03em;overflow-wrap:anywhere;word-break:break-word}
+      .seller-dashboard-shell .dashboard-section-total{display:block;max-width:100%;font-size:clamp(1.1rem,2.8vw,2rem);line-height:1.06;letter-spacing:-.03em;overflow-wrap:anywhere;word-break:break-word;text-align:right}
+      .week-indicator-grid .metric strong,.week-goals .week-goal dd{display:block;font-size:clamp(1.02rem,4.1vw,1.85rem);line-height:1.08;letter-spacing:-.03em;overflow-wrap:anywhere;word-break:break-word}
+      .week-indicator-grid .metric.emphasized strong,.week-indicator-grid .metric.result-status strong{font-size:clamp(1.14rem,4.5vw,2.2rem)}
+      .week-status-toggle{max-width:100%}
+      .week-status-toggle>span:first-child{display:block;max-width:100%;overflow-wrap:anywhere;word-break:break-word}
+      .dashboard-chart-modal{position:fixed;inset:0;background:rgba(15,23,42,.58);backdrop-filter:blur(6px);display:grid;place-items:center;padding:16px;z-index:9999}
+      .dashboard-chart-modal[hidden]{display:none!important}
+      .dashboard-chart-modal-dialog{width:min(1180px,100%);max-height:calc(100vh - 32px);overflow:auto;background:#fff;border-radius:24px;box-shadow:0 28px 64px rgba(15,23,42,.28);padding:18px}
+      .dashboard-chart-modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+      .dashboard-chart-modal-head strong{font-size:clamp(1.05rem,2.4vw,1.45rem);color:#17324d}
+      .dashboard-chart-modal-close{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:12px;border:1px solid rgba(100,93,255,.18);background:#fff;color:#4f46e5;font-size:24px;line-height:1;cursor:pointer}
+      .dashboard-chart-modal-body .dashboard-card-expanded{border:0;box-shadow:none;padding:0}
+      .dashboard-chart-modal-body .dashboard-card-expanded .dashboard-chart-expand{display:none!important}
+      .dashboard-chart-modal-open{overflow:hidden}
+      @media (max-width:760px){
+        .seller-dashboard-shell .dashboard-section .dashboard-card h4{padding-right:48px}
+        .seller-dashboard-shell .dashboard-kpi strong{font-size:clamp(1.08rem,5vw,1.55rem)}
+        .seller-dashboard-shell .dashboard-section-total{font-size:clamp(1rem,4.6vw,1.45rem);text-align:left}
+        .week-indicator-grid .metric strong,.week-goals .week-goal dd{font-size:clamp(1rem,5vw,1.5rem)}
+        .week-indicator-grid .metric.emphasized strong,.week-indicator-grid .metric.result-status strong{font-size:clamp(1.08rem,5.8vw,1.8rem)}
+        .dashboard-chart-modal{padding:10px}
+        .dashboard-chart-modal-dialog{padding:14px;border-radius:18px;max-height:calc(100vh - 20px)}
+        .dashboard-chart-modal-body .svg-chart{min-width:720px}
       }
     `;
     document.head.appendChild(st);
