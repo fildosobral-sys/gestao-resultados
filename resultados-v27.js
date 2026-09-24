@@ -720,9 +720,9 @@
     };
     root.innerHTML = '';
     root.classList.add('overview-kpi-organized');
-    root.appendChild(group('merc','1 🛒 Mercantil','Vendas e resultado mercantil',mercCards));
-    root.appendChild(group('indicators','2 📄 Notas Fiscais e Ticket Médio','Quantidade, média, por vendedor e ticket médio',[invoiceCard,invoiceAvgCard,invoiceSellerCard,ticketCard]));
-    root.appendChild(group('services','3 🔐 Serviços','Serviços, conversão e eficiência',servicesCards));
+    root.appendChild(group('merc','🛒 Mercantil','Vendas e resultado mercantil',mercCards));
+    root.appendChild(group('indicators','📄 Notas Fiscais e Ticket Médio','Quantidade, média, por vendedor e ticket médio',[invoiceCard,invoiceAvgCard,invoiceSellerCard,ticketCard]));
+    root.appendChild(group('services','🔐 Serviços','Serviços, conversão e eficiência',servicesCards));
     root.dataset.organized = '1';
   }
 
@@ -1068,7 +1068,7 @@
         weekMetric('EFICIÊNCIA', result.eligible > 0 ? efficiencyPct.format(result.efficiency) : 'Não calculada', 'Meta 7%', `result-status ${efficiencyStatus}`),
         weekMetric('PROJEÇÃO DE SERVIÇOS', brl.format(paceServiceProjection), serviceTarget ? `${pct.format(serviceProjectionRate)} da meta` : 'Sem meta definida')
       ].join('');
-      return `<article class="week ${visualClass}"><div class="week-top"><div><div class="week-title">${index + 1}ª semana</div><div class="week-date">${items[0].date.toLocaleDateString('pt-BR')} a ${items.at(-1).date.toLocaleDateString('pt-BR')}</div></div><div class="week-head-actions">${result.pendingDays && phase !== 'future' ? `<span class="week-pending-chip ${phase === 'current' ? 'current' : ''}">${pendingLabel}</span>` : ''}<button type="button" class="week-status-toggle ${toggleStatus}" data-week-toggle="${index}" aria-expanded="${expanded}"><span>${hasResults || phase === 'closed' ? pct.format(primary.overall) : 'Sem dados'}</span><span class="chevron">⌄</span></button></div></div>${chart}<div class="week-indicator-groups"><section class="week-indicator-group merc"><header><strong>1 🛒 Mercantil</strong><small>Vendas, médias, saldos e projeção</small></header><div class="week-indicator-grid">${mercGroup}</div></section><section class="week-indicator-group indicators"><header><strong>2 📄 Notas Fiscais e Ticket Médio</strong><small>Quantidade, média, por vendedor e ticket médio</small></header><div class="week-indicator-grid">${indicatorGroup}</div></section><section class="week-indicator-group services"><header><strong>3 🔐 Serviços</strong><small>Serviços, conversão, eficiência, saldos e projeção</small></header><div class="week-indicator-grid">${servicesGroup}</div></section></div><div class="hint">${targetNote}${grossAvailable ? ' • Lucro bruto mensal distribuído pela participação da semana nas vendas.' : ' • Lucro bruto não informado; percentual calculado somente pelo mercantil.'}</div><div class="week-goals">${goals}</div></article>`;
+      return `<article class="week ${visualClass}"><div class="week-top"><div><div class="week-title">${index + 1}ª semana</div><div class="week-date">${items[0].date.toLocaleDateString('pt-BR')} a ${items.at(-1).date.toLocaleDateString('pt-BR')}</div></div><div class="week-head-actions">${result.pendingDays && phase !== 'future' ? `<span class="week-pending-chip ${phase === 'current' ? 'current' : ''}">${pendingLabel}</span>` : ''}<button type="button" class="week-status-toggle ${toggleStatus}" data-week-toggle="${index}" aria-expanded="${expanded}"><span>${hasResults || phase === 'closed' ? pct.format(primary.overall) : 'Sem dados'}</span><span class="chevron">⌄</span></button></div></div>${chart}<div class="week-indicator-groups"><section class="week-indicator-group merc"><header><strong>🛒 Mercantil</strong><small>Vendas, médias, saldos e projeção</small></header><div class="week-indicator-grid">${mercGroup}</div></section><section class="week-indicator-group indicators"><header><strong>📄 Notas Fiscais e Ticket Médio</strong><small>Quantidade, média, por vendedor e ticket médio</small></header><div class="week-indicator-grid">${indicatorGroup}</div></section><section class="week-indicator-group services"><header><strong>🔐 Serviços</strong><small>Serviços, conversão, eficiência, saldos e projeção</small></header><div class="week-indicator-grid">${servicesGroup}</div></section></div><div class="hint">${targetNote}${grossAvailable ? ' • Lucro bruto mensal distribuído pela participação da semana nas vendas.' : ' • Lucro bruto não informado; percentual calculado somente pelo mercantil.'}</div><div class="week-goals">${goals}</div></article>`;
     }).join('');
     grid.querySelectorAll('[data-week-toggle]').forEach((button) => {
       button.addEventListener('click', () => {
@@ -1596,7 +1596,7 @@
       card('📈 Projeção serviços',brl.format(projServ),w.serviceGoal?pct.format(projServ/w.serviceGoal)+' projetado':'Sem meta')
     ].join('');
     const auxGroup=`<div class="seller-week-aux">${card('💵 Comissões',brl.format(commissions),'Mercantil + serviços')}${card('📅 Dias da semana',`${w.launched}/${w.working}`,`${w.pending} pendente(s)`)}${card('📊 Distribuição',pct2.format(w.share),'da meta mensal')}</div>`;
-    return `<article class="seller-week-card ${w.tone}"><header><div><strong>${w.index+1}ª semana</strong><small>${range}</small></div><span>${badge}</span></header><div class="seller-week-indicator-groups"><section class="seller-week-indicator-group merc"><header><strong>1 🛒 Mercantil</strong><small>Vendas, médias, saldos e projeção</small></header><div class="seller-week-grid">${mercGroup}</div></section><section class="seller-week-indicator-group indicators"><header><strong>2 📄 Notas Fiscais e Indicadores</strong><small>Quantidade, médias, conversão, eficiência e ticket</small></header><div class="seller-week-grid">${indicatorGroup}</div></section><section class="seller-week-indicator-group services"><header><strong>3 🔧 Serviços</strong><small>Serviços, médias, saldos e projeção</small></header><div class="seller-week-grid">${servicesGroup}</div></section></div>${auxGroup}<footer>Semana sincronizada com a configuração gerencial e com a distribuição diária da competência.</footer></article>`;
+    return `<article class="seller-week-card ${w.tone}"><header><div><strong>${w.index+1}ª semana</strong><small>${range}</small></div><span>${badge}</span></header><div class="seller-week-indicator-groups"><section class="seller-week-indicator-group merc"><header><strong>🛒 Mercantil</strong><small>Vendas, médias, saldos e projeção</small></header><div class="seller-week-grid">${mercGroup}</div></section><section class="seller-week-indicator-group indicators"><header><strong>📄 Notas Fiscais e Indicadores</strong><small>Quantidade, médias, conversão, eficiência e ticket</small></header><div class="seller-week-grid">${indicatorGroup}</div></section><section class="seller-week-indicator-group services"><header><strong>🔧 Serviços</strong><small>Serviços, médias, saldos e projeção</small></header><div class="seller-week-grid">${servicesGroup}</div></section></div>${auxGroup}<footer>Semana sincronizada com a configuração gerencial e com a distribuição diária da competência.</footer></article>`;
   }
   function sellerWorkspacePeriodCard(label, aggregateData={}, mercGoal=0, serviceGoal=0) {
     const a = aggregateData || {};
@@ -1739,10 +1739,11 @@
   function branchDashboardHasVisibleDay(day) {
     if (!day || ['off','medical','justified'].includes(day.status)) return false;
     const hasValues = ['general','eligible','warranty','other','mixed','invoiceCount','nfs','warrantyQty'].some((field) => num(day[field]) > 0);
-    // Regra da filial: só entra no dashboard quando houve dado real OU quando o dia
-    // foi explicitamente trabalhado/finalizado pelo gestor. Isso impede domingos,
-    // feriados e dias fechados (objetos antigos zerados) de aparecerem como R$ 0.
-    return hasValues || day.dashboardWorkedExplicit === true;
+    // Dia visível = houve resultado real OU o gestor registrou/finalizou o expediente,
+    // inclusive quando a loja abriu e o resultado terminou em zero. Dias apenas
+    // existentes no calendário, sem lançamento e sem finalização, ficam fora.
+    const explicitlyWorked = day.status === 'done' || day.status === 'partial' || day.dashboardWorkedExplicit === true;
+    return hasValues || explicitlyWorked;
   }
   function branchDashboardRows(period='month') {
     const all = Object.entries(db.daily || {}).filter(([, day]) => branchDashboardHasVisibleDay(day)).sort(([a],[b]) => a.localeCompare(b));
@@ -2712,13 +2713,13 @@
     const metric = card.dataset.chartMetric || 'merc';
     const type = card.dataset.chartType || 'bar';
     let statusFlags = String(card.dataset.chartStatus || '').split(',');
-    if (values.length && labels.length && labels.every(label => /^\d+$/.test(label))) {
-      const valueByDay = new Map(labels.map((label,index) => [Number(label), Number(values[index] || 0)]));
-      const lastDay = Math.max(...labels.map(Number));
-      labels = Array.from({length:lastDay}, (_,index) => String(index + 1));
-      const statusByDay = new Map(String(card.dataset.chartLabels || '').split(',').filter(Boolean).map((label,index)=>[Number(label),statusFlags[index]||'']));
-      values = labels.map(label => valueByDay.get(Number(label)) || 0);
-      statusFlags = labels.map(label => statusByDay.get(Number(label)) || '');
+    // Preserve exatamente os dias já filtrados pelo dashboard. Não preencher lacunas
+    // do calendário com zero ao expandir (ex.: domingos/feriados sem operação).
+    if (values.length && labels.length) {
+      const size = Math.min(values.length, labels.length);
+      values = values.slice(0, size);
+      labels = labels.slice(0, size);
+      statusFlags = statusFlags.slice(0, size);
     }
     const oldSvg = clone.querySelector('.svg-chart');
     if (oldSvg && values.length && labels.length) {
@@ -3641,4 +3642,35 @@ document.addEventListener('DOMContentLoaded',()=>{const b=document.getElementByI
   document.head.appendChild(st);
   const syncFooter=()=>document.querySelectorAll('.footer-note').forEach(el=>{el.textContent='Developed by Fildo Sobral • FS Soluções'});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',syncFooter,{once:true});else syncFooter();
+})();
+
+
+/* V70 — expansão de indicadores por duplo clique, sem alterar cálculos */
+(function setupIndicatorSectionExpansionV70(){
+  if(window.__fsIndicatorSectionExpansionV70)return;window.__fsIndicatorSectionExpansionV70=true;
+  const selectors=['.dashboard-section-head','.week-indicator-group>header','.seller-week-indicator-group>header','.overview-kpi-group>header'];
+  const style=document.createElement('style');style.id='indicatorSectionModalCssV70';style.textContent=`
+    ${selectors.join(',')}{cursor:zoom-in}
+    .indicator-section-modal[hidden]{display:none!important}.indicator-section-modal{position:fixed;inset:0;z-index:99990;background:rgba(9,24,42,.58);display:grid;place-items:center;padding:28px}
+    .indicator-section-dialog{width:min(1280px,95vw);max-height:92vh;background:#f8fbff;border-radius:24px;box-shadow:0 28px 90px rgba(8,24,42,.35);overflow:hidden;display:flex;flex-direction:column}
+    .indicator-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 20px;border-bottom:1px solid #e4ebf3;background:linear-gradient(135deg,#f7fbff,#f5f3ff);position:sticky;top:0;z-index:5}
+    .indicator-section-head strong{font-size:21px;color:#17324d}.indicator-section-close{width:40px;height:40px;border:0;border-radius:12px;background:#eef3f8;color:#17324d;font-size:25px;cursor:pointer}
+    .indicator-section-body{padding:18px 20px 24px;overflow:auto}.indicator-section-body>.dashboard-section,.indicator-section-body>.week-indicator-group,.indicator-section-body>.seller-week-indicator-group,.indicator-section-body>.overview-kpi-group{margin:0!important;max-width:none!important;width:100%!important}
+    .indicator-section-body .dashboard-chart-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.indicator-section-body .dashboard-card{min-width:0!important}
+    .indicator-section-modal-open{overflow:hidden!important}
+    @media(max-width:1024px),(pointer:coarse){
+      .indicator-section-modal.mobile-landscape{display:flex!important;align-items:stretch!important;justify-content:stretch!important;padding:0!important}
+      .indicator-section-modal.mobile-landscape .indicator-section-dialog{width:100vw!important;height:100dvh!important;max-height:none!important;border-radius:0!important;overflow:auto!important}
+      .indicator-section-modal.mobile-landscape.virtual-landscape{display:block!important;overflow:hidden!important}
+      .indicator-section-modal.mobile-landscape.virtual-landscape .indicator-section-dialog{position:absolute!important;left:50%!important;top:50%!important;width:100dvh!important;height:100vw!important;transform:translate(-50%,-50%) rotate(90deg)!important;transform-origin:center center!important;overflow:auto!important}
+      .indicator-section-modal.mobile-landscape .indicator-section-body{min-width:720px!important;overflow:auto!important}.indicator-section-modal.mobile-landscape .dashboard-chart-grid{grid-template-columns:1fr 1fr!important}
+    }
+  `;document.head.appendChild(style);
+  function useLandscape(){return window.matchMedia('(max-width:1024px),(pointer:coarse)').matches}
+  let modal=null,locked=false;
+  function ensure(){if(modal)return modal;modal=document.createElement('div');modal.className='indicator-section-modal';modal.hidden=true;modal.innerHTML='<div class="indicator-section-dialog" role="dialog" aria-modal="true"><div class="indicator-section-head"><strong>Indicador</strong><button type="button" class="indicator-section-close" aria-label="Fechar">×</button></div><div class="indicator-section-body"></div></div>';document.body.appendChild(modal);modal.querySelector('.indicator-section-close').onclick=close;modal.addEventListener('click',e=>{if(e.target===modal)close()});return modal}
+  async function close(){if(!modal)return;modal.hidden=true;modal.classList.remove('mobile-landscape','virtual-landscape');document.body.classList.remove('indicator-section-modal-open');if(locked&&screen?.orientation?.unlock){try{screen.orientation.unlock()}catch{}}locked=false}
+  async function open(section,header){const m=ensure(),body=m.querySelector('.indicator-section-body'),title=header.querySelector('h3,strong')?.textContent?.trim()||'Indicador';m.querySelector('.indicator-section-head strong').textContent=title;body.innerHTML='';const clone=section.cloneNode(true);clone.removeAttribute('id');body.appendChild(clone);const landscape=useLandscape();m.classList.toggle('mobile-landscape',landscape);m.classList.remove('virtual-landscape');m.hidden=false;document.body.classList.add('indicator-section-modal-open');if(landscape){let ok=false;if(screen?.orientation?.lock){try{await screen.orientation.lock('landscape');locked=true;ok=true}catch{}}m.classList.toggle('virtual-landscape',!ok)}}
+  document.addEventListener('dblclick',e=>{const header=e.target.closest(selectors.join(','));if(!header)return;const section=header.closest('.dashboard-section,.week-indicator-group,.seller-week-indicator-group,.overview-kpi-group');if(!section)return;e.preventDefault();e.stopPropagation();open(section,header)});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modal&&!modal.hidden)close()});
 })();

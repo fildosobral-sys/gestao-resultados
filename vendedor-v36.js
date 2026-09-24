@@ -107,24 +107,24 @@ function renderHome(){
   const metricCard=x=>`<div class="metric ${x[3]||''}"><div class="metric-status-head"><span class="metric-status-label">${x[0]}</span>${metricTrendArrow(x[5],x[6])}</div><strong>${x[1]}</strong><small class="${x[4]||''}">${x[2]}</small></div>`;
   const invoiceAvg=worked?a.invoiceCount/worked:0;
   const rhythmGroups=[
-    ['merc','1 🛒 Mercantil','Vendas, médias, saldos e projeções',[
+    ['merc','🛒 Mercantil','Vendas, médias, saldos e projeções',[
       ['💰 Mercantil no mês',brl.format(mercTotal),mg?`${pct.format(mercRate)} da meta`:'Cadastre sua meta','strong-card','note-footer note-emphasis note-blue',mg?mercRate:null,'meta'],
       ['⚡ Média mercantil/dia',brl.format(avgMerc),`Necessário ${brl.format(needMerc)}/dia`,'','note-footer note-gold',mg&&planned?avgMerc/(mg/planned):null,'pace'],
       ['📈 Projeção mercantil',brl.format(projMerc),mg?progressText(projMerc,mg):'Meta não definida',projMerc>=mg&&mg?'good':'','note-footer note-emphasis '+(projMerc>=mg&&mg?'note-green':'note-gold'),mg?projMercRate:null,'meta']
     ]],
-    ['indicators','2 📄 Notas Fiscais e Ticket Médio','Quantidade, média e ticket médio',[
+    ['indicators','📄 Notas Fiscais e Ticket Médio','Quantidade, média e ticket médio',[
       ['📄 Notas fiscais total',String(a.invoiceCount||0),`${worked} dia(s) considerado(s)`,'','note-footer',null,'none'],
       ['📊 Média notas fiscais/dia',invoiceAvg.toLocaleString('pt-BR',{minimumFractionDigits:Number.isInteger(invoiceAvg)?0:1,maximumFractionDigits:1}),`${worked} dia(s) considerado(s)`,'','note-footer',null,'none'],
       ['🧾 Ticket médio',a.invoiceCount?brl.format(mercTotal/a.invoiceCount):'—',`${a.invoiceCount||0} nota(s) fiscal(is)`,'','note-footer',null,'none']
     ]],
-    ['services','3 🔐 Serviços','Vendas, conversão, eficiência, médias e projeções',[
+    ['services','🔐 Serviços','Vendas, conversão, eficiência, médias e projeções',[
       ['🛡️ Serviços no mês',brl.format(a.services),sg?`${pct.format(servRate)} da meta`:'Cadastre sua meta','strong-card','note-footer note-emphasis note-purple',sg?servRate:null,'meta'],
       ['⚡ Média serviços/dia',brl.format(avgServ),`Necessário ${brl.format(needServ)}/dia`,'','note-footer note-gold',sg&&planned?avgServ/(sg/planned):null,'pace'],
       ['🎯 Conversão',a.nfs?pct.format(a.conversion):'—','Meta 35,00%',a.nfs?(a.conversion>=.30?'good':a.conversion>=.20?'attention':'bad'):'','note-footer note-emphasis note-red',a.nfs?a.conversion/.35:null,'meta'],
       ['⚡ Eficiência',a.eligible?pct.format(a.efficiency):'—','Meta 7,00%',a.eligible?(a.efficiency>=.07?'good':a.efficiency>=.05?'attention':'bad'):'','note-footer note-emphasis note-green',a.eligible?a.efficiency/.07:null,'meta'],
       ['📈 Projeção serviços',brl.format(projServ),sg?progressText(projServ,sg):'Meta não definida',projServ>=sg&&sg?'good':'','note-footer note-emphasis '+(projServ>=sg&&sg?'note-green':'note-gold'),sg?projServRate:null,'meta']
     ]],
-    ['aux','4 📅 Dias e E-commerce','Competência e vendas digitais',[
+    ['aux','📅 Dias e E-commerce','Competência e vendas digitais',[
       ['📅 Dias considerados',String(worked),`${remaining} restante(s) de ${planned}`,'','note-footer',null,'none'],
       ['🌐 E-commerce',brl.format(ecom),'Acumulado da competência','','note-footer',null,'none']
     ]]
@@ -197,18 +197,18 @@ function renderWeekly(){
     const hit=!!(mg&&mercRate>=1),current=today>=startDate&&today<=endDate,past=today>endDate;
     let tone='neutral',label=mg?`Mercantil ${pct.format(mercRate)}`:'Sem meta';if(hit){tone='positive';label=`✅ Mercantil ${pct.format(mercRate)}`}else if(current){tone='warning';label=`🟡 ${mg?`Mercantil ${pct.format(mercRate)}`:'Em andamento'}`}else if(past){tone='negative';label=`🔴 ${mg?`Mercantil ${pct.format(mercRate)}`:'Encerrada'}`}else label=`⚪ ${mg?`Mercantil ${pct.format(mercRate)}`:'Futura'}`;
     const groups=[
-      ['merc','1 🛒 Mercantil','Vendas, médias, saldos e projeção',[
+      ['merc','🛒 Mercantil','Vendas, médias, saldos e projeção',[
         ['💰 Mercantil',brl.format(a.general),mg?`Meta ${brl.format(mg)} • ${progressText(a.general,mg)}`:'Meta aguardando gestão',mg?toneFor(mercRate):''],
         ['⚡ Média mercantil/dia',brl.format(avgM),`${days} dia(s) considerado(s)`,''],
         ['↕ Saldo mercantil/dia',signedBrl(deltaMercDay),`Meta/dia: ${brl.format(targetMercDay)} • ${deltaMercDay>=0?'acima':'abaixo'} ${brl.format(Math.abs(deltaMercDay))}`,deltaMercDay>=0?'metric-positive':'metric-negative'],
         ['📈 Projeção pelo ritmo',brl.format(paceMerc),mg?`${pct.format(projectionRate)} da meta`:'Sem meta definida',mg?toneFor(projectionRate):'']
       ]],
-      ['indicators','2 📄 Notas Fiscais e Ticket Médio','Quantidade, média e ticket médio',[
+      ['indicators','📄 Notas Fiscais e Ticket Médio','Quantidade, média e ticket médio',[
         ['📄 Notas fiscais total',String(a.invoiceCount||0),`${days} dia(s) lançado(s)`,''],
         ['📊 Média notas fiscais/dia',invoiceAvg.toLocaleString('pt-BR',{minimumFractionDigits:Number.isInteger(invoiceAvg)?0:1,maximumFractionDigits:1}),`${days} dia(s) considerado(s)`,''],
         ['🧾 Ticket médio',a.invoiceCount?brl.format(ticket):'—',`${a.invoiceCount||0} nota(s) fiscal(is)`,'']
       ]],
-      ['services','3 🔐 Serviços','Serviços, conversão, eficiência, médias, saldos e projeção',[
+      ['services','🔐 Serviços','Serviços, conversão, eficiência, médias, saldos e projeção',[
         ['🛡️ Serviços',brl.format(a.services),sg?`Meta ${brl.format(sg)} • ${progressText(a.services,sg)}`:'Meta aguardando gestão',sg?toneFor(servRate):''],
         ['⚡ Média serviços/dia',brl.format(avgS),`${pending} pendência(s)`,''],
         ['🎯 Conversão',a.nfs?pct.format(a.conversion):'—',a.nfs?`${a.warrantyQty} garantia(s) ÷ ${a.nfs} elegível(is) • Meta 35%`:'Meta 35%',a.nfs?(a.conversion>=.30?'metric-positive':a.conversion>=.20?'metric-warning':'metric-negative'):''],
@@ -458,4 +458,26 @@ function setupInternalNavigationGuard(){
     }
   `;
   document.head.appendChild(st);
+})();
+
+
+/* V70 — largura integral das análises + expansão de indicadores por duplo clique */
+(function setupSellerIndicatorExpansionV70(){
+  if(window.__fsSellerIndicatorExpansionV70)return;window.__fsSellerIndicatorExpansionV70=true;
+  const st=document.createElement('style');st.id='sellerIndicatorExpansionCssV70';st.textContent=`
+    #periodCompare{display:block!important;width:100%!important;max-width:none!important}#periodCompare>.analysis-shell{width:100%!important;max-width:none!important}
+    .rhythm-group>header,.weekly-indicator-group>header,.dash-section-head{cursor:zoom-in}
+    .seller-indicator-modal[hidden]{display:none!important}.seller-indicator-modal{position:fixed;inset:0;z-index:99990;background:rgba(9,24,42,.58);display:grid;place-items:center;padding:28px}
+    .seller-indicator-dialog{width:min(1280px,95vw);max-height:92vh;background:#f8fbff;border-radius:24px;box-shadow:0 28px 90px rgba(8,24,42,.35);overflow:hidden;display:flex;flex-direction:column}
+    .seller-indicator-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 20px;border-bottom:1px solid #e4ebf3;background:linear-gradient(135deg,#f7fbff,#f5f3ff);position:sticky;top:0;z-index:5}.seller-indicator-head strong{font-size:21px;color:#17324d}.seller-indicator-close{width:40px;height:40px;border:0;border-radius:12px;background:#eef3f8;color:#17324d;font-size:25px;cursor:pointer}
+    .seller-indicator-body{padding:18px 20px 24px;overflow:auto}.seller-indicator-body>.rhythm-group,.seller-indicator-body>.weekly-indicator-group,.seller-indicator-body>.dash-section{margin:0!important;width:100%!important;max-width:none!important}.seller-indicator-body .dash-chart-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+    @media(max-width:1024px),(pointer:coarse){.seller-indicator-modal.mobile-landscape{display:flex!important;align-items:stretch!important;justify-content:stretch!important;padding:0!important}.seller-indicator-modal.mobile-landscape .seller-indicator-dialog{width:100vw!important;height:100dvh!important;max-height:none!important;border-radius:0!important;overflow:auto!important}.seller-indicator-modal.mobile-landscape.virtual-landscape{display:block!important;overflow:hidden!important}.seller-indicator-modal.mobile-landscape.virtual-landscape .seller-indicator-dialog{position:absolute!important;left:50%!important;top:50%!important;width:100dvh!important;height:100vw!important;transform:translate(-50%,-50%) rotate(90deg)!important;transform-origin:center center!important;overflow:auto!important}.seller-indicator-modal.mobile-landscape .seller-indicator-body{min-width:720px!important;overflow:auto!important}.seller-indicator-modal.mobile-landscape .dash-chart-grid{grid-template-columns:1fr 1fr!important}}
+  `;document.head.appendChild(st);
+  const sel='.rhythm-group>header,.weekly-indicator-group>header,.dash-section-head';let modal=null,locked=false;
+  function landscape(){return window.matchMedia('(max-width:1024px),(pointer:coarse)').matches}
+  function ensure(){if(modal)return modal;modal=document.createElement('div');modal.className='seller-indicator-modal';modal.hidden=true;modal.innerHTML='<div class="seller-indicator-dialog" role="dialog" aria-modal="true"><div class="seller-indicator-head"><strong>Indicador</strong><button type="button" class="seller-indicator-close" aria-label="Fechar">×</button></div><div class="seller-indicator-body"></div></div>';document.body.appendChild(modal);modal.querySelector('.seller-indicator-close').onclick=close;modal.addEventListener('click',e=>{if(e.target===modal)close()});return modal}
+  async function close(){if(!modal)return;modal.hidden=true;modal.classList.remove('mobile-landscape','virtual-landscape');document.body.classList.remove('seller-indicator-modal-open');if(locked&&screen?.orientation?.unlock){try{screen.orientation.unlock()}catch{}}locked=false}
+  async function open(section,header){const m=ensure(),body=m.querySelector('.seller-indicator-body'),title=header.querySelector('h3,strong')?.textContent?.trim()||'Indicador';m.querySelector('.seller-indicator-head strong').textContent=title;body.innerHTML='';const clone=section.cloneNode(true);clone.removeAttribute('id');body.appendChild(clone);const land=landscape();m.classList.toggle('mobile-landscape',land);m.classList.remove('virtual-landscape');m.hidden=false;document.body.classList.add('seller-indicator-modal-open');if(land){let ok=false;if(screen?.orientation?.lock){try{await screen.orientation.lock('landscape');locked=true;ok=true}catch{}}m.classList.toggle('virtual-landscape',!ok)}}
+  document.addEventListener('dblclick',e=>{const header=e.target.closest(sel);if(!header)return;const section=header.closest('.rhythm-group,.weekly-indicator-group,.dash-section');if(!section)return;e.preventDefault();e.stopPropagation();open(section,header)});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modal&&!modal.hidden)close()});
 })();
