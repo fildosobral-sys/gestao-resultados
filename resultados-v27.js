@@ -733,6 +733,7 @@
     setText('heroEyebrow', scope.type === 'branch' ? 'Venda mercantil total da filial' : scope.type === 'all' ? 'Venda mercantil total dos vendedores' : `Venda mercantil total — ${scope.label}`);
     setText('revenueHero', brl.format(result.revenue)); setText('workedHero', result.worked); setText('remainingHero', result.remaining);
     setText('dailyHero', brl.format(result.dailyAvg)); setText('projectionHero', brl.format(result.projection));
+    ['workedHero','remainingHero','dailyHero'].forEach((id) => document.getElementById(id)?.parentElement?.classList.add('overview-hero-stat-shift'));
     setText('eligibleKpi', brl.format(result.eligible)); setText('servicesKpi', brl.format(result.services));
     setText('grossProfitKpiLabel', scope.type === 'branch' ? 'Lucro bruto' : 'Lucro bruto de referência');
     setText('grossProfitKpi', grossAvailable ? brl.format(result.grossProfit) : 'Não informado');
@@ -768,7 +769,13 @@
     const tiers = tierGoals(goalSource), firstGoal = tiers[0].mercantile;
     const projectedRate = firstGoal ? result.projection / firstGoal : 0;
     const projectedGrossRate = tiers[0].grossProfit ? result.grossProfitProjection / tiers[0].grossProfit : 0;
-    setText('projectionText', result.worked ? (grossAvailable ? `Projeção da Meta 1: mercantil ${pct.format(projectedRate)} • lucro bruto ${pct.format(projectedGrossRate)}.` : `Projeção da Meta 1 mercantil: ${pct.format(projectedRate)} • lucro bruto não informado.`) : 'Preencha os resultados diários para calcular.');
+    const projectionTextEl = document.getElementById('projectionText');
+    if (projectionTextEl) {
+      projectionTextEl.classList.add('projection-executive-status');
+      projectionTextEl.innerHTML = result.worked
+        ? `<span class="projection-status-chip merc"><b>${pct.format(projectedRate)}</b><small>Mercantil</small></span>${grossAvailable ? `<span class="projection-status-chip gross"><b>${pct.format(projectedGrossRate)}</b><small>Lucro bruto</small></span>` : `<span class="projection-status-chip neutral"><b>—</b><small>Lucro bruto não informado</small></span>`}`
+        : '<span class="projection-status-chip neutral"><b>—</b><small>Preencha os resultados diários para calcular</small></span>';
+    }
     document.getElementById('projectionBar').style.width = `${clampRate(projectedRate)}%`;
     document.getElementById('goalGrid').innerHTML = tiers.map((tier) => {
       const rates = tierRate(tier, result.revenue, result.grossProfit, grossAvailable);
@@ -2622,7 +2629,11 @@
     modal.hidden = true;
     modal.innerHTML = '<div class="dashboard-chart-modal-dialog" role="dialog" aria-modal="true" aria-label="Gráfico ampliado"><div class="dashboard-chart-modal-head"><strong id="dashboardChartModalTitle">Gráfico</strong><button type="button" class="dashboard-chart-modal-close" aria-label="Fechar">×</button></div><div class="dashboard-chart-modal-body"></div></div>';
     document.body.appendChild(modal);
-    const close = () => { modal.hidden = true; document.body.classList.remove('dashboard-chart-modal-open'); };
+    const close = () => {
+      modal.hidden = true;
+      modal.classList.remove('mobile-landscape');
+      document.body.classList.remove('dashboard-chart-modal-open');
+    };
     modal.querySelector('.dashboard-chart-modal-close').addEventListener('click', close);
     modal.addEventListener('click', e => { if (e.target === modal) close(); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.hidden) close(); });
@@ -2659,8 +2670,13 @@
       if (newSvg) oldSvg.replaceWith(newSvg);
     }
     body.appendChild(clone);
+    modal.classList.toggle('mobile-landscape', window.matchMedia('(max-width: 760px)').matches);
     modal.hidden = false;
-    document.body.classList.add('dashboard-chart-modal-open');
+    if (!window.matchMedia('(max-width: 760px)').matches) document.body.classList.add('dashboard-chart-modal-open');
+    requestAnimationFrame(() => {
+      const dialog = modal.querySelector('.dashboard-chart-modal-dialog');
+      if (dialog) { dialog.scrollTop = 0; dialog.scrollLeft = 0; }
+    });
   }
   document.addEventListener('click', event => {
     const trigger = event.target.closest('[data-chart-expand]');
@@ -3437,7 +3453,47 @@
       .dashboard-chart-modal-body .dashboard-card-expanded{border:0;box-shadow:none;padding:0}
       .dashboard-chart-modal-body .dashboard-card-expanded .dashboard-chart-expand{display:none!important}
       .dashboard-chart-modal-open{overflow:hidden}
+      /* V65 — acabamento executivo: visão geral, semanal e dashboard */
+      .overview-hero-stat-shift{transform:translateY(7px)}
+      #projectionText.projection-executive-status{display:flex!important;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px!important;color:inherit!important}
+      #projectionText .projection-status-chip{display:inline-flex;align-items:baseline;gap:6px;padding:6px 10px;border-radius:999px;background:#f4f7fb;border:1px solid #e4eaf1;white-space:nowrap}
+      #projectionText .projection-status-chip b{font-size:.92rem;line-height:1;font-weight:850;color:#17324d}
+      #projectionText .projection-status-chip small{font-size:.66rem;line-height:1;color:#6f7f91;font-weight:750}
+      #projectionText .projection-status-chip.merc{background:#eef5ff;border-color:#d9e8fb}
+      #projectionText .projection-status-chip.gross{background:#eefaf3;border-color:#d8eee2}
+      #projectionText .projection-status-chip.neutral{background:#f6f7f9;border-color:#e8ebef}
+      .overview-kpi-group.merc{background:linear-gradient(180deg,#f6faff 0%,#fff 100%)!important;border-color:#dfeaf6!important}
+      .overview-kpi-group.indicators{background:linear-gradient(180deg,#f8fbfe 0%,#fff 100%)!important;border-color:#e1e8ef!important}
+      .overview-kpi-group.services{background:linear-gradient(180deg,#f5fbf7 0%,#fff 100%)!important;border-color:#dceee3!important}
+      .week-indicator-grid .metric{min-height:142px!important;padding:14px 14px 12px!important}
+      .week-indicator-grid .metric>span:first-child{font-size:.69rem!important;line-height:1.16!important;letter-spacing:.012em!important}
+      .week-indicator-grid .metric>strong{white-space:nowrap!important;overflow:visible!important;overflow-wrap:normal!important;word-break:normal!important;font-size:clamp(1.22rem,3.1vw,1.72rem)!important;line-height:1.04!important;margin-top:9px!important;letter-spacing:-.025em!important}
+      .week-indicator-grid .metric.emphasized>strong,.week-indicator-grid .metric.result-status>strong{font-size:clamp(1.28rem,3.35vw,1.82rem)!important}
+      .week-indicator-grid .metric>small{font-size:.63rem!important;line-height:1.2!important;padding:5px 7px!important;margin-top:auto!important;max-width:100%!important}
+      .seller-dashboard-shell .dashboard-section-head{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:12px!important;align-items:start!important}
+      .seller-dashboard-shell .dashboard-section-head>div{min-width:0!important}
+      .seller-dashboard-shell .dashboard-section-head h3{margin:0!important;line-height:1.08!important}
+      .seller-dashboard-shell .dashboard-section-total{align-self:start!important;white-space:nowrap!important;overflow-wrap:normal!important;word-break:normal!important;font-size:clamp(1.05rem,2.25vw,1.7rem)!important;line-height:1.02!important;padding-top:2px!important;max-width:none!important}
+      .dashboard-chart-modal{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+      .dashboard-chart-modal-dialog{overscroll-behavior:contain;touch-action:pan-x pan-y;-webkit-overflow-scrolling:touch}
+      .dashboard-chart-modal-body{overflow:auto;max-width:100%;-webkit-overflow-scrolling:touch}
       @media (max-width:760px){
+        .overview-hero-stat-shift{transform:translateY(6px)}
+        #projectionText.projection-executive-status{gap:6px;margin-top:8px!important}
+        #projectionText .projection-status-chip{padding:5px 8px}
+        #projectionText .projection-status-chip b{font-size:.82rem}
+        #projectionText .projection-status-chip small{font-size:.6rem}
+        .week-indicator-grid .metric{min-height:146px!important;padding:13px 12px 11px!important}
+        .week-indicator-grid .metric>strong{font-size:clamp(1.18rem,5.15vw,1.5rem)!important}
+        .week-indicator-grid .metric.emphasized>strong,.week-indicator-grid .metric.result-status>strong{font-size:clamp(1.22rem,5.45vw,1.58rem)!important}
+        .week-indicator-grid .metric>small{font-size:.59rem!important;line-height:1.18!important}
+        .seller-dashboard-shell .dashboard-section-head{grid-template-columns:minmax(0,1fr) minmax(112px,42%)!important;gap:8px!important}
+        .seller-dashboard-shell .dashboard-section-total{font-size:clamp(1.02rem,5vw,1.38rem)!important;text-align:right!important;justify-self:end!important}
+        .dashboard-chart-modal.mobile-landscape{display:flex!important;align-items:stretch!important;justify-content:stretch!important;padding:0!important;background:rgba(15,23,42,.72)!important}
+        .dashboard-chart-modal.mobile-landscape .dashboard-chart-modal-dialog{width:100vw!important;height:100dvh!important;max-height:none!important;border-radius:0!important;padding:10px!important;overflow:auto!important}
+        .dashboard-chart-modal.mobile-landscape .dashboard-chart-modal-head{position:sticky;top:0;z-index:5;background:rgba(255,255,255,.96);padding:6px 2px 8px;margin-bottom:8px}
+        .dashboard-chart-modal.mobile-landscape .dashboard-chart-modal-body{overflow:auto!important;max-width:100%!important}
+        .dashboard-chart-modal.mobile-landscape .dashboard-card-expanded{min-width:680px!important}
         .seller-dashboard-shell .dashboard-section .dashboard-card h4{padding-right:48px}
         .seller-dashboard-shell .dashboard-kpi strong{font-size:clamp(1.08rem,5vw,1.55rem)}
         .seller-dashboard-shell .dashboard-section-total{font-size:clamp(1rem,4.6vw,1.45rem);text-align:left}
