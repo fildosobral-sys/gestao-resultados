@@ -1025,7 +1025,7 @@
       const serviceProjectionRate = serviceTarget ? paceServiceProjection / serviceTarget : 0;
       const weekMetric = (label, value, note = '', cls = '') => `<div class="metric ${cls}"><span>${label}</span><strong>${value}</strong>${note ? `<small>${note}</small>` : ''}</div>`;
       const mercGroup = [
-        weekMetric('VENDA MERCANTIL', `${brl.format(result.general)} · ${pct.format(primary.mercRate)}`, primaryTarget ? `Meta ${brl.format(primaryTarget)} • ${salesBalance >= 0 ? 'acima' : 'abaixo'} ${brl.format(Math.abs(salesBalance))}` : '', `result-status ${mercantileStatus}`),
+        weekMetric('VENDA MERCANTIL', brl.format(result.general), primaryTarget ? `${pct.format(primary.mercRate)} da meta • Meta ${brl.format(primaryTarget)} • ${salesBalance >= 0 ? 'acima' : 'abaixo'} ${brl.format(Math.abs(salesBalance))}` : '', `result-status ${mercantileStatus}`),
         weekMetric('LUCRO BRUTO', grossAvailable ? brl.format(result.grossProfit) : 'Não informado', grossAvailable ? 'Resultado proporcional da semana' : 'Sem informação cadastrada'),
         weekMetric('MÉDIA MERCANTIL / DIA', brl.format(averageDay), `Meta/dia: ${brl.format(targetDay)}`),
         weekMetric('SALDO MERCANTIL / DIA', `<span class="${salesDailyDelta >= 0 ? 'positive' : 'negative'}">${signedBrl(salesDailyDelta)}</span>`, `Meta/dia: ${brl.format(targetDay)} • ${salesDailyDelta >= 0 ? 'acima' : 'abaixo'} ${brl.format(Math.abs(salesDailyDelta))}`),
@@ -1040,7 +1040,7 @@
         weekMetric('TICKET MÉDIO', result.invoiceCount ? brl.format(ticket) : '—', `${result.invoiceCount || 0} nota(s) fiscal(is)`)
       ].join('');
       const servicesGroup = [
-        weekMetric('SERVIÇOS', `${brl.format(result.services)} · ${pct.format(serviceRate)}`, serviceTarget ? `Meta ${brl.format(serviceTarget)} • ${serviceBalance >= 0 ? 'acima' : 'abaixo'} ${brl.format(Math.abs(serviceBalance))}` : '', serviceRate >= 1 ? 'result-status passed' : 'result-status failed'),
+        weekMetric('SERVIÇOS', brl.format(result.services), serviceTarget ? `${pct.format(serviceRate)} da meta • Meta ${brl.format(serviceTarget)} • ${serviceBalance >= 0 ? 'acima' : 'abaixo'} ${brl.format(Math.abs(serviceBalance))}` : '', serviceRate >= 1 ? 'result-status passed' : 'result-status failed'),
         weekMetric('MÉDIA SERVIÇOS / DIA', brl.format(serviceAverageDay), `Meta/dia: ${brl.format(targetServiceDay)}`),
         weekMetric('SALDO SERVIÇOS / DIA', `<span class="${serviceDailyDelta >= 0 ? 'positive' : 'negative'}">${signedBrl(serviceDailyDelta)}</span>`, `Meta/dia: ${brl.format(targetServiceDay)} • ${serviceDailyDelta >= 0 ? 'acima' : 'abaixo'} ${brl.format(Math.abs(serviceDailyDelta))}`),
         weekMetric('SALDO SERVIÇOS / VENDEDOR', `<span class="${perSellerService >= 0 ? 'positive' : 'negative'}">${signedBrl(perSellerService)}</span>`, `${sellerNote} • ${perSellerService >= 0 ? 'acima' : 'abaixo'} ${brl.format(Math.abs(perSellerService))}`),
@@ -1610,7 +1610,7 @@
     if (numValue >= 1000) return `R$ ${(numValue / 1000).toFixed(numValue >= 10000 ? 0 : 1).replace('.',',')} mil`;
     return `R$ ${numValue.toFixed(0).replace('.',',')}`;
   }
-  function dashboardSvg(values, labels, metric, type='bar', expanded=false) {
+  function dashboardSvg(values, labels, metric, type='bar', expanded=false, statusFlags=[]) {
     const W=expanded?Math.max(960,Math.min(1500,100+Math.max(1,values.length)*44)):760,H=expanded?352:292,left=68,right=18,top=28,bottom=expanded?44:34,maxValue=Math.max(...values,0),axisMax=maxValue>0?maxValue*1.16:1;
     const dense=values.length>12, veryDense=values.length>22;
     const x=i=>type==='bar'?left+(i+.5)*((W-left-right)/Math.max(1,values.length)):left+i*((W-left-right)/Math.max(1,values.length-1));
@@ -1626,16 +1626,14 @@
       const points=values.map((v,i)=>`${x(i)},${y(v)}`).join(' ');
       const fontSize=veryDense?7:dense?8:10;
       marks=`<polyline points="${points}" fill="none" stroke="#1688ec" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`+
-        values.map((v,i)=>{const labelY=Math.max(top+9,Math.min(H-bottom-5,y(v)+(dense&&i%2?12:-8)));return `<circle cx="${x(i)}" cy="${y(v)}" r="4" fill="#644de8"/><text x="${x(i)}" y="${labelY}" text-anchor="middle" fill="#516174" font-size="${fontSize}" font-weight="700">${dashboardAxisFormat(v,metric)}</text>`;}).join('');
+        values.map((v,i)=>{const state=statusFlags[i]||'',arrow=state==='up'?'▲':state==='down'?'▼':'',arrowColor=state==='up'?'#169b62':'#df4053',arrowY=Math.max(top+10,y(v)-18),labelY=Math.max(top+22,Math.min(H-bottom-5,y(v)+(dense&&i%2?12:-8)));return `${arrow?`<text x="${x(i)}" y="${arrowY}" text-anchor="middle" fill="${arrowColor}" font-size="${expanded?13:11}" font-weight="900">${arrow}</text>`:''}<circle cx="${x(i)}" cy="${y(v)}" r="4" fill="#644de8"/><text x="${x(i)}" y="${labelY}" text-anchor="middle" fill="#516174" font-size="${fontSize}" font-weight="700">${dashboardAxisFormat(v,metric)}</text>`;}).join('');
     } else {
       const unit=(W-left-right)/Math.max(1,values.length),barWidth=Math.max(5,unit*.58),fontSize=veryDense?7:dense?8:10;
-      const deltaThreshold=['conversion','efficiency'].includes(metric)?0.05:metric==='invoice'?0.25:1;
       marks=values.map((v,i)=>{
         const xx=left+i*unit+unit*.21,yy=y(v),hh=Math.max(2,H-bottom-yy),cx=xx+barWidth/2;
-        const previous=i>0?Number(values[i-1]||0):null,delta=previous===null?0:v-previous;
-        const hasArrow=previous!==null&&Math.abs(delta)>=deltaThreshold;
-        const arrowY=Math.max(top-2,yy-18);
-        const arrow=hasArrow?`<text x="${cx}" y="${arrowY}" text-anchor="middle" fill="${delta>=0?'#169b62':'#df4053'}" font-size="${expanded?13:12}" font-weight="900">${delta>=0?'▲':'▼'}</text>`:'';
+        const state=statusFlags[i]||'';
+        const arrowY=Math.max(top+10,yy-13);
+        const arrow=state==='up'?`<text x="${cx}" y="${arrowY}" text-anchor="middle" fill="#169b62" font-size="${expanded?13:11}" font-weight="900">▲</text>`:state==='down'?`<text x="${cx}" y="${arrowY}" text-anchor="middle" fill="#df4053" font-size="${expanded?13:11}" font-weight="900">▼</text>`:'';
         if(dense){
           const tx=cx,ty=Math.max(top+26,Math.min(H-bottom-7,yy+Math.min(hh-4,Math.max(18,hh*.6))));
           return `${arrow}<rect x="${xx}" y="${yy}" width="${barWidth}" height="${hh}" rx="5" fill="url(#g)"/><text x="${tx}" y="${ty}" text-anchor="middle" fill="${hh>38?'#fff':'#516174'}" font-size="${fontSize}" font-weight="800" transform="rotate(-90 ${tx} ${ty})">${dashboardAxisFormat(v,metric)}</text>`;
@@ -1665,14 +1663,32 @@
     }
     return [];
   }
+  function dashboardDayStatus(seller, key, day, metric){
+    const services=num(day.warranty)+num(day.other)+num(day.mixed);
+    if(metric==='conversion') return num(day.nfs)>0 ? (num(day.warrantyQty)/num(day.nfs)>=.35?'up':'down') : '';
+    if(metric==='efficiency') return num(day.eligible)>0 ? (services/num(day.eligible)>=.07?'up':'down') : '';
+    if(metric!=='merc'&&metric!=='services') return '';
+    if(seller){
+      const mission=sellerMissionMetrics(seller,key);
+      if(!mission?.percent) return '';
+      const target=metric==='merc'?num(mission.mercantileGoal):num(mission.serviceGoal);
+      const actual=metric==='merc'?num(day.general):services;
+      return actual>=target?'up':'down';
+    }
+    const mission=dailyGoalMetrics(key);
+    if(!mission?.percent) return '';
+    const target=metric==='merc'?num(mission.branchGoal):num(mission.serviceGoal);
+    const actual=metric==='merc'?num(day.general):services;
+    return actual>=target?'up':'down';
+  }
   function dashboardSection(seller, rows, metric, title, subtitle, compareRows=[]){
-    const vals=rows.map(([,d])=>dashboardMetricValue(d,metric)), labels=rows.map(([k])=>String(Number(k.slice(-2)))), agg=sellerDashboardAggregateRows(rows);
+    const vals=rows.map(([,d])=>dashboardMetricValue(d,metric)), labels=rows.map(([k])=>String(Number(k.slice(-2)))), statusFlags=rows.map(([k,d])=>dashboardDayStatus(seller,k,d,metric)), agg=sellerDashboardAggregateRows(rows);
     const total=metric==='services'?agg.services:metric==='conversion'?(agg.nfs?agg.warrantyQty/agg.nfs*100:0):metric==='efficiency'?(agg.eligible?agg.services/agg.eligible*100:0):metric==='ticket'?(agg.invoiceCount?agg.general/agg.invoiceCount:0):metric==='invoice'?agg.invoiceCount:metric==='gain'?rows.reduce((a,[,d])=>a+dashboardMetricValue(d,'gain'),0):agg.general;
     const cagg=sellerDashboardAggregateRows(compareRows), ctotal=!compareRows.length?0:metric==='services'?cagg.services:metric==='conversion'?(cagg.nfs?cagg.warrantyQty/cagg.nfs*100:0):metric==='efficiency'?(cagg.eligible?cagg.services/cagg.eligible*100:0):metric==='ticket'?(cagg.invoiceCount?cagg.general/cagg.invoiceCount:0):metric==='invoice'?cagg.invoiceCount:metric==='gain'?compareRows.reduce((a,[,d])=>a+dashboardMetricValue(d,'gain'),0):cagg.general;
     const nz=vals.filter(v=>v>0), best=nz.length?Math.max(...nz):0, worst=nz.length?Math.min(...nz):0, half=Math.max(1,Math.floor(vals.length/2)), fa=vals.slice(0,half), qa=vals.slice(half), f=fa.length?fa.reduce((a,b)=>a+b,0)/fa.length:0, q=qa.length?qa.reduce((a,b)=>a+b,0)/qa.length:0, trend=f?(q-f)/f:0, delta=ctotal?(total-ctotal)/ctotal:0;
     const invoiceDays = agg.days || rows.length || 0, invoiceAverage = metric==='invoice' && invoiceDays ? agg.invoiceCount / invoiceDays : 0, invoicePerSeller = metric==='invoice' && !seller ? (configuredSellerCount() ? agg.invoiceCount / configuredSellerCount() : 0) : 0;
     const invoiceKpis = metric==='invoice' ? `<div class="dashboard-kpi"><span>Média / dia</span><strong>${dashboardFormat(invoiceAverage,'invoice')}</strong><small>${invoiceDays} dia(s) considerado(s)</small></div>${!seller?`<div class="dashboard-kpi"><span>Por vendedor</span><strong>${dashboardFormat(invoicePerSeller,'invoice')}</strong><small>${configuredSellerCount()||0} vendedor(es)</small></div>`:''}` : '';
-    return `<section class="dashboard-section" id="seller-dash-${metric}"><div class="dashboard-section-head"><div><h3>${title}</h3><p>${subtitle}</p></div><span class="dashboard-section-total">${dashboardFormat(total,metric)}</span></div><div class="dashboard-kpis"><div class="dashboard-kpi"><span>Resultado</span><strong>${dashboardFormat(total,metric)}</strong></div>${invoiceKpis}<div class="dashboard-kpi"><span>Melhor dia</span><strong>${dashboardFormat(best,metric)}</strong></div><div class="dashboard-kpi"><span>Menor dia</span><strong>${dashboardFormat(worst,metric)}</strong></div><div class="dashboard-kpi"><span>Tendência</span><strong class="${trend>.02?'trend-up':trend<-.02?'trend-down':'trend-flat'}">${trend>.02?'▲ Ascendente':trend<-.02?'▼ Descendente':'→ Estável'}</strong></div>${compareRows.length?`<div class="dashboard-kpi"><span>Comparativo</span><strong class="${delta>0?'trend-up':delta<0?'trend-down':'trend-flat'}">${(delta>=0?'▲ ':'▼ ')+Math.abs(delta*100).toFixed(1).replace('.',',')}%</strong><small>${dashboardFormat(ctotal,metric)} no período comparado</small></div>`:''}</div><div class="dashboard-chart-grid"><div class="dashboard-card" data-chart-values="${vals.join(',')}" data-chart-labels="${labels.join(',')}" data-chart-metric="${metric}" data-chart-type="bar"><button class="dashboard-chart-expand" type="button" data-chart-expand aria-label="Ampliar gráfico">⛶</button><h4>${title} por dia</h4><div class="hint">Somente dias com lançamento. Até 31 barras no mês.</div>${dashboardSvg(vals,labels,metric,'bar')}</div><div class="dashboard-card" data-chart-values="${vals.join(',')}" data-chart-labels="${labels.join(',')}" data-chart-metric="${metric}" data-chart-type="line"><button class="dashboard-chart-expand" type="button" data-chart-expand aria-label="Ampliar gráfico">⛶</button><h4>Tendência</h4><div class="hint">Evolução do indicador ao longo do período selecionado.</div>${dashboardSvg(vals,labels,metric,'line')}</div></div></section>`;
+    return `<section class="dashboard-section" id="seller-dash-${metric}"><div class="dashboard-section-head"><div><h3>${title}</h3><p>${subtitle}</p></div><span class="dashboard-section-total">${dashboardFormat(total,metric)}</span></div><div class="dashboard-kpis"><div class="dashboard-kpi"><span>Resultado</span><strong>${dashboardFormat(total,metric)}</strong></div>${invoiceKpis}<div class="dashboard-kpi"><span>Melhor dia</span><strong>${dashboardFormat(best,metric)}</strong></div><div class="dashboard-kpi"><span>Menor dia</span><strong>${dashboardFormat(worst,metric)}</strong></div><div class="dashboard-kpi"><span>Tendência</span><strong class="${trend>.02?'trend-up':trend<-.02?'trend-down':'trend-flat'}">${trend>.02?'▲ Ascendente':trend<-.02?'▼ Descendente':'→ Estável'}</strong></div>${compareRows.length?`<div class="dashboard-kpi"><span>Comparativo</span><strong class="${delta>0?'trend-up':delta<0?'trend-down':'trend-flat'}">${(delta>=0?'▲ ':'▼ ')+Math.abs(delta*100).toFixed(1).replace('.',',')}%</strong><small>${dashboardFormat(ctotal,metric)} no período comparado</small></div>`:''}</div><div class="dashboard-chart-grid"><div class="dashboard-card" data-chart-values="${vals.join(',')}" data-chart-labels="${labels.join(',')}" data-chart-status="${statusFlags.join(',')}" data-chart-metric="${metric}" data-chart-type="bar"><button class="dashboard-chart-expand" type="button" data-chart-expand aria-label="Ampliar gráfico">⛶</button><h4>${title} por dia</h4><div class="hint">Somente dias com lançamento. Até 31 barras no mês.</div>${dashboardSvg(vals,labels,metric,'bar',false,statusFlags)}</div><div class="dashboard-card" data-chart-values="${vals.join(',')}" data-chart-labels="${labels.join(',')}" data-chart-status="${statusFlags.join(',')}" data-chart-metric="${metric}" data-chart-type="line"><button class="dashboard-chart-expand" type="button" data-chart-expand aria-label="Ampliar gráfico">⛶</button><h4>Tendência</h4><div class="hint">Evolução do indicador ao longo do período selecionado.</div>${dashboardSvg(vals,labels,metric,'line',false,statusFlags)}</div></div></section>`;
   }
   function dashboardPrint(title, html){
     const win=window.open('','_blank'); if(!win){alert('Permita pop-ups para gerar o relatório.');return;}
@@ -2626,16 +2642,19 @@
     let labels = String(card.dataset.chartLabels || '').split(',').filter(Boolean);
     const metric = card.dataset.chartMetric || 'merc';
     const type = card.dataset.chartType || 'bar';
+    let statusFlags = String(card.dataset.chartStatus || '').split(',');
     if (values.length && labels.length && labels.every(label => /^\d+$/.test(label))) {
       const valueByDay = new Map(labels.map((label,index) => [Number(label), Number(values[index] || 0)]));
       const lastDay = Math.max(...labels.map(Number));
       labels = Array.from({length:lastDay}, (_,index) => String(index + 1));
+      const statusByDay = new Map(String(card.dataset.chartLabels || '').split(',').filter(Boolean).map((label,index)=>[Number(label),statusFlags[index]||'']));
       values = labels.map(label => valueByDay.get(Number(label)) || 0);
+      statusFlags = labels.map(label => statusByDay.get(Number(label)) || '');
     }
     const oldSvg = clone.querySelector('.svg-chart');
     if (oldSvg && values.length && labels.length) {
       const wrap = document.createElement('div');
-      wrap.innerHTML = dashboardSvg(values, labels, metric, type, true);
+      wrap.innerHTML = dashboardSvg(values, labels, metric, type, true, statusFlags);
       const newSvg = wrap.firstElementChild;
       if (newSvg) oldSvg.replaceWith(newSvg);
     }
@@ -3393,6 +3412,11 @@
         .overview-service-note small{grid-column:auto}
       }
       .seller-dashboard-shell .dashboard-section .dashboard-card{position:relative;overflow:hidden}
+      .dashboard-section .dashboard-card{position:relative!important;overflow:hidden}
+      .dashboard-section .dashboard-chart-expand{display:inline-flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}
+      .week-indicator-grid .metric>strong{white-space:nowrap!important;overflow-wrap:normal!important;word-break:normal!important;font-size:clamp(1.08rem,3.7vw,1.58rem)!important}
+      .week-indicator-grid .metric>small{color:#667b91!important;opacity:1!important;background:rgba(239,246,255,.58);border-radius:9px;padding:5px 7px!important;margin-top:auto!important;text-align:right!important}
+      .week-indicator-grid .metric>span:first-child{color:#5d7085!important;opacity:1!important}
       .seller-dashboard-shell .dashboard-section .dashboard-card h4{padding-right:44px}
       .seller-dashboard-shell .dashboard-section .dashboard-chart-expand{position:absolute;top:14px;right:14px;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:12px;border:1px solid rgba(100,93,255,.18);background:rgba(255,255,255,.92);box-shadow:0 10px 24px rgba(17,24,39,.10);color:#4f46e5;font-size:16px;font-weight:800;cursor:pointer;z-index:2}
       .seller-dashboard-shell .dashboard-section .dashboard-chart-expand:hover{transform:translateY(-1px);box-shadow:0 14px 28px rgba(17,24,39,.14)}
