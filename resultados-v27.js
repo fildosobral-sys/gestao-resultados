@@ -3051,9 +3051,33 @@
       return {branch:biBranch(),month:record.month,type:'revenue',unit:'brl',base:null,completeness:closed?'closed':'partial',rows:[{label:'Faturamento',value:revenue}],source:'Sincronizado dos lançamentos diários',updatedAt:record.updatedAt||new Date().toISOString(),syncedDaily:true,workedDays:worked};
     }).filter(Boolean);
   }
+  function biRecordSignature(record) {
+    const rows=(record?.rows||[]).map(row=>[biKey(row.label),Number(row.value||0)]).sort((a,b)=>a[0].localeCompare(b[0]));
+    return JSON.stringify({type:record?.type,unit:record?.unit||'',base:Number(record?.base||0),rows});
+  }
+  function biImportedIntegrity() {
+    const branch=biKey(biBranch()),records=biRecords().filter(record=>biKey(record.branch)===branch);
+    const groups=new Map();
+    records.filter(record=>['department','payment'].includes(record.type)).forEach(record=>{
+      const key=`${record.type}|${biKey(record.source||'')}|${biRecordSignature(record)}`;
+      if(!groups.has(key))groups.set(key,[]);
+      groups.get(key).push(record);
+    });
+    const quarantined=new Set();
+    groups.forEach(group=>{
+      const sorted=[...group].sort((a,b)=>String(a.month).localeCompare(String(b.month)));
+      if(sorted.length<3)return;
+      const sameMoment=new Set(sorted.map(record=>String(record.updatedAt||'').slice(0,10))).size===1;
+      if(!sameMoment)return;
+      // Proteção contra uma leitura antiga que replicava o mesmo conjunto em vários meses.
+      // Mantém o primeiro mês como referência e retira somente as cópias posteriores da análise.
+      sorted.slice(1).forEach(record=>quarantined.add(record));
+    });
+    return {records,quarantined};
+  }
   function biMergedRecords() {
-    const branch=biKey(biBranch()),map=new Map();
-    biRecords().filter(record=>biKey(record.branch)===branch).forEach(record=>map.set(`${record.type}|${record.month}`,record));
+    const branch=biKey(biBranch()),map=new Map(),integrity=biImportedIntegrity();
+    integrity.records.filter(record=>!integrity.quarantined.has(record)).forEach(record=>map.set(`${record.type}|${record.month}`,record));
     // O faturamento diário é a fonte operacional mais atual. Só substitui o registro de faturamento do mesmo mês; departamentos e pagamentos permanecem intactos.
     biDailyRevenueRecords().forEach(record=>map.set(`revenue|${record.month}`,record));
     return [...map.values()];
@@ -3094,8 +3118,9 @@
         <div class="bi-actions"><button class="btn" id="biAddRow">Adicionar linha</button><button class="btn primary" id="biSave">Conferi os dados: salvar no histórico</button></div>
       </div><div id="biSaved"></div>
     </article>`);
-    document.getElementById('compiled').insertAdjacentHTML('beforeend',`<article class="panel bi-panel" id="biDashboard"><h2>BI · Comparativos e evolução</h2><p>Veja o que cresceu, o que caiu e quais meses se destacaram. Em cada seção, alterne entre comparação de anos e evolução mês a mês.</p>
-      <div class="bi-sync-strip"><div><span>↻ FATURAMENTO</span><strong>Sincronizado com os lançamentos diários da filial</strong></div><small>Vendas por departamento e formas de pagamento continuam vindo dos registros específicos do BI. Nenhum lançamento diário é alterado pelo Compilado.</small></div>
+    document.getElementById('compiled').insertAdjacentHTML('beforeend',`<article class="panel bi-panel bi-ios-shell" id="biDashboard"><div class="bi-ios-hero"><div><span class="bi-ios-kicker">▦ INTELIGÊNCIA COMERCIAL</span><h2>BI · Comparativos e evolução</h2><p>Leitura consolidada da filial com dados separados por origem, competência e indicador.</p></div><div class="bi-ios-hero-badge">Filial ${esc(db.branch||'—')}</div></div>
+      <div class="bi-sync-strip"><div><span>↻ FATURAMENTO</span><strong>Sincronizado com os lançamentos diários da filial</strong></div><small>Departamentos e formas de pagamento só entram quando houver importação específica para aquela competência. O BI não replica valores de um mês para outro.</small></div>
+      <div id="biDataHealth" class="bi-data-health"></div>
       <div class="bi-form"><label>Período geral<select id="biPeriod"><option value="month">Mês</option><option value="last3" selected>Últimos 3 meses</option><option value="quarter">Trimestre do calendário</option><option value="last6">Últimos 6 meses</option><option value="semester">Semestre do calendário</option><option value="year">Ano completo</option><option value="custom">Escolher início e fim</option></select></label><label>Mês de referência<input type="month" id="biReference" value="${esc(db.month)}"></label><label>Ano de comparação<input id="biCompareYear" type="number" min="2000" max="2099" value="${Number(db.month.slice(0,4))-1}"></label><label class="bi-check"><input type="checkbox" id="biIncludePartial"> Incluir meses parciais</label><label id="biStartLabel" hidden>Início<input id="biStart" type="month" value="${esc(relativeMonth(db.month,-2))}"></label><label id="biEndLabel" hidden>Fim<input id="biEnd" type="month" value="${esc(db.month)}"></label></div>
       <p id="biPeriodNote" class="method-note"></p><div id="biCharts"></div></article>`);
     const type=document.getElementById('biType'),unit=document.getElementById('biUnit');
@@ -3277,6 +3302,13 @@
       rows.push({label,value,completeness:row.completeness});
     }
     if(!groups.size){biStatus('Adicione pelo menos uma linha.');return;}
+    if(type!=='revenue'){
+      const selectedMonth=document.getElementById('biMonth').value;
+      const months=[...groups.keys()];
+      if(months.length!==1||months[0]!==selectedMonth){
+        biStatus(`Para ${biTypes[type]}, registre somente o mês selecionado (${monthLabel(selectedMonth)}). Isso evita que uma imagem seja replicada por engano em outras competências.`);return;
+      }
+    }
     for(const [month,rows] of groups){
       if(type==='revenue'&&rows.length!==1){biStatus(`Faturamento deve ter uma linha por mês (${month}).`);return;}
       if(new Set(rows.map(row=>row.completeness)).size>1){biStatus(`Use o mesmo fechamento para todas as categorias de ${month}.`);return;}
@@ -3453,7 +3485,9 @@
     const select=(key,label,options,current)=>`<label>${label}<select id="bi-${type}-${key}" data-bi-type="${type}" data-bi-control="${key}">${options.map(([value,text])=>`<option value="${esc(value)}" ${value===current?'selected':''}>${esc(text)}</option>`).join('')}</select></label>`;
     const controls=`<div class="bi-section-controls">${select('mode','Tipo de análise',modes,view.mode)}${select('period','Período desta seção',periods,view.period)}${type==='revenue'?'':select('focus','Categoria nos gráficos',categories.map(c=>[c.key,c.label]),focus)}</div>`;
     const syncedCount=type==='revenue'?records.filter(record=>record.syncedDaily&&months.includes(record.month)).length:0;
-    const header=`<section class="bi-chart-section bi-v27" id="bi-section-${type}"><div class="bi-section-head"><h3>${esc(title)}</h3>${type==='revenue'?`<span class="bi-sync-badge">↻ ${syncedCount}/${months.length} mês(es) sincronizado(s)</span>`:''}</div>${controls}`;
+    const icon=type==='revenue'?'💰':type==='department'?'▦':'💳';
+    const subtitle=type==='revenue'?'Resultado mensal vindo do lançamento diário':type==='department'?'Participação real por departamento, somente quando importada':'Distribuição por modalidade de pagamento, somente quando importada';
+    const header=`<section class="bi-chart-section bi-v27 bi-kind-${type}" id="bi-section-${type}"><div class="bi-section-head"><div class="bi-section-title-wrap"><span class="bi-section-icon">${icon}</span><div><h3>${esc(title)}</h3><small>${esc(subtitle)}</small></div></div>${type==='revenue'?`<span class="bi-sync-badge">↻ ${syncedCount}/${months.length} sincronizado(s)</span>`:''}</div>${controls}`;
     if(!months.length)return header+'<p class="method-note">Escolha um intervalo válido, de até 24 meses.</p></section>';
     if(view.mode==='years'&&(!Number.isInteger(settings.compare)||settings.compare<2000||settings.compare>2099||settings.offset===0))return header+'<p class="method-note">Escolha um ano de comparação diferente do ano de referência ou alterne para evolução mensal.</p></section>';
     const analysis=biAnalysis(records,months,view.mode,settings.offset,focus,type),c=analysis.comparison;
@@ -3491,13 +3525,21 @@
     const settings={reference,period,compare,offset:year-compare,start:document.getElementById('biStart').value,end:document.getElementById('biEnd').value};
     document.getElementById('biStartLabel').hidden=period!=='custom';document.getElementById('biEndLabel').hidden=period!=='custom';
     const includePartial=document.getElementById('biIncludePartial').checked;
-    const imported=biRecords().filter(record=>biKey(record.branch)===biKey(biBranch()));
+    const integrity=biImportedIntegrity();
+    const imported=integrity.records;
     const synced=biDailyRevenueRecords();
     const merged=biMergedRecords();
     const records=merged.filter(record=>includePartial||record.completeness==='closed');
     const excluded=merged.length-records.length;
     const syncMonths=synced.length;
-    document.getElementById('biPeriodNote').textContent=`${db.branch||'Filial não informada'}. Faturamento sincronizado automaticamente com os lançamentos diários (${syncMonths} competência(s) disponível(is)). Departamentos e pagamentos usam os registros do BI. ${includePartial?'Meses parciais incluídos: comparações provisórias.':`Somente meses fechados${excluded?`; ${excluded} registro(s) parcial(is) fora da análise`:''}.`} Meses ausentes não valem zero.`;
+    document.getElementById('biPeriodNote').textContent=`${db.branch||'Filial não informada'}. Faturamento sincronizado automaticamente com os lançamentos diários (${syncMonths} competência(s) disponível(is)). Departamentos e pagamentos usam somente registros efetivamente importados para cada mês. ${includePartial?'Meses parciais incluídos: comparações provisórias.':`Somente meses fechados${excluded?`; ${excluded} registro(s) parcial(is) fora da análise`:''}.`} Meses ausentes não valem zero.`;
+    const health=document.getElementById('biDataHealth');
+    if(health){
+      const dep=imported.filter(r=>r.type==='department'&&!integrity.quarantined.has(r)).length;
+      const pay=imported.filter(r=>r.type==='payment'&&!integrity.quarantined.has(r)).length;
+      const quarantine=integrity.quarantined.size;
+      health.innerHTML=`<div class="bi-health-card ok"><span>↻</span><div><strong>${syncMonths}</strong><small>competência(s) com faturamento sincronizado</small></div></div><div class="bi-health-card"><span>▦</span><div><strong>${dep}</strong><small>mês(es) com departamentos importados</small></div></div><div class="bi-health-card"><span>💳</span><div><strong>${pay}</strong><small>mês(es) com pagamentos importados</small></div></div><div class="bi-health-card ${quarantine?'warn':''}"><span>${quarantine?'⚠':'✓'}</span><div><strong>${quarantine}</strong><small>${quarantine?'registro(s) repetido(s) isolado(s) da análise':'nenhuma inconsistência automática detectada'}</small></div></div>`;
+    }
     document.getElementById('biCharts').innerHTML=Object.entries(biTypes).map(([type,title])=>biSection(type,title,records.filter(record=>record.type===type),settings)).join('');
 
     const months=[...new Set(imported.map(record=>record.month).concat(synced.map(record=>record.month)))].sort((a,b)=>b.localeCompare(a));
@@ -3511,7 +3553,8 @@
       ['department','payment'].forEach(type=>{
         const record=items.find(item=>item.type===type);
         if(record){
-          rows.push(`<div class="bi-saved-row"><span><b>${esc(biTypes[type])}</b><small>${record.rows.length} categoria(s) · ${record.completeness==='partial'?'Parcial':'Fechado'} · ${esc(record.source||'Importação')} · atualizado em ${new Date(record.updatedAt).toLocaleDateString('pt-BR')}</small></span><div class="bi-saved-actions"><button type="button" class="btn danger small" data-bi-delete-type="${esc(type)}" data-bi-month="${esc(month)}">Excluir ${type==='department'?'departamentos':'formas de pagamento'}</button></div></div>`);
+          const suspect=integrity.quarantined.has(record);
+          rows.push(`<div class="bi-saved-row ${suspect?'is-quarantined':''}"><span><b>${esc(biTypes[type])}${suspect?' · Revisar':''}</b><small>${record.rows.length} categoria(s) · ${record.completeness==='partial'?'Parcial':'Fechado'} · ${esc(record.source||'Importação')} · atualizado em ${new Date(record.updatedAt).toLocaleDateString('pt-BR')}${suspect?' · cópia idêntica detectada em outra competência; fora das análises até ser corrigida':''}</small></span><div class="bi-saved-actions"><button type="button" class="btn danger small" data-bi-delete-type="${esc(type)}" data-bi-month="${esc(month)}">Excluir ${type==='department'?'departamentos':'formas de pagamento'}</button></div></div>`);
         }else{
           rows.push(`<div class="bi-saved-row is-empty"><span><b>${esc(biTypes[type])}</b><small>Nenhum dado importado para este mês.</small></span><strong>—</strong></div>`);
         }
