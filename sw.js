@@ -1,4 +1,4 @@
-const CACHE='fs-resultados-v49-bi-sync-organized';
+const CACHE='fs-resultados-v50-bi-selective-delete';
 const FILES=['./','./index.html','./resultados.html','./vendedor.html','./vendedor-v36.js','./auth.js','./access-guard.js','./cloud-sync.js','./resultados-v27.js','./portal-context.js','./mobile-polish-v11.css','./mobile-polish-v11.js','./access-admin-v1.css','./access-admin-v1.js','./home-transition.js','./pwa-update.js','./manifest.webmanifest','./favicon.svg','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>Promise.allSettled(FILES.map(file=>cache.add(new Request(file,{cache:'reload'}))))).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE && (key.startsWith('gestao-resultados-')||key.startsWith('fs-resultados-'))).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));

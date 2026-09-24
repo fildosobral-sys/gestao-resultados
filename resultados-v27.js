@@ -3058,19 +3058,19 @@
     biDailyRevenueRecords().forEach(record=>map.set(`revenue|${record.month}`,record));
     return [...map.values()];
   }
-  function deleteBIMonth(month) {
-    const branch=biBranch();
-    const imported=biRecords().filter(record=>biKey(record.branch)===biKey(branch)&&record.month===month);
-    if(!imported.length){biStatus(`Não há registros importados do BI para ${monthLabel(month)}. O faturamento sincronizado com o lançamento diário não é apagado aqui.`);return;}
-    const types=[...new Set(imported.map(record=>biTypes[record.type]||record.type))].join(', ');
-    if(!confirm(`Excluir do BI os dados importados de ${monthLabel(month)} (${types}) da filial ${db.branch}?\n\nOs lançamentos diários, metas, vendedores e demais dados da plataforma NÃO serão alterados.`))return;
+  function deleteBIRecord(month,type) {
+    const branch=biBranch(), label=biTypes[type]||type;
+    if(!['department','payment'].includes(type)){biStatus('O faturamento mensal sincronizado com os lançamentos diários é protegido e não pode ser apagado por esta área do BI.');return;}
+    const exists=biRecords().some(record=>biKey(record.branch)===biKey(branch)&&record.month===month&&record.type===type);
+    if(!exists){biStatus(`Não há dados importados de ${label} em ${monthLabel(month)}.`);return;}
+    if(!confirm(`Excluir somente ${label} de ${monthLabel(month)} da filial ${db.branch}?\n\nEsta ação NÃO apaga faturamento, lançamentos diários, metas, vendedores nem outros dados do BI.`))return;
     const previous=clone(biRecords());
     try{
-      vault.biRecords=biRecords().filter(record=>!(biKey(record.branch)===biKey(branch)&&record.month===month));
+      vault.biRecords=biRecords().filter(record=>!(biKey(record.branch)===biKey(branch)&&record.month===month&&record.type===type));
       persist(false);
       renderBI();
-      biStatus(`Dados importados do BI de ${monthLabel(month)} excluídos. Os lançamentos diários foram preservados.`);
-    }catch(error){vault.biRecords=previous;biStatus('Não foi possível excluir os dados do mês. Nenhuma informação foi alterada.');}
+      biStatus(`${label} de ${monthLabel(month)} excluído. Os demais dados do mês foram preservados.`);
+    }catch(error){vault.biRecords=previous;biStatus('Não foi possível excluir os dados selecionados. Nenhuma informação foi alterada.');}
   }
   function biStatus(message) {document.getElementById('biStatus').textContent=message;}
   function initBI() {
@@ -3122,7 +3122,7 @@
     document.getElementById('biAddRow').addEventListener('click',()=>{readBIDraft();biDraft.push({month:document.getElementById('biMonth').value,label:type.value==='revenue'?'Faturamento':'',value:'',completeness:document.getElementById('biCompleteness').value});renderBIDraft();});
     document.getElementById('biDraftBody').addEventListener('click',e=>{const button=e.target.closest('[data-bi-remove]');if(!button)return;readBIDraft();biDraft.splice(Number(button.dataset.biRemove),1);renderBIDraft();});
     document.getElementById('biSave').addEventListener('click',saveBI);
-    document.getElementById('biSaved').addEventListener('click',event=>{const button=event.target.closest('[data-bi-delete-month]');if(button)deleteBIMonth(button.dataset.biDeleteMonth);});
+    document.getElementById('biSaved').addEventListener('click',event=>{const button=event.target.closest('[data-bi-delete-type]');if(button)deleteBIRecord(button.dataset.biMonth,button.dataset.biDeleteType);});
     document.getElementById('biReference').dataset.contextMonth=db.month;
     ['biPeriod','biReference','biCompareYear','biIncludePartial','biStart','biEnd'].forEach(id=>document.getElementById(id).addEventListener('change',renderBI));
     document.getElementById('biCharts').addEventListener('change',event=>{
@@ -3505,14 +3505,22 @@
       const items=imported.filter(record=>record.month===month).sort((a,b)=>String(a.type).localeCompare(String(b.type)));
       const daily=synced.find(record=>record.month===month);
       const rows=[];
-      if(daily)rows.push(`<div class="bi-saved-row is-synced"><span><b>Faturamento mensal</b><small>↻ Sincronizado automaticamente com o lançamento diário</small></span><strong>${brl.format(daily.rows[0]?.value||0)}</strong></div>`);
-      items.forEach(record=>{
-        const overridden=record.type==='revenue'&&!!daily;
-        rows.push(`<div class="bi-saved-row${overridden?' is-overridden':''}"><span><b>${esc(biTypes[record.type]||record.type)}</b><small>${record.rows.length} categoria(s) · ${record.completeness==='partial'?'Parcial':'Fechado'} · ${esc(record.source||'Importação')}${overridden?' · substituído na análise pelo lançamento diário':''}</small></span><strong>${new Date(record.updatedAt).toLocaleDateString('pt-BR')}</strong></div>`);
+      if(daily)rows.push(`<div class="bi-saved-row is-synced"><span><b>Faturamento mensal</b><small>↻ Sincronizado automaticamente com o lançamento diário · protegido nesta área</small></span><strong>${brl.format(daily.rows[0]?.value||0)}</strong></div>`);
+      const importedRevenue=items.find(record=>record.type==='revenue');
+      if(importedRevenue&&!daily)rows.push(`<div class="bi-saved-row is-overridden"><span><b>Faturamento mensal</b><small>Registro histórico importado · ${importedRevenue.completeness==='partial'?'Parcial':'Fechado'} · ${esc(importedRevenue.source||'Importação')}</small></span><strong>${new Date(importedRevenue.updatedAt).toLocaleDateString('pt-BR')}</strong></div>`);
+      ['department','payment'].forEach(type=>{
+        const record=items.find(item=>item.type===type);
+        if(record){
+          rows.push(`<div class="bi-saved-row"><span><b>${esc(biTypes[type])}</b><small>${record.rows.length} categoria(s) · ${record.completeness==='partial'?'Parcial':'Fechado'} · ${esc(record.source||'Importação')} · atualizado em ${new Date(record.updatedAt).toLocaleDateString('pt-BR')}</small></span><div class="bi-saved-actions"><button type="button" class="btn danger small" data-bi-delete-type="${esc(type)}" data-bi-month="${esc(month)}">Excluir ${type==='department'?'departamentos':'formas de pagamento'}</button></div></div>`);
+        }else{
+          rows.push(`<div class="bi-saved-row is-empty"><span><b>${esc(biTypes[type])}</b><small>Nenhum dado importado para este mês.</small></span><strong>—</strong></div>`);
+        }
       });
-      return `<article class="bi-saved-month"><header><div><strong>${esc(monthLabel(month))}</strong><small>${items.length?`${items.length} registro(s) importado(s)`:daily?'Somente faturamento sincronizado':'Sem registros'}</small></div>${items.length?`<button type="button" class="btn danger small bi-delete-month" data-bi-delete-month="${esc(month)}">Excluir dados do mês</button>`:''}</header><div class="bi-saved-month-body">${rows.join('')}</div></article>`;
+      const importedCount=items.filter(record=>['department','payment'].includes(record.type)).length;
+      const status=importedCount?`${importedCount} conjunto(s) importado(s)`:daily?'Sem departamentos/pagamentos importados':'Sem dados importados';
+      return `<article class="bi-saved-month"><header><div><strong>${esc(monthLabel(month))}</strong><small>${status}</small></div></header><div class="bi-saved-month-body">${rows.join('')}</div></article>`;
     }).join('');
-    document.getElementById('biSaved').innerHTML=`<div class="bi-saved-title"><div><h3>Registros do BI · ${esc(db.branch||'filial não informada')}</h3><p>Excluir um mês remove somente as informações importadas do BI. Lançamentos diários e demais módulos permanecem intactos.</p></div></div>${months.length?`<div class="bi-saved-list">${saved}</div>`:'<p>Nenhum registro de BI ou faturamento diário disponível para esta filial.</p>'}`;
+    document.getElementById('biSaved').innerHTML=`<div class="bi-saved-title"><div><h3>Registros do BI · ${esc(db.branch||'filial não informada')}</h3><p>Gerencie separadamente somente os dados importados de departamentos e formas de pagamento. O faturamento sincronizado com os lançamentos diários não é apagado aqui.</p></div></div>${months.length?`<div class="bi-saved-list">${saved}</div>`:'<p>Nenhum registro de BI ou faturamento diário disponível para esta filial.</p>'}`;
   }
 
   function applyV56TabletPolish() {
