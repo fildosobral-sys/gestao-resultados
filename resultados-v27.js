@@ -2620,6 +2620,39 @@
 
   function renderAll() { if (dailyExportGesture) { dailyRenderDeferred=true; return; } if (document.getElementById("biCharts")) renderBI(); fillSettings(); renderScopeSelector(); renderOverview(); renderDaily(); renderWeekly(); renderSellers(); renderGoalsHistory(); renderCompiled(); renderBranchDashboard(); renderSellerProfile(); renderPrint(); }
 
+  function shouldUseLandscapeChartModal() {
+    return window.matchMedia('(max-width: 1024px), (pointer: coarse)').matches;
+  }
+  async function requestLandscapePresentation(dialog) {
+    const orientation = screen?.orientation;
+    if (!shouldUseLandscapeChartModal()) return { mobile: false, locked: false, fullscreen: false };
+    const state = { mobile: true, locked: false, fullscreen: false };
+    if (!document.fullscreenElement) {
+      const target = dialog || document.documentElement;
+      const requestFs = target?.requestFullscreen || target?.webkitRequestFullscreen || target?.msRequestFullscreen;
+      if (requestFs) {
+        try {
+          await requestFs.call(target);
+          state.fullscreen = true;
+        } catch {}
+      }
+    }
+    if (orientation?.lock) {
+      try {
+        await orientation.lock('landscape');
+        state.locked = true;
+      } catch {}
+    }
+    return state;
+  }
+  async function releaseLandscapePresentation(state) {
+    if (state?.locked && screen?.orientation?.unlock) {
+      try { screen.orientation.unlock(); } catch {}
+    }
+    if (state?.fullscreen && document.fullscreenElement && document.exitFullscreen) {
+      try { await document.exitFullscreen(); } catch {}
+    }
+  }
   function ensureDashboardChartModal() {
     let modal = document.getElementById('dashboardChartModal');
     if (modal) return modal;
@@ -2627,12 +2660,18 @@
     modal.id = 'dashboardChartModal';
     modal.className = 'dashboard-chart-modal';
     modal.hidden = true;
+    modal.dataset.landscapeLock = '0';
+    modal.dataset.landscapeFullscreen = '0';
     modal.innerHTML = '<div class="dashboard-chart-modal-dialog" role="dialog" aria-modal="true" aria-label="Gráfico ampliado"><div class="dashboard-chart-modal-head"><strong id="dashboardChartModalTitle">Gráfico</strong><button type="button" class="dashboard-chart-modal-close" aria-label="Fechar">×</button></div><div class="dashboard-chart-modal-body"></div></div>';
     document.body.appendChild(modal);
-    const close = () => {
+    const close = async () => {
+      const state = { locked: modal.dataset.landscapeLock === '1', fullscreen: modal.dataset.landscapeFullscreen === '1' };
       modal.hidden = true;
       modal.classList.remove('mobile-landscape');
       document.body.classList.remove('dashboard-chart-modal-open');
+      modal.dataset.landscapeLock = '0';
+      modal.dataset.landscapeFullscreen = '0';
+      await releaseLandscapePresentation(state);
     };
     modal.querySelector('.dashboard-chart-modal-close').addEventListener('click', close);
     modal.addEventListener('click', e => { if (e.target === modal) close(); });
@@ -2670,12 +2709,16 @@
       if (newSvg) oldSvg.replaceWith(newSvg);
     }
     body.appendChild(clone);
-    modal.classList.toggle('mobile-landscape', window.matchMedia('(max-width: 760px)').matches);
+    const isLandscapeModal = shouldUseLandscapeChartModal();
+    modal.classList.toggle('mobile-landscape', isLandscapeModal);
     modal.hidden = false;
-    if (!window.matchMedia('(max-width: 760px)').matches) document.body.classList.add('dashboard-chart-modal-open');
-    requestAnimationFrame(() => {
+    document.body.classList.add('dashboard-chart-modal-open');
+    requestAnimationFrame(async () => {
       const dialog = modal.querySelector('.dashboard-chart-modal-dialog');
       if (dialog) { dialog.scrollTop = 0; dialog.scrollLeft = 0; }
+      const state = await requestLandscapePresentation(dialog);
+      modal.dataset.landscapeLock = state.locked ? '1' : '0';
+      modal.dataset.landscapeFullscreen = state.fullscreen ? '1' : '0';
     });
   }
   document.addEventListener('click', event => {
