@@ -1705,7 +1705,7 @@
     return actual>=target?'up':'down';
   }
   function dashboardSection(seller, rows, metric, title, subtitle, compareRows=[]){
-    const vals=rows.map(([,d])=>dashboardMetricValue(d,metric)), labels=rows.map(([k])=>String(Number(k.slice(-2)))), statusFlags=rows.map(([k,d])=>dashboardDayStatus(seller,k,d,metric)), agg=sellerDashboardAggregateRows(rows);
+    const vals=rows.map(([,d])=>dashboardMetricValue(d,metric)), multiMonth=new Set(rows.map(([k])=>String(k).slice(0,7))).size>1, labels=rows.map(([k])=>multiMonth?`${String(k).slice(8,10)}/${String(k).slice(5,7)}`:String(Number(k.slice(-2)))), statusFlags=rows.map(([k,d])=>dashboardDayStatus(seller,k,d,metric)), agg=sellerDashboardAggregateRows(rows);
     const total=metric==='services'?agg.services:metric==='conversion'?(agg.nfs?agg.warrantyQty/agg.nfs*100:0):metric==='efficiency'?(agg.eligible?agg.services/agg.eligible*100:0):metric==='ticket'?(agg.invoiceCount?agg.general/agg.invoiceCount:0):metric==='invoice'?agg.invoiceCount:metric==='gain'?rows.reduce((a,[,d])=>a+dashboardMetricValue(d,'gain'),0):agg.general;
     const cagg=sellerDashboardAggregateRows(compareRows), ctotal=!compareRows.length?0:metric==='services'?cagg.services:metric==='conversion'?(cagg.nfs?cagg.warrantyQty/cagg.nfs*100:0):metric==='efficiency'?(cagg.eligible?cagg.services/cagg.eligible*100:0):metric==='ticket'?(cagg.invoiceCount?cagg.general/cagg.invoiceCount:0):metric==='invoice'?cagg.invoiceCount:metric==='gain'?compareRows.reduce((a,[,d])=>a+dashboardMetricValue(d,'gain'),0):cagg.general;
     const nz=vals.filter(v=>v>0), best=nz.length?Math.max(...nz):0, worst=nz.length?Math.min(...nz):0, half=Math.max(1,Math.floor(vals.length/2)), fa=vals.slice(0,half), qa=vals.slice(half), f=fa.length?fa.reduce((a,b)=>a+b,0)/fa.length:0, q=qa.length?qa.reduce((a,b)=>a+b,0)/qa.length:0, trend=f?(q-f)/f:0, delta=ctotal?(total-ctotal)/ctotal:0;
@@ -1744,6 +1744,23 @@
     // existentes no calendário, sem lançamento e sem finalização, ficam fora.
     const explicitlyWorked = day.status === 'done' || day.status === 'partial' || day.dashboardWorkedExplicit === true;
     return hasValues || explicitlyWorked;
+  }
+  function branchDashboardCustomRows(start, end) {
+    if (!start || !end) return [];
+    let a = new Date(start + 'T12:00:00'), b = new Date(end + 'T12:00:00');
+    if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) return [];
+    if (a > b) [a, b] = [b, a];
+    const targetBranch = String(db.branch || '').trim().toLocaleUpperCase('pt-BR');
+    const records = Object.values(vault.records || {}).filter((item) => item && String(item.branch || '').trim().toLocaleUpperCase('pt-BR') === targetBranch);
+    const byMonth = new Map(records.map((item) => [String(item.month), item]));
+    if (db?.month) byMonth.set(String(db.month), db);
+    const rows = [];
+    for (let d = new Date(a); d <= b; d.setDate(d.getDate() + 1)) {
+      const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
+      const key = `${y}-${m}-${day}`, record = byMonth.get(`${y}-${m}`), data = record?.daily?.[key];
+      if (branchDashboardHasVisibleDay(data)) rows.push([key, data]);
+    }
+    return rows;
   }
   function branchDashboardRows(period='month') {
     const all = Object.entries(db.daily || {}).filter(([, day]) => branchDashboardHasVisibleDay(day)).sort(([a],[b]) => a.localeCompare(b));
@@ -1804,17 +1821,40 @@
       const year = Number(String(db.month).slice(0, 4)), previousYear = year - 1, monthNames = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
       return `<div class="seller-dashboard-shell"><div class="dashboard-controls"><div><label>Período</label><select data-branch-dash-period><option value="week">Semana</option><option value="fortnight">15 dias</option><option value="month">Mês</option><option value="year" selected>Ano</option></select></div><div><label>Comparação</label><select data-branch-dash-compare><option value="none" ${compare==='none'?'selected':''}>Somente ${year}</option><option value="lastYear" ${compare==='lastYear'?'selected':''}>${year} × ${previousYear}</option></select></div><div class="dashboard-report-actions"><label>Relatório</label><button class="btn primary" type="button" data-branch-dash-print>🧾 Baixar / imprimir A4</button></div></div>${metrics.map(([metric, title]) => { const vals = branchDashboardYearSeries(metric, year), prevVals = branchDashboardYearSeries(metric, previousYear), currentTotal = vals.reduce((sum, value) => sum + value, 0), previousTotal = prevVals.reduce((sum, value) => sum + value, 0), delta = previousTotal ? (currentTotal - previousTotal) / previousTotal : 0; return `<section class="dashboard-section branch-theme-${metric}"><div class="dashboard-section-head"><div><h3>${title}</h3><p>${year}${compare === 'lastYear' ? ` comparado com ${previousYear}` : ''}.</p></div><span class="dashboard-section-total">${dashboardFormat(currentTotal, metric)}</span></div><div class="dashboard-kpis"><div class="dashboard-kpi"><span>${year}</span><strong>${dashboardFormat(currentTotal, metric)}</strong></div><div class="dashboard-kpi"><span>${previousYear}</span><strong>${compare === 'lastYear' ? dashboardFormat(previousTotal, metric) : '—'}</strong></div><div class="dashboard-kpi"><span>Evolução</span><strong class="${delta > 0 ? 'trend-up' : delta < 0 ? 'trend-down' : 'trend-flat'}">${compare === 'lastYear' && previousTotal ? (delta >= 0 ? '▲ ' : '▼ ') + Math.abs(delta * 100).toFixed(1).replace('.', ',') + '%' : '—'}</strong></div></div><div class="dashboard-card" data-chart-values="${vals.join(',')}" data-chart-labels="${monthNames.join(',')}" data-chart-metric="${metric}" data-chart-type="bar"><button class="dashboard-chart-expand" type="button" data-chart-expand aria-label="Ampliar gráfico">⛶</button><h4>Mês a mês</h4>${dashboardSvg(vals, monthNames, metric, 'bar')}${compare === 'lastYear' ? `<div class="dashboard-year-note">Ano anterior disponível para comparação: ${previousTotal ? dashboardFormat(previousTotal, metric) : 'sem dados'}.</div>` : ''}</div></section>`; }).join('')}</div>`;
     }
-    const rows = branchDashboardRows(period).slice(0, 31), compareRows = branchDashboardCompareRows(period, compare), agg = sellerDashboardAggregateRows(rows), w = num(agg.warranty), m = num(agg.mixed), o = num(agg.other), mix = w + m + o || 1, pie = `conic-gradient(#668ce8 0 ${w / mix * 100}%,#57d6c5 ${w / mix * 100}% ${(w + m) / mix * 100}%,#f5b84f ${(w + m) / mix * 100}% 100%)`, label = period === 'week' ? 'Semana' : period === 'fortnight' ? '15 dias' : 'Mês';
-    return `<div class="seller-dashboard-shell"><div class="dashboard-controls"><div><label>Período</label><select data-branch-dash-period><option value="week" ${period==='week'?'selected':''}>Semana</option><option value="fortnight" ${period==='fortnight'?'selected':''}>15 dias</option><option value="month" ${period==='month'?'selected':''}>Mês</option><option value="year">Ano</option></select></div><div><label>Comparação</label><select data-branch-dash-compare><option value="none" ${compare==='none'?'selected':''}>Somente atual</option><option value="previous" ${compare==='previous'?'selected':''}>Atual × período anterior</option><option value="lastYear" ${compare==='lastYear'?'selected':''}>Atual × mesmo período ano anterior</option></select></div><div class="dashboard-report-actions"><label>Relatório</label><button class="btn primary" type="button" data-branch-dash-print>🧾 Baixar / imprimir A4</button></div></div><div class="dashboard-overview-note">📅 ${label} • ${rows.length} dia(s) com lançamento • visão do gestor consolidada na filial</div>${dashboardSection(null, rows, 'merc', '💰 Venda mercantil', 'Volume vendido e comportamento diário da filial.', compareRows)}${dashboardSection(null, rows, 'services', '🛡️ Serviços', 'Garantias, presta-mista e outros serviços da filial.', compareRows)}<section class="dashboard-section branch-theme-services"><div class="dashboard-section-head"><div><h3>🧩 Composição dos serviços</h3><p>Participação de cada tipo de serviço no período.</p></div><span class="dashboard-section-total">${brl.format(agg.services)}</span></div><div class="dashboard-pie-wrap dashboard-service-composition"><div class="dashboard-pie" style="background:${pie}">${dashboardPieLabels([w,m,o],mix)}</div>${dashboardCompositionBars([w,m,o],mix)}</div></section>${dashboardSection(null, rows, 'conversion', '🎯 Conversão', 'Garantias vendidas ÷ quantidade elegível. Meta 35%.', compareRows)}${dashboardSection(null, rows, 'efficiency', '⚡ Eficiência', 'Serviços ÷ venda elegível. Meta 7%.', compareRows)}${dashboardSection(null, rows, 'ticket', '🧾 Ticket médio', 'Venda mercantil ÷ notas fiscais.', compareRows)}${dashboardSection(null, rows, 'invoice', '📄 Notas fiscais', 'Total de notas fiscais, média diária e referência por vendedor.', compareRows)}</div>`;
+    const customStart = arguments[2] || '', customEnd = arguments[3] || '';
+    const rows = period === 'custom' ? branchDashboardCustomRows(customStart, customEnd) : branchDashboardRows(period).slice(0, 31), compareRows = period === 'custom' ? [] : branchDashboardCompareRows(period, compare), agg = sellerDashboardAggregateRows(rows), w = num(agg.warranty), m = num(agg.mixed), o = num(agg.other), mix = w + m + o || 1, pie = `conic-gradient(#668ce8 0 ${w / mix * 100}%,#57d6c5 ${w / mix * 100}% ${(w + m) / mix * 100}%,#f5b84f ${(w + m) / mix * 100}% 100%)`, label = period === 'week' ? 'Semana' : period === 'fortnight' ? '15 dias' : period === 'custom' ? 'Personalizado' : 'Mês';
+    const customRange = period === 'custom' ? `<div class="branch-custom-range"><div><label>Data inicial</label><input type="date" data-branch-range-start value="${customStart}"></div><div><label>Data final</label><input type="date" data-branch-range-end value="${customEnd}"></div><button class="btn soft" type="button" data-branch-range-apply>Aplicar período</button><small>Escolha o intervalo desejado. O filtro é aplicado a todos os indicadores e gráficos da filial.</small></div>` : '';
+    const customLabel = period === 'custom' && customStart && customEnd ? ` • ${new Date(customStart + 'T12:00:00').toLocaleDateString('pt-BR')} a ${new Date(customEnd + 'T12:00:00').toLocaleDateString('pt-BR')}` : '';
+    return `<div class="seller-dashboard-shell"><div class="dashboard-controls"><div><label>Período</label><select data-branch-dash-period><option value="week" ${period==='week'?'selected':''}>Semana</option><option value="fortnight" ${period==='fortnight'?'selected':''}>15 dias</option><option value="month" ${period==='month'?'selected':''}>Mês</option><option value="year">Ano</option><option value="custom" ${period==='custom'?'selected':''}>Personalizado</option></select></div><div><label>Comparação</label><select data-branch-dash-compare ${period==='custom'?'disabled':''}><option value="none" ${compare==='none'?'selected':''}>Somente atual</option><option value="previous" ${compare==='previous'?'selected':''}>Atual × período anterior</option><option value="lastYear" ${compare==='lastYear'?'selected':''}>Atual × mesmo período ano anterior</option></select></div><div class="dashboard-report-actions"><label>Relatório</label><button class="btn primary" type="button" data-branch-dash-print>🧾 Baixar / imprimir A4</button></div></div>${customRange}<div class="dashboard-overview-note">📅 ${label}${customLabel} • ${rows.length} dia(s) trabalhado(s) • visão do gestor consolidada na filial</div>${dashboardSection(null, rows, 'merc', '💰 Venda mercantil', 'Volume vendido e comportamento diário da filial.', compareRows)}${dashboardSection(null, rows, 'services', '🛡️ Serviços', 'Garantias, presta-mista e outros serviços da filial.', compareRows)}<section class="dashboard-section branch-theme-services"><div class="dashboard-section-head"><div><h3>🧩 Composição dos serviços</h3><p>Participação de cada tipo de serviço no período.</p></div><span class="dashboard-section-total">${brl.format(agg.services)}</span></div><div class="dashboard-pie-wrap dashboard-service-composition"><div class="dashboard-pie" style="background:${pie}">${dashboardPieLabels([w,m,o],mix)}</div>${dashboardCompositionBars([w,m,o],mix)}</div></section>${dashboardSection(null, rows, 'conversion', '🎯 Conversão', 'Garantias vendidas ÷ quantidade elegível. Meta 35%.', compareRows)}${dashboardSection(null, rows, 'efficiency', '⚡ Eficiência', 'Serviços ÷ venda elegível. Meta 7%.', compareRows)}${dashboardSection(null, rows, 'ticket', '🧾 Ticket médio', 'Venda mercantil ÷ notas fiscais.', compareRows)}${dashboardSection(null, rows, 'invoice', '📄 Notas fiscais', 'Total de notas fiscais, média diária e referência por vendedor.', compareRows)}</div>`;
   }
   function mountBranchDashboard(root) {
     if (!root) return;
     let period = root.dataset.period || 'month', compare = root.dataset.compare || 'none';
+    let customStart = root.dataset.customStart || '', customEnd = root.dataset.customEnd || '';
+    const ensureDefaultRange = () => {
+      if (customStart && customEnd) return;
+      const base = String(db.month || '');
+      if (!/^\d{4}-\d{2}$/.test(base)) return;
+      const [yy, mm] = base.split('-').map(Number), last = new Date(yy, mm, 0).getDate();
+      customStart = customStart || `${base}-01`;
+      customEnd = customEnd || `${base}-${String(last).padStart(2, '0')}`;
+    };
     const draw = () => {
-      root.innerHTML = branchDashboardMarkup(period, compare);
+      if (period === 'custom') ensureDefaultRange();
+      root.innerHTML = branchDashboardMarkup(period, compare, customStart, customEnd);
       const p = root.querySelector('[data-branch-dash-period]'), c = root.querySelector('[data-branch-dash-compare]'), print = root.querySelector('[data-branch-dash-print]');
-      if (p) p.onchange = () => { period = p.value; root.dataset.period = period; draw(); };
+      const startInput = root.querySelector('[data-branch-range-start]'), endInput = root.querySelector('[data-branch-range-end]'), apply = root.querySelector('[data-branch-range-apply]');
+      if (p) p.onchange = () => { period = p.value; if (period === 'custom') { compare = 'none'; ensureDefaultRange(); } root.dataset.period = period; draw(); };
       if (c) c.onchange = () => { compare = c.value; root.dataset.compare = compare; draw(); };
+      if (apply) apply.onclick = () => {
+        const a = startInput?.value, b = endInput?.value;
+        if (!a || !b) { alert('Selecione a data inicial e a data final.'); return; }
+        customStart = a; customEnd = b;
+        if (new Date(customStart + 'T12:00:00') > new Date(customEnd + 'T12:00:00')) [customStart, customEnd] = [customEnd, customStart];
+        root.dataset.customStart = customStart; root.dataset.customEnd = customEnd;
+        compare = 'none'; root.dataset.compare = compare;
+        draw();
+      };
       if (print) print.onclick = () => dashboardPrint(`Dashboard da filial — ${db.branch || 'Filial'}`, root.innerHTML);
     };
     draw();
