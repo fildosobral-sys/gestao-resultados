@@ -3059,6 +3059,8 @@
     const branch=biKey(biBranch()),records=biRecords().filter(record=>biKey(record.branch)===branch);
     const groups=new Map();
     records.filter(record=>['department','payment'].includes(record.type)).forEach(record=>{
+      // A mesma imagem/conjunto não pode alimentar mais de uma competência.
+      // Meses diferentes com mesma origem + mesma assinatura são tratados como cópia acidental.
       const key=`${record.type}|${biKey(record.source||'')}|${biRecordSignature(record)}`;
       if(!groups.has(key))groups.set(key,[]);
       groups.get(key).push(record);
@@ -3066,11 +3068,8 @@
     const quarantined=new Set();
     groups.forEach(group=>{
       const sorted=[...group].sort((a,b)=>String(a.month).localeCompare(String(b.month)));
-      if(sorted.length<3)return;
-      const sameMoment=new Set(sorted.map(record=>String(record.updatedAt||'').slice(0,10))).size===1;
-      if(!sameMoment)return;
-      // Proteção contra uma leitura antiga que replicava o mesmo conjunto em vários meses.
-      // Mantém o primeiro mês como referência e retira somente as cópias posteriores da análise.
+      if(sorted.length<2)return;
+      // Mantém a competência mais antiga e isola somente as repetições posteriores.
       sorted.slice(1).forEach(record=>quarantined.add(record));
     });
     return {records,quarantined};
@@ -3469,6 +3468,40 @@
       return `<article class="bi-share-card"><h5>${esc(category.label)}</h5><div class="bi-share-value">${snapshot.share===null?'—':`${biNumber(snapshot.share)}%`}</div><span class="bi-muted">${snapshot.simple?'Participação média mensal':'Participação no total do período'}</span><small>${snapshot.money===null?'Valor em reais sem base informada':`${brl.format(snapshot.money)} · média/mês: ${brl.format(snapshot.money/Math.max(1,snapshot.count))}`}</small><div class="bi-category-change ${biTone(change)}"><strong>${change===null?'Sem base comparável':`${biSigned(change)} ${c.unit}`}</strong><span>${type==='payment'?'Variação da participação':'Crescimento das vendas'}</span></div>${type==='department'?`<small>Participação: ${c.shareChange===null?'sem comparação':`${biSigned(c.shareChange)} p.p.`}</small>`:''}<small>${mode==='years'?`${data.pairs.length} mês(es) comparável(is)`:'Primeiro × último mês com dados'}${c.partial?' · provisório':''}</small>${data.best?`<small>Melhor variação: ${esc(biShortMonth(data.best.month))} · ${biSigned(data.best.value)} ${c.unit}</small>`:''}</article>`;
     }).join('')}</div>`;
   }
+  function biAllCategoryRows(records,months,mode,offset,type,categories) {
+    return categories.map(category=>{
+      const data=biAnalysis(records,months,mode,offset,category.key,type);
+      const snapshot=biSummary(data.current);
+      const projection=biProjection(data.current,type);
+      return {category,data,snapshot,projection,comparison:data.comparison};
+    }).filter(item=>item.snapshot.count>0)
+      .sort((a,b)=>(b.snapshot.share??-1)-(a.snapshot.share??-1));
+  }
+  function biAllCategoriesOverview(records,months,view,settings,type,categories) {
+    const rows=biAllCategoryRows(records,months,view.mode,settings.offset,type,categories);
+    const currentMonthCount=new Set(records.filter(r=>months.includes(r.month)).map(r=>r.month)).size;
+    const leader=rows[0];
+    const moneyRows=rows.filter(row=>row.snapshot.money!==null);
+    const totalMoney=moneyRows.length?moneyRows.reduce((sum,row)=>sum+row.snapshot.money,0):null;
+    const projections=rows.filter(row=>row.projection).slice(0,5);
+    const labelAll=type==='department'?'Todos os departamentos':'Todas as modalidades';
+    const itemName=type==='department'?'departamento(s)':'modalidade(s)';
+    const maxShare=Math.max(1,...rows.map(row=>row.snapshot.share||0));
+    const summary=`<div class="bi-kpis bi-kpis-compact">
+      <div class="bi-kpi neutral"><span>Visão consolidada</span><strong>${rows.length}</strong><small>${itemName} com dados no período</small></div>
+      <div class="bi-kpi neutral"><span>Competências válidas</span><strong>${currentMonthCount}/${months.length}</strong><small>Meses realmente importados nesta seção</small></div>
+      <div class="bi-kpi neutral"><span>Maior participação</span><strong>${leader?.snapshot.share===null||!leader?'Sem dados':`${biNumber(leader.snapshot.share)}%`}</strong><small>${leader?esc(leader.category.label):'Nenhuma categoria disponível'}</small></div>
+      <div class="bi-kpi neutral"><span>Valor consolidado</span><strong>${totalMoney===null?'Sem base em R$':brl.format(totalMoney)}</strong><small>${type==='payment'?'Somente quando a base monetária está informada':'Soma dos departamentos com dados'}</small></div>
+    </div>`;
+    if(!rows.length)return `<p class="bi-empty-state"><strong>Nenhum dado importado para o período selecionado.</strong><span>Importe os dados desta seção para a competência correta; meses ausentes não são preenchidos automaticamente.</span></p>`;
+    const ranking=`<div class="bi-all-ranking">${rows.map((row,index)=>{
+      const share=row.snapshot.share;
+      const change=row.comparison.primary;
+      return `<article class="bi-all-row"><div class="bi-all-rank">${index+1}</div><div class="bi-all-main"><div class="bi-all-name"><strong>${esc(row.category.label)}</strong><span>${share===null?'—':`${biNumber(share)}%`}</span></div><div class="bi-all-track"><span style="width:${share===null?0:Math.max(2,share/maxShare*100)}%"></span></div><div class="bi-all-meta"><span>${row.snapshot.money===null?'Sem base em R$':brl.format(row.snapshot.money)}</span><span class="${biTone(change)}">${change===null?'Sem comparação':`${biSigned(change)} ${row.comparison.unit}`}</span></div></div></article>`;
+    }).join('')}</div>`;
+    const projectionBlock=projections.length?`<details class="bi-projection-summary"><summary>Projeções futuras com base no histórico (${projections.length})</summary><div class="bi-projection-grid">${projections.map(row=>`<div><strong>${esc(row.category.label)}</strong><span>${esc(monthLabel(row.projection.month))}</span><b>${type==='payment'?`${biNumber(row.projection.value)}%`:row.snapshot.money===null?`${biNumber(row.projection.value)}%`:type==='department'?`${biNumber(row.projection.value)}%`:brl.format(row.projection.value)}</b><small>Estimativa linear com ${row.projection.count} meses fechados e consecutivos.</small></div>`).join('')}</div></details>`:'';
+    return `${summary}<div class="bi-chart-heading bi-heading-compact"><h4>${labelAll}</h4><span>Ranking consolidado do período</span></div>${ranking}${projectionBlock}<details class="bi-method-toggle"><summary>Como esta visão é calculada</summary><p>O ranking usa somente competências que possuem dados realmente importados para esta seção. Meses sem importação não são considerados como zero. Comparações seguem o tipo de análise selecionado e projeções só aparecem quando existem pelo menos 3 meses fechados e consecutivos.</p></details>`;
+  }
   function biSection(type,title,records,settings) {
     const view=biViews[type]||{mode:'years',period:'global',focus:''};
     const range=view.period==='global'?settings.period:view.period;
@@ -3480,16 +3513,21 @@
     relevant.forEach(r=>r.rows.forEach(row=>{const key=biKey(row.label);if(!categories.some(c=>c.key===key))categories.push({key,label:row.label});}));
     const currentRecords=records.filter(r=>months.includes(r.month));
     categories.sort((a,b)=>(biSummary(currentRecords.map(r=>biPoint(r,b.key,type))).share||0)-(biSummary(currentRecords.map(r=>biPoint(r,a.key,type))).share||0));
-    const focus=type==='revenue'?'':categories.some(c=>c.key===view.focus)?view.focus:categories[0]?.key||'';
-    const focusName=type==='revenue'?'Faturamento':categories.find(c=>c.key===focus)?.label||'Categoria';
+    const requested=view.focus||'__all__';
+    const focus=type==='revenue'?'':requested==='__all__'?'__all__':categories.some(c=>c.key===requested)?requested:'__all__';
+    const focusName=type==='revenue'?'Faturamento':focus==='__all__'?(type==='department'?'Todos os departamentos':'Todas as modalidades'):categories.find(c=>c.key===focus)?.label||'Categoria';
     const select=(key,label,options,current)=>`<label>${label}<select id="bi-${type}-${key}" data-bi-type="${type}" data-bi-control="${key}">${options.map(([value,text])=>`<option value="${esc(value)}" ${value===current?'selected':''}>${esc(text)}</option>`).join('')}</select></label>`;
-    const controls=`<div class="bi-section-controls">${select('mode','Tipo de análise',modes,view.mode)}${select('period','Período desta seção',periods,view.period)}${type==='revenue'?'':select('focus','Categoria nos gráficos',categories.map(c=>[c.key,c.label]),focus)}</div>`;
+    const focusOptions=type==='department'?[['__all__','Todos os departamentos'],...categories.map(c=>[c.key,c.label])]:type==='payment'?[['__all__','Todas as modalidades'],...categories.map(c=>[c.key,c.label])]:[];
+    const controls=`<div class="bi-section-controls">${select('mode','Tipo de análise',modes,view.mode)}${select('period','Período desta seção',periods,view.period)}${type==='revenue'?'':select('focus',type==='department'?'Departamento nos gráficos':'Modalidade nos gráficos',focusOptions,focus)}</div>`;
     const syncedCount=type==='revenue'?records.filter(record=>record.syncedDaily&&months.includes(record.month)).length:0;
     const icon=type==='revenue'?'💰':type==='department'?'▦':'💳';
     const subtitle=type==='revenue'?'Resultado mensal vindo do lançamento diário':type==='department'?'Participação real por departamento, somente quando importada':'Distribuição por modalidade de pagamento, somente quando importada';
     const header=`<section class="bi-chart-section bi-v27 bi-kind-${type}" id="bi-section-${type}"><div class="bi-section-head"><div class="bi-section-title-wrap"><span class="bi-section-icon">${icon}</span><div><h3>${esc(title)}</h3><small>${esc(subtitle)}</small></div></div>${type==='revenue'?`<span class="bi-sync-badge">↻ ${syncedCount}/${months.length} sincronizado(s)</span>`:''}</div>${controls}`;
-    if(!months.length)return header+'<p class="method-note">Escolha um intervalo válido, de até 24 meses.</p></section>';
-    if(view.mode==='years'&&(!Number.isInteger(settings.compare)||settings.compare<2000||settings.compare>2099||settings.offset===0))return header+'<p class="method-note">Escolha um ano de comparação diferente do ano de referência ou alterne para evolução mensal.</p></section>';
+    if(!months.length)return header+'<p class="bi-empty-state"><strong>Período inválido.</strong><span>Escolha um intervalo de até 24 meses.</span></p></section>';
+    if(view.mode==='years'&&(!Number.isInteger(settings.compare)||settings.compare<2000||settings.compare>2099||settings.offset===0))return header+'<p class="bi-empty-state"><strong>Comparação indisponível.</strong><span>Escolha um ano diferente do ano de referência ou alterne para evolução mensal.</span></p></section>';
+    if(type!=='revenue'&&focus==='__all__'){
+      return header+`<p class="bi-coverage"><strong>${esc(focusName)}</strong> · ${esc(monthLabel(months[0]))} a ${esc(monthLabel(months.at(-1)))}.</p>`+biAllCategoriesOverview(records,months,view,settings,type,categories)+'</section>';
+    }
     const analysis=biAnalysis(records,months,view.mode,settings.offset,focus,type),c=analysis.comparison;
     const projection=biProjection(analysis.current,type);
     const snapshot=biSummary(analysis.current);
@@ -3498,17 +3536,15 @@
     const mainLabel=type==='payment'?'Variação da participação':'Crescimento das vendas';
     const main=c.primary===null?c.a.count&&c.b.count&&type!=='payment'&&c.b.money===0?'Base anterior zero':'Sem base comparável':`${biSigned(c.primary)} ${c.unit}`;
     let html=header+`<p class="bi-coverage"><strong>${esc(focusName)}</strong> · ${esc(monthLabel(months[0]))} a ${esc(monthLabel(months.at(-1)))} · ${analysis.present.length}/${months.length} mês(es) com dados${view.mode==='years'?` · ${analysis.pairs.length} mês(es) em comum`:''}.</p>`;
-    if(analysis.present.some(p=>p.partial)||c.partial)html+='<p class="bi-partial">Comparação provisória: inclui mês parcial. Um mês em andamento não equivale a um mês fechado.</p>';
-    html+=`<div class="bi-kpis">${metric(mainLabel,main,view.mode==='years'?`Mesmo período: ${compareDates}`:`Primeiro × último: ${compareDates}`,biTone(c.primary))}${metric(type==='revenue'?'Faturamento no período':'Participação no período',type==='revenue'?snapshot.money===null?'Sem dados':brl.format(snapshot.money):snapshot.share===null?'Sem dados':`${biNumber(snapshot.share)}%`,type==='revenue'?snapshot.count?`Média/mês: ${brl.format(snapshot.money/snapshot.count)}`:'Meses ausentes não valem zero':snapshot.money===null?'Valor em reais sem base informada':`${brl.format(snapshot.money)} em vendas`)}${metric('Melhor variação mensal',analysis.best?`${biSigned(analysis.best.value)} ${c.unit}`:'Sem comparação',analysis.best?biShortMonth(analysis.best.month):'Preencha meses comparáveis',biTone(analysis.best?.value??null))}${metric('Menor variação mensal',analysis.worst?`${biSigned(analysis.worst.value)} ${c.unit}`:'Sem comparação',analysis.worst?biShortMonth(analysis.worst.month):'Preencha meses comparáveis',biTone(analysis.worst?.value??null))}</div>`;
-    if(type==='payment'&&c.relativeShare!==null)html+=`<p class="bi-explanation">Crescimento relativo da participação: <strong>${biSigned(c.relativeShare)}%</strong>. Variação de participação: <strong>${biSigned(c.shareChange)} p.p.</strong>${c.growth!==null?` Crescimento em reais: ${biSigned(c.growth)}%.`:''}</p>`;
-    if(type==='department')html+=`<p class="bi-explanation">Mudança de participação de ${esc(focusName)}: <strong>${c.shareChange===null?'sem base comparável':`${biSigned(c.shareChange)} p.p.`}</strong>. O crescimento das vendas compara valores em reais; a participação mostra a fatia do departamento no total.</p>`;
+    if(analysis.present.some(p=>p.partial)||c.partial)html+='<p class="bi-partial">Comparação provisória: inclui mês parcial.</p>';
+    html+=`<div class="bi-kpis">${metric(mainLabel,main,view.mode==='years'?`Mesmo período: ${compareDates}`:`Primeiro × último: ${compareDates}`,biTone(c.primary))}${metric(type==='revenue'?'Faturamento no período':'Participação no período',type==='revenue'?snapshot.money===null?'Sem dados':brl.format(snapshot.money):snapshot.share===null?'Sem dados':`${biNumber(snapshot.share)}%`,type==='revenue'?snapshot.count?`Média/mês: ${brl.format(snapshot.money/snapshot.count)}`:'Meses ausentes não valem zero':snapshot.money===null?'Sem base monetária':`${brl.format(snapshot.money)} em vendas`)}${metric('Melhor variação mensal',analysis.best?`${biSigned(analysis.best.value)} ${c.unit}`:'Sem comparação',analysis.best?biShortMonth(analysis.best.month):'Sem mês comparável',biTone(analysis.best?.value??null))}${metric('Menor variação mensal',analysis.worst?`${biSigned(analysis.worst.value)} ${c.unit}`:'Sem comparação',analysis.worst?biShortMonth(analysis.worst.month):'Sem mês comparável',biTone(analysis.worst?.value??null))}</div>`;
     const currentName=view.mode==='years'?'Período analisado':'Mês analisado',baseName=view.mode==='years'?'Mesmo mês do ano comparado':'Mês imediatamente anterior';
-    html+=`<div class="bi-chart-heading"><h4>Comparativo mensal · ${esc(focusName)}</h4><span>${type==='revenue'?'Barras em reais; crescimento em %':'Barras de participação em %'}</span></div><div class="bi-legend"><span class="bi-blue">■ ${currentName}</span><span class="bi-base-label">■ ${baseName}</span></div>${biBars(analysis,type,view.mode)}`;
-    html+=`<div class="bi-chart-heading"><h4>Evolução e projeção · ${esc(focusName)}</h4><span>${type==='revenue'?'Faturamento (R$)':'Participação (%)'}</span></div>${biLineChart(analysis,type,view.mode,projection)}<p class="bi-projection-note">${projection?`Linha tracejada: estimativa para ${esc(monthLabel(projection.month))} de <strong>${type==='revenue'?brl.format(projection.value):`${biNumber(projection.value)}%`}</strong>. Tendência linear dos últimos ${projection.count} meses fechados e consecutivos, sem considerar sazonalidade. Não é meta nem resultado realizado.`:'Projeção indisponível: são necessários pelo menos 3 meses fechados e consecutivos, terminando no último mês com dados da seleção.'}</p>`;
-    if(type!=='revenue')html+=`<div class="bi-chart-heading"><h4>${type==='department'?'Participação e crescimento por departamento':'Participação e evolução por pagamento'}</h4><span>Percentual em destaque · valores em reais abaixo</span></div>${biCategoryCards(records,months,view.mode,settings.offset,type,categories)}`;
+    html+=`<div class="bi-chart-heading"><h4>Comparativo mensal · ${esc(focusName)}</h4><span>${type==='revenue'?'Valores em reais':'Participação em %'}</span></div><div class="bi-legend"><span class="bi-blue">■ ${currentName}</span><span class="bi-base-label">■ ${baseName}</span></div>${biBars(analysis,type,view.mode)}`;
+    html+=`<div class="bi-chart-heading"><h4>Evolução e projeção · ${esc(focusName)}</h4><span>${type==='revenue'?'Faturamento (R$)':'Participação (%)'}</span></div>${biLineChart(analysis,type,view.mode,projection)}<p class="bi-projection-note">${projection?`Estimativa para ${esc(monthLabel(projection.month))}: <strong>${type==='revenue'?brl.format(projection.value):`${biNumber(projection.value)}%`}</strong> · baseada em ${projection.count} meses fechados e consecutivos.`:'Projeção indisponível: são necessários pelo menos 3 meses fechados e consecutivos com dados desta mesma categoria.'}</p>`;
+    if(type!=='revenue')html+=`<div class="bi-chart-heading"><h4>${type==='department'?'Participação e crescimento por departamento':'Participação e evolução por pagamento'}</h4><span>Resumo de todas as categorias</span></div>${biCategoryCards(records,months,view.mode,settings.offset,type,categories)}`;
     const dataRows=months.map((month,index)=>{const a=analysis.current[index],b=analysis.base[index],change=analysis.changes[index];const val=p=>!p?'Sem dados':type==='revenue'?brl.format(p.money):`${p.share===null?'—':`${biNumber(p.share)}%`}${p.money===null?'':` · ${brl.format(p.money)}`}`;return `<tr><td>${esc(biShortMonth(month))}</td><td>${esc(val(a))}${a?.partial?' · parcial':''}</td><td>${esc(val(b))}${b?.partial?' · parcial':''}</td><td>${change.value===null?'Sem base comparável':`${biSigned(change.value)} ${c.unit}`}</td></tr>`;}).join('');
     html+=`<details class="bi-data-details"><summary>Conferir números mês a mês</summary><div class="bi-review-scroll"><table><thead><tr><th>Mês</th><th>Analisado</th><th>Comparação</th><th>Variação</th></tr></thead><tbody>${dataRows}</tbody></table></div></details>`;
-    html+=`<p class="method-note">${view.mode==='years'?'Crescimento do período calculado somente sobre meses em comum e com a categoria informada nos dois anos.':'Variação do período compara o primeiro e o último mês com dados. Melhor e menor variação usam apenas meses vizinhos, sem pular lacunas.'} ${snapshot.simple&&type!=='revenue'?'Sem base monetária completa: participação calculada por média simples dos percentuais mensais.':'Participação do período ponderada pelos totais dos meses informados.'} Categoria ausente não é tratada como zero.</p></section>`;
+    html+=`<details class="bi-method-toggle"><summary>Como esta análise é calculada</summary><p>${view.mode==='years'?'O crescimento considera somente meses em comum com a categoria informada nos dois anos.':'A evolução compara meses com dados reais e não preenche lacunas.'} ${snapshot.simple&&type!=='revenue'?'Sem base monetária completa, a participação usa média simples dos percentuais mensais.':'A participação consolidada é ponderada pelos totais realmente informados.'} Categoria ausente não é tratada como zero.</p></details></section>`;
     return html;
   }
   function renderBI() {
