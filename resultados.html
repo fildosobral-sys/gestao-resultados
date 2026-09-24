@@ -206,6 +206,37 @@
 @media(max-width:1050px){.bi-kpis{grid-template-columns:1fr 1fr}.bi-share-cards{grid-template-columns:1fr 1fr}.bi-section-controls{grid-template-columns:1fr 1fr}}
 @media(max-width:600px){.bi-section-controls{grid-template-columns:1fr}.bi-kpis{gap:8px}.bi-kpi{padding:12px}.bi-kpi>strong{font-size:23px}.bi-share-cards{grid-template-columns:1fr 1fr;gap:8px}.bi-share-card{padding:12px}.bi-share-card h5{font-size:12px}.bi-share-value{font-size:25px}.bi-category-change strong{font-size:18px}.bi-chart-heading{display:block}.bi-chart-heading>span{display:block;margin-top:6px}.bi-line-scroll svg{max-height:none}.bi-section-controls select{min-height:44px}}
 </style>
+<style id="bi-v72-polish">
+#biDashboard{overflow:hidden}
+#biDashboard>h2{margin-bottom:6px}
+.bi-sync-strip{display:grid;grid-template-columns:minmax(240px,.8fr) minmax(0,1.4fr);gap:14px;align-items:center;margin:16px 0 18px;padding:14px 16px;border:1px solid #cfe3f8;border-radius:16px;background:linear-gradient(135deg,#eef7ff 0%,#f8fbff 100%)}
+.bi-sync-strip div{display:flex;flex-direction:column;gap:3px}.bi-sync-strip span{font-size:10px;font-weight:900;letter-spacing:.05em;color:#2473bd}.bi-sync-strip strong{font-size:14px;color:#18364d}.bi-sync-strip small{font-size:11px;line-height:1.55;color:#60728a}
+#biDashboard>.bi-form{padding:14px;border:1px solid #e0e8f1;border-radius:16px;background:#fbfdff}
+#biPeriodNote{margin:14px 0 8px;padding:11px 13px;border-radius:12px;background:#f3f7fb;border:1px solid #e3eaf2;color:#526175;line-height:1.5}
+.bi-chart-section{margin:18px 0 22px!important;padding:18px!important;border:1px solid #dfe7f0!important;border-radius:20px!important;background:#fff!important;box-shadow:0 8px 24px rgba(29,54,82,.045)}
+.bi-chart-section+.bi-chart-section{border-top:1px solid #dfe7f0!important}
+.bi-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:-18px -18px 16px;padding:0}
+.bi-section-head h3{flex:1;margin:0!important;border-radius:18px 0 12px 0!important;padding:15px 16px!important}
+.bi-sync-badge{margin-right:14px;padding:7px 10px;border-radius:999px;background:#edf8f2;color:#13744b;font-size:10px;font-weight:900;white-space:nowrap}
+.bi-section-controls{margin:12px 0 14px!important;padding:12px;border-radius:14px;background:#f8fafc;border:1px solid #e6edf4}
+.bi-kpis{align-items:stretch}.bi-kpi{display:flex;flex-direction:column;min-height:142px}.bi-kpi>small{margin-top:auto}
+.bi-chart-heading{padding-top:4px;border-top:1px solid #edf1f5}
+.bi-bars-scroll,.bi-line-scroll{scrollbar-width:thin}
+.bi-saved-title{display:flex;justify-content:space-between;gap:12px;align-items:end;margin-top:24px}.bi-saved-title h3{margin:0 0 4px}.bi-saved-title p{margin:0;color:#65758a;font-size:11px;line-height:1.45}
+.bi-saved-list{max-height:none!important;overflow:visible!important;gap:12px!important}
+.bi-saved-month{border:1px solid #dde6ef;border-radius:16px;background:#fff;overflow:hidden}
+.bi-saved-month>header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 14px;background:#f7faff;border-bottom:1px solid #e6edf4}.bi-saved-month>header>div{display:flex;flex-direction:column;gap:2px}.bi-saved-month>header strong{text-transform:capitalize;color:#18364d}.bi-saved-month>header small{font-size:10px;color:#718096}
+.bi-saved-month-body{display:grid}.bi-saved-row{display:grid!important;grid-template-columns:minmax(0,1fr) auto;gap:12px!important;align-items:center!important;border:0!important;border-bottom:1px solid #edf1f5!important;border-radius:0!important;padding:12px 14px!important}.bi-saved-row:last-child{border-bottom:0!important}.bi-saved-row>span{display:flex;flex-direction:column;gap:3px}.bi-saved-row b{font-size:12px;color:#253c55}.bi-saved-row small{font-size:10px;line-height:1.4;color:#6c7d91}.bi-saved-row>strong{font-size:11px;color:#526175;white-space:nowrap}.bi-saved-row.is-synced{background:#f1fbf6}.bi-saved-row.is-synced b{color:#176a49}.bi-saved-row.is-overridden{opacity:.66}
+.bi-delete-month{white-space:nowrap!important}
+@media(max-width:760px){
+  .bi-sync-strip{grid-template-columns:1fr;padding:12px;margin-top:12px}.bi-sync-strip strong{font-size:13px}
+  #biDashboard>.bi-form{padding:10px}.bi-chart-section{padding:12px!important;border-radius:16px!important;margin:14px 0 18px!important}
+  .bi-section-head{margin:-12px -12px 12px;display:block}.bi-section-head h3{border-radius:15px 15px 0 0!important;padding:13px 14px!important;font-size:17px!important}.bi-sync-badge{display:inline-flex;margin:9px 12px 0}
+  .bi-section-controls{padding:9px;gap:9px!important}.bi-kpis{grid-template-columns:1fr 1fr!important;gap:8px!important}.bi-kpi{min-height:128px;padding:12px!important}.bi-kpi>strong{font-size:clamp(20px,6vw,25px)!important}
+  .bi-saved-month>header{align-items:flex-start;flex-direction:column}.bi-delete-month{width:100%!important}.bi-saved-row{grid-template-columns:1fr!important}.bi-saved-row>strong{justify-self:start}
+}
+@media(max-width:430px){.bi-kpis{grid-template-columns:1fr!important}.bi-kpi{min-height:auto}.bi-share-cards{grid-template-columns:1fr!important}.bi-month-chart{grid-template-columns:1fr!important}}
+</style>
 <link rel="stylesheet" href="./mobile-polish-v11.css?v=14">
 <link rel="stylesheet" href="./access-admin-v1.css?v=7">
 
@@ -855,7 +886,7 @@ body.seller-modal-open{overflow:hidden}
 })();
 </script>
 <script src="cloud-sync.js?v=1"></script>
-<script src="resultados-v27.js?v=171"></script>
+<script src="resultados-v27.js?v=172"></script>
 
 <script id="results-meeting-backup-v26-js">
 (() => {

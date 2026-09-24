@@ -3038,6 +3038,40 @@
   }
   function biNumber(value) {return Number(value).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
   function biRecords() {return Array.isArray(vault.biRecords) ? vault.biRecords : [];}
+  function biDailyRevenueRecords() {
+    const branch=biKey(biBranch());
+    if(!branch)return [];
+    return Object.values(vault.records||{}).map(raw=>normalizeRecord(raw)).filter(record=>biKey(record.branch)===branch).map(record=>{
+      const days=Object.values(record.daily||{});
+      const hasOperation=days.some(day=>day?.status==='done'||['general','eligible','invoiceCount','warranty','warrantyQty','other','mixed','nfs'].some(field=>num(day?.[field])>0));
+      const revenue=days.reduce((sum,day)=>sum+num(day?.general),0)+num(record.ecommerce);
+      if(!hasOperation&&revenue<=0)return null;
+      const worked=days.filter(day=>day?.status==='done').length;
+      const closed=record.month<monthDefault||(record.month===monthDefault&&num(record.businessDays)>0&&worked>=num(record.businessDays));
+      return {branch:biBranch(),month:record.month,type:'revenue',unit:'brl',base:null,completeness:closed?'closed':'partial',rows:[{label:'Faturamento',value:revenue}],source:'Sincronizado dos lançamentos diários',updatedAt:record.updatedAt||new Date().toISOString(),syncedDaily:true,workedDays:worked};
+    }).filter(Boolean);
+  }
+  function biMergedRecords() {
+    const branch=biKey(biBranch()),map=new Map();
+    biRecords().filter(record=>biKey(record.branch)===branch).forEach(record=>map.set(`${record.type}|${record.month}`,record));
+    // O faturamento diário é a fonte operacional mais atual. Só substitui o registro de faturamento do mesmo mês; departamentos e pagamentos permanecem intactos.
+    biDailyRevenueRecords().forEach(record=>map.set(`revenue|${record.month}`,record));
+    return [...map.values()];
+  }
+  function deleteBIMonth(month) {
+    const branch=biBranch();
+    const imported=biRecords().filter(record=>biKey(record.branch)===biKey(branch)&&record.month===month);
+    if(!imported.length){biStatus(`Não há registros importados do BI para ${monthLabel(month)}. O faturamento sincronizado com o lançamento diário não é apagado aqui.`);return;}
+    const types=[...new Set(imported.map(record=>biTypes[record.type]||record.type))].join(', ');
+    if(!confirm(`Excluir do BI os dados importados de ${monthLabel(month)} (${types}) da filial ${db.branch}?\n\nOs lançamentos diários, metas, vendedores e demais dados da plataforma NÃO serão alterados.`))return;
+    const previous=clone(biRecords());
+    try{
+      vault.biRecords=biRecords().filter(record=>!(biKey(record.branch)===biKey(branch)&&record.month===month));
+      persist(false);
+      renderBI();
+      biStatus(`Dados importados do BI de ${monthLabel(month)} excluídos. Os lançamentos diários foram preservados.`);
+    }catch(error){vault.biRecords=previous;biStatus('Não foi possível excluir os dados do mês. Nenhuma informação foi alterada.');}
+  }
   function biStatus(message) {document.getElementById('biStatus').textContent=message;}
   function initBI() {
     document.getElementById('settings').insertAdjacentHTML('beforeend',`<article class="panel bi-panel" id="biImportPanel">
@@ -3061,6 +3095,7 @@
       </div><div id="biSaved"></div>
     </article>`);
     document.getElementById('compiled').insertAdjacentHTML('beforeend',`<article class="panel bi-panel" id="biDashboard"><h2>BI · Comparativos e evolução</h2><p>Veja o que cresceu, o que caiu e quais meses se destacaram. Em cada seção, alterne entre comparação de anos e evolução mês a mês.</p>
+      <div class="bi-sync-strip"><div><span>↻ FATURAMENTO</span><strong>Sincronizado com os lançamentos diários da filial</strong></div><small>Vendas por departamento e formas de pagamento continuam vindo dos registros específicos do BI. Nenhum lançamento diário é alterado pelo Compilado.</small></div>
       <div class="bi-form"><label>Período geral<select id="biPeriod"><option value="month">Mês</option><option value="last3" selected>Últimos 3 meses</option><option value="quarter">Trimestre do calendário</option><option value="last6">Últimos 6 meses</option><option value="semester">Semestre do calendário</option><option value="year">Ano completo</option><option value="custom">Escolher início e fim</option></select></label><label>Mês de referência<input type="month" id="biReference" value="${esc(db.month)}"></label><label>Ano de comparação<input id="biCompareYear" type="number" min="2000" max="2099" value="${Number(db.month.slice(0,4))-1}"></label><label class="bi-check"><input type="checkbox" id="biIncludePartial"> Incluir meses parciais</label><label id="biStartLabel" hidden>Início<input id="biStart" type="month" value="${esc(relativeMonth(db.month,-2))}"></label><label id="biEndLabel" hidden>Fim<input id="biEnd" type="month" value="${esc(db.month)}"></label></div>
       <p id="biPeriodNote" class="method-note"></p><div id="biCharts"></div></article>`);
     const type=document.getElementById('biType'),unit=document.getElementById('biUnit');
@@ -3087,6 +3122,8 @@
     document.getElementById('biAddRow').addEventListener('click',()=>{readBIDraft();biDraft.push({month:document.getElementById('biMonth').value,label:type.value==='revenue'?'Faturamento':'',value:'',completeness:document.getElementById('biCompleteness').value});renderBIDraft();});
     document.getElementById('biDraftBody').addEventListener('click',e=>{const button=e.target.closest('[data-bi-remove]');if(!button)return;readBIDraft();biDraft.splice(Number(button.dataset.biRemove),1);renderBIDraft();});
     document.getElementById('biSave').addEventListener('click',saveBI);
+    document.getElementById('biSaved').addEventListener('click',event=>{const button=event.target.closest('[data-bi-delete-month]');if(button)deleteBIMonth(button.dataset.biDeleteMonth);});
+    document.getElementById('biReference').dataset.contextMonth=db.month;
     ['biPeriod','biReference','biCompareYear','biIncludePartial','biStart','biEnd'].forEach(id=>document.getElementById(id).addEventListener('change',renderBI));
     document.getElementById('biCharts').addEventListener('change',event=>{
       const control=event.target.closest('[data-bi-control]');if(!control)return;
@@ -3415,7 +3452,8 @@
     const focusName=type==='revenue'?'Faturamento':categories.find(c=>c.key===focus)?.label||'Categoria';
     const select=(key,label,options,current)=>`<label>${label}<select id="bi-${type}-${key}" data-bi-type="${type}" data-bi-control="${key}">${options.map(([value,text])=>`<option value="${esc(value)}" ${value===current?'selected':''}>${esc(text)}</option>`).join('')}</select></label>`;
     const controls=`<div class="bi-section-controls">${select('mode','Tipo de análise',modes,view.mode)}${select('period','Período desta seção',periods,view.period)}${type==='revenue'?'':select('focus','Categoria nos gráficos',categories.map(c=>[c.key,c.label]),focus)}</div>`;
-    const header=`<section class="bi-chart-section bi-v27" id="bi-section-${type}"><h3>${esc(title)}</h3>${controls}`;
+    const syncedCount=type==='revenue'?records.filter(record=>record.syncedDaily&&months.includes(record.month)).length:0;
+    const header=`<section class="bi-chart-section bi-v27" id="bi-section-${type}"><div class="bi-section-head"><h3>${esc(title)}</h3>${type==='revenue'?`<span class="bi-sync-badge">↻ ${syncedCount}/${months.length} mês(es) sincronizado(s)</span>`:''}</div>${controls}`;
     if(!months.length)return header+'<p class="method-note">Escolha um intervalo válido, de até 24 meses.</p></section>';
     if(view.mode==='years'&&(!Number.isInteger(settings.compare)||settings.compare<2000||settings.compare>2099||settings.offset===0))return header+'<p class="method-note">Escolha um ano de comparação diferente do ano de referência ou alterne para evolução mensal.</p></section>';
     const analysis=biAnalysis(records,months,view.mode,settings.offset,focus,type),c=analysis.comparison;
@@ -3441,17 +3479,40 @@
   }
   function renderBI() {
     if(!document.getElementById('biCharts'))return;
-    const reference=document.getElementById('biReference').value||db.month,period=document.getElementById('biPeriod').value;
-    const compare=Number(document.getElementById('biCompareYear').value),year=Number(reference.slice(0,4));
+    const referenceInput=document.getElementById('biReference'),compareInput=document.getElementById('biCompareYear');
+    if(referenceInput.dataset.contextMonth!==db.month){
+      referenceInput.value=db.month;referenceInput.dataset.contextMonth=db.month;
+      compareInput.value=String(Number(db.month.slice(0,4))-1);
+      document.getElementById('biStart').value=relativeMonth(db.month,-2);document.getElementById('biEnd').value=db.month;
+      const importMonth=document.getElementById('biMonth');if(importMonth)importMonth.value=db.month;
+    }
+    const reference=referenceInput.value||db.month,period=document.getElementById('biPeriod').value;
+    const compare=Number(compareInput.value),year=Number(reference.slice(0,4));
     const settings={reference,period,compare,offset:year-compare,start:document.getElementById('biStart').value,end:document.getElementById('biEnd').value};
     document.getElementById('biStartLabel').hidden=period!=='custom';document.getElementById('biEndLabel').hidden=period!=='custom';
     const includePartial=document.getElementById('biIncludePartial').checked;
-    const all=biRecords().filter(record=>biKey(record.branch)===biKey(biBranch()));
-    const records=all.filter(record=>includePartial||record.completeness==='closed');
-    const excluded=all.length-records.length;
-    document.getElementById('biPeriodNote').textContent=`${db.branch||'Filial não informada'}. Os controles abaixo são independentes para faturamento, departamentos e pagamentos. ${includePartial?'Meses parciais incluídos: comparações provisórias.':`Somente meses fechados${excluded?`; ${excluded} registro(s) parcial(is) fora da análise`:''}.`} Meses ausentes não valem zero.`;
+    const imported=biRecords().filter(record=>biKey(record.branch)===biKey(biBranch()));
+    const synced=biDailyRevenueRecords();
+    const merged=biMergedRecords();
+    const records=merged.filter(record=>includePartial||record.completeness==='closed');
+    const excluded=merged.length-records.length;
+    const syncMonths=synced.length;
+    document.getElementById('biPeriodNote').textContent=`${db.branch||'Filial não informada'}. Faturamento sincronizado automaticamente com os lançamentos diários (${syncMonths} competência(s) disponível(is)). Departamentos e pagamentos usam os registros do BI. ${includePartial?'Meses parciais incluídos: comparações provisórias.':`Somente meses fechados${excluded?`; ${excluded} registro(s) parcial(is) fora da análise`:''}.`} Meses ausentes não valem zero.`;
     document.getElementById('biCharts').innerHTML=Object.entries(biTypes).map(([type,title])=>biSection(type,title,records.filter(record=>record.type===type),settings)).join('');
-    document.getElementById('biSaved').innerHTML=`<h3>Registros do BI · ${esc(db.branch||'filial não informada')}</h3>${all.length?`<div class="bi-saved-list">${[...all].sort((a,b)=>b.month.localeCompare(a.month)).map(record=>`<div><strong>${esc(monthLabel(record.month))}</strong><span>${esc(biTypes[record.type]||record.type)} · ${record.rows.length} categoria(s) · ${record.completeness==='partial'?'Parcial':'Fechado'}</span><small>${esc(record.source||'Importação')} · ${new Date(record.updatedAt).toLocaleDateString('pt-BR')}</small></div>`).join('')}</div>`:'<p>Nenhum registro importado para esta filial.</p>'}`;
+
+    const months=[...new Set(imported.map(record=>record.month).concat(synced.map(record=>record.month)))].sort((a,b)=>b.localeCompare(a));
+    const saved=months.map(month=>{
+      const items=imported.filter(record=>record.month===month).sort((a,b)=>String(a.type).localeCompare(String(b.type)));
+      const daily=synced.find(record=>record.month===month);
+      const rows=[];
+      if(daily)rows.push(`<div class="bi-saved-row is-synced"><span><b>Faturamento mensal</b><small>↻ Sincronizado automaticamente com o lançamento diário</small></span><strong>${brl.format(daily.rows[0]?.value||0)}</strong></div>`);
+      items.forEach(record=>{
+        const overridden=record.type==='revenue'&&!!daily;
+        rows.push(`<div class="bi-saved-row${overridden?' is-overridden':''}"><span><b>${esc(biTypes[record.type]||record.type)}</b><small>${record.rows.length} categoria(s) · ${record.completeness==='partial'?'Parcial':'Fechado'} · ${esc(record.source||'Importação')}${overridden?' · substituído na análise pelo lançamento diário':''}</small></span><strong>${new Date(record.updatedAt).toLocaleDateString('pt-BR')}</strong></div>`);
+      });
+      return `<article class="bi-saved-month"><header><div><strong>${esc(monthLabel(month))}</strong><small>${items.length?`${items.length} registro(s) importado(s)`:daily?'Somente faturamento sincronizado':'Sem registros'}</small></div>${items.length?`<button type="button" class="btn danger small bi-delete-month" data-bi-delete-month="${esc(month)}">Excluir dados do mês</button>`:''}</header><div class="bi-saved-month-body">${rows.join('')}</div></article>`;
+    }).join('');
+    document.getElementById('biSaved').innerHTML=`<div class="bi-saved-title"><div><h3>Registros do BI · ${esc(db.branch||'filial não informada')}</h3><p>Excluir um mês remove somente as informações importadas do BI. Lançamentos diários e demais módulos permanecem intactos.</p></div></div>${months.length?`<div class="bi-saved-list">${saved}</div>`:'<p>Nenhum registro de BI ou faturamento diário disponível para esta filial.</p>'}`;
   }
 
   function applyV56TabletPolish() {
