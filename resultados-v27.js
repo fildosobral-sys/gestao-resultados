@@ -684,8 +684,14 @@
     if (!root || root.dataset.organized === '1') return;
     const cardOf = (id) => document.getElementById(id)?.closest('.kpi');
     const mercCards = [cardOf('eligibleKpi'), cardOf('grossProfitKpi')].filter(Boolean);
-    const servicesCards = [cardOf('servicesKpi'), cardOf('conversionKpi'), cardOf('efficiencyKpi')].filter(Boolean);
     const ticketCard = cardOf('ticketKpi');
+    let serviceAverageCard = document.getElementById('serviceAverageKpi')?.closest('.kpi');
+    if (!serviceAverageCard) {
+      serviceAverageCard = document.createElement('article');
+      serviceAverageCard.className = 'kpi overview-service-average-card';
+      serviceAverageCard.innerHTML = '<div class="label">Média serviços / dia</div><div class="value" id="serviceAverageKpi">R$ 0,00</div><div class="sub" id="serviceAverageKpiSub">Média do período</div>';
+    }
+    const servicesCards = [cardOf('servicesKpi'), serviceAverageCard, cardOf('conversionKpi'), cardOf('efficiencyKpi')].filter(Boolean);
     let invoiceCard = document.getElementById('invoiceCountKpi')?.closest('.kpi');
     if (!invoiceCard) {
       invoiceCard = document.createElement('article');
@@ -746,6 +752,19 @@
     setText('invoiceAverageKpiSub', `${result.worked || 0} dia(s) considerado(s)`);
     setText('invoicePerSellerKpi', overviewSellerCount ? formatOverviewCount(invoicePerSeller) : '—');
     setText('invoicePerSellerKpiSub', overviewSellerCount ? `${overviewSellerCount} vendedor(es)` : 'Equipe não configurada');
+    const serviceAverage = result.worked ? result.services / result.worked : 0;
+    setText('serviceAverageKpi', brl.format(serviceAverage));
+    setText('serviceAverageKpiSub', `${result.worked || 0} dia(s) considerado(s)`);
+    const setOverviewTone = (id, tone = '') => {
+      const card = document.getElementById(id)?.closest('.kpi');
+      if (!card) return;
+      card.classList.remove('status-positive','status-warning','status-negative');
+      if (tone) card.classList.add(`status-${tone}`);
+    };
+    if (result.nfs > 0) setOverviewTone('conversionKpi', conversion >= .30 ? 'positive' : conversion >= .20 ? 'warning' : 'negative');
+    else setOverviewTone('conversionKpi');
+    if (result.eligible > 0) setOverviewTone('efficiencyKpi', result.efficiency >= .07 ? 'positive' : result.efficiency >= .05 ? 'warning' : 'negative');
+    else setOverviewTone('efficiencyKpi');
     const tiers = tierGoals(goalSource), firstGoal = tiers[0].mercantile;
     const projectedRate = firstGoal ? result.projection / firstGoal : 0;
     const projectedGrossRate = tiers[0].grossProfit ? result.grossProfitProjection / tiers[0].grossProfit : 0;
@@ -985,7 +1004,7 @@
           : 'Meta proporcional aos dias úteis da semana, sempre de segunda-feira a domingo.';
       const efficiencyRate = num(db.efficiencyGoal) ? result.efficiency / num(db.efficiencyGoal) : 0;
       const mercantileStatus = hasResults ? (result.general >= primaryTarget ? 'passed' : 'failed') : '';
-      const efficiencyStatus = result.eligible > 0 ? (efficiencyRate >= 1 ? 'passed' : 'failed') : '';
+      const efficiencyStatus = result.eligible > 0 ? (result.efficiency >= .07 ? 'passed' : result.efficiency >= .05 ? 'attention' : 'failed') : '';
       const projectionRate = primaryTarget ? paceProjection / primaryTarget : 0;
       const expanded = openWeeklyIndex === index;
       const toggleStatus = phase === 'future' ? '' : phase === 'current' ? 'warning' : primary.passed ? 'positive' : 'negative';
@@ -994,7 +1013,7 @@
       const chart = `<div class="week-chart-panel" ${expanded ? '' : 'hidden'}><div class="week-chart-title"><strong>Percentuais e projeção da semana</strong><span>Comparação com as metas do período</span></div><div class="week-donut-grid">${donut('Mercantil', primary.mercRate, `${brl.format(result.general)} de ${brl.format(primaryTarget)}`, primary.mercRate >= 1 ? '#169b62' : '#df4053')}${donut('Serviços', serviceRate, `${brl.format(result.services)} de ${brl.format(serviceTarget)}`, serviceRate >= 1 ? '#169b62' : '#df4053')}${donut('Projeção', projectionRate, brl.format(paceProjection), projectionRate >= 1 ? '#169b62' : '#0879e8')}</div></div>`;
       const conversion = result.nfs ? result.warrantyQty / result.nfs : 0;
       const conversionTarget = 0.35;
-      const conversionStatus = result.nfs ? (conversion >= conversionTarget ? 'passed' : 'failed') : '';
+      const conversionStatus = result.nfs ? (conversion >= .30 ? 'passed' : conversion >= .20 ? 'attention' : 'failed') : '';
       const sellerNote = sellerCount ? `${sellerCount} vendedor(es)` : 'Configure a equipe';
       const perSellerSales = sellerCount ? salesBalance / sellerCount : 0;
       const perSellerService = sellerCount ? serviceBalance / sellerCount : 0;
@@ -3298,7 +3317,7 @@
       .overview-kpi-group.services,.week-indicator-group.services,.seller-week-indicator-group.services{background:linear-gradient(180deg,#f7fcf9,#fff)}
       .overview-kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
       .overview-kpi-group.merc .overview-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-      .overview-kpi-group.services .overview-kpi-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+      .overview-kpi-group.services .overview-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
       .overview-service-note{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center;margin-top:10px;padding:10px 12px;border-radius:12px;background:#eef8f2;border:1px solid #d8eadf;color:#486b58}
       .overview-service-note strong{color:#176c45}.overview-service-note small{grid-column:1/-1;color:#75847a;font-size:11px}
       .monthly-gap-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}
@@ -3307,11 +3326,30 @@
       .week-indicator-groups,.seller-week-indicator-groups{display:flex;flex-direction:column;gap:12px;margin-top:12px}
       .week-indicator-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
       .week-indicator-grid .metric{min-width:0;position:relative;display:flex;flex-direction:column;min-height:116px;padding:13px 14px 12px!important;border-radius:15px!important}
-      .week-indicator-grid .metric>span:first-child{font-size:10px!important;line-height:1.15!important;font-weight:850!important;letter-spacing:.02em;color:#677689!important}
-      .week-indicator-grid .metric>strong{font-size:clamp(20px,2vw,28px)!important;line-height:1.08!important;font-weight:850!important;margin-top:7px!important;color:#18324c}
+      .week-indicator-grid .metric>span:first-child{font-size:10.5px!important;line-height:1.18!important;font-weight:900!important;letter-spacing:.015em;color:#5b6d82!important}
+      .week-indicator-grid .metric>strong{font-size:clamp(22px,2.15vw,30px)!important;line-height:1.08!important;font-weight:900!important;margin-top:8px!important;color:#17324d}
       .week-indicator-grid .metric>small{margin-top:auto!important;padding-top:8px!important;font-size:9.5px!important;line-height:1.25!important;color:#7f8b99!important;text-align:right!important}
       .week-indicator-grid .metric.result-status.passed>strong,.week-indicator-grid .metric .positive{color:#178b5b!important}
       .week-indicator-grid .metric.result-status.failed>strong,.week-indicator-grid .metric .negative{color:#c83f54!important}
+      .week-indicator-grid .metric.result-status.attention{background:#fff9ea!important;border-color:#ead79a!important}
+      .week-indicator-grid .metric.result-status.attention>strong{color:#9a6b00!important}
+      .week-indicator-grid .metric.result-status.passed{background:#effaf4!important;border-color:#bfe3cf!important}
+      .week-indicator-grid .metric.result-status.failed{background:#fff2f4!important;border-color:#efc3cb!important}
+      .week-indicator-grid .metric{background:#fff!important;border:1px solid #e2e9f1!important;box-shadow:0 4px 12px rgba(20,50,80,.035)!important}
+      .week-indicator-grid .metric>strong>span{font-size:inherit!important;font-weight:inherit!important;line-height:inherit!important}
+      .week-indicator-grid .metric>small{background:#f4f8fc!important;border-radius:8px!important;padding:6px 8px!important;color:#557394!important;text-align:right!important}
+      .week-indicator-grid .metric.result-status.passed>small{background:#e8f6ee!important;color:#327355!important}
+      .week-indicator-grid .metric.result-status.attention>small{background:#fff4d8!important;color:#896a1b!important}
+      .week-indicator-grid .metric.result-status.failed>small{background:#fdebed!important;color:#a04d5b!important}
+      .overview-kpi-grid .kpi.status-positive{background:#effaf4!important;border-color:#bfe3cf!important}
+      .overview-kpi-grid .kpi.status-warning{background:#fff9ea!important;border-color:#ead79a!important}
+      .overview-kpi-grid .kpi.status-negative{background:#fff2f4!important;border-color:#efc3cb!important}
+      .overview-kpi-grid .kpi.status-positive .value{color:#178b5b!important}
+      .overview-kpi-grid .kpi.status-warning .value{color:#9a6b00!important}
+      .overview-kpi-grid .kpi.status-negative .value{color:#c83f54!important}
+      .overview-kpi-grid .kpi.status-positive .sub{color:#327355!important}
+      .overview-kpi-grid .kpi.status-warning .sub{color:#896a1b!important}
+      .overview-kpi-grid .kpi.status-negative .sub{color:#a04d5b!important}
       .overview-kpi-grid .kpi{min-height:128px!important;display:flex!important;flex-direction:column!important;justify-content:flex-start!important}
       .overview-kpi-grid .kpi .label{font-size:11px!important;font-weight:850!important;color:#687789!important}
       .overview-kpi-grid .kpi .value{font-size:clamp(22px,2vw,30px)!important;line-height:1.08!important;font-weight:850!important;margin-top:7px!important}

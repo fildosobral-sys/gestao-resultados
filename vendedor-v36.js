@@ -120,8 +120,8 @@ function renderHome(){
     ['services','3 🔐 Serviços','Vendas, conversão, eficiência, médias e projeções',[
       ['🛡️ Serviços no mês',brl.format(a.services),sg?`${pct.format(servRate)} da meta`:'Cadastre sua meta','strong-card','note-footer note-emphasis note-purple',sg?servRate:null,'meta'],
       ['⚡ Média serviços/dia',brl.format(avgServ),`Necessário ${brl.format(needServ)}/dia`,'','note-footer note-gold',sg&&planned?avgServ/(sg/planned):null,'pace'],
-      ['🎯 Conversão',a.nfs?pct.format(a.conversion):'—','Meta 35,00%',a.conversion>=.35?'good':a.nfs?'attention':'','note-footer note-emphasis note-red',a.nfs?a.conversion/.35:null,'meta'],
-      ['⚡ Eficiência',a.eligible?pct.format(a.efficiency):'—','Meta 7,00%',a.efficiency>=.07?'good':a.eligible?'attention':'','note-footer note-emphasis note-green',a.eligible?a.efficiency/.07:null,'meta'],
+      ['🎯 Conversão',a.nfs?pct.format(a.conversion):'—','Meta 35,00%',a.nfs?(a.conversion>=.30?'good':a.conversion>=.20?'attention':'bad'):'','note-footer note-emphasis note-red',a.nfs?a.conversion/.35:null,'meta'],
+      ['⚡ Eficiência',a.eligible?pct.format(a.efficiency):'—','Meta 7,00%',a.eligible?(a.efficiency>=.07?'good':a.efficiency>=.05?'attention':'bad'):'','note-footer note-emphasis note-green',a.eligible?a.efficiency/.07:null,'meta'],
       ['📈 Projeção serviços',brl.format(projServ),sg?progressText(projServ,sg):'Meta não definida',projServ>=sg&&sg?'good':'','note-footer note-emphasis '+(projServ>=sg&&sg?'note-green':'note-gold'),sg?projServRate:null,'meta']
     ]],
     ['aux','4 📅 Dias e E-commerce','Competência e vendas digitais',[
@@ -211,8 +211,8 @@ function renderWeekly(){
       ['services','3 🔐 Serviços','Serviços, conversão, eficiência, médias, saldos e projeção',[
         ['🛡️ Serviços',brl.format(a.services),sg?`Meta ${brl.format(sg)} • ${progressText(a.services,sg)}`:'Meta aguardando gestão',sg?toneFor(servRate):''],
         ['⚡ Média serviços/dia',brl.format(avgS),`${pending} pendência(s)`,''],
-        ['🎯 Conversão',a.nfs?pct.format(a.conversion):'—',a.nfs?`${a.warrantyQty} garantia(s) ÷ ${a.nfs} elegível(is) • Meta 35%`:'Meta 35%',a.nfs?toneFor(convRate):''],
-        ['⚡ Eficiência',a.eligible?pct.format(a.efficiency):'—','Meta 7%',a.eligible?toneFor(effRate):''],
+        ['🎯 Conversão',a.nfs?pct.format(a.conversion):'—',a.nfs?`${a.warrantyQty} garantia(s) ÷ ${a.nfs} elegível(is) • Meta 35%`:'Meta 35%',a.nfs?(a.conversion>=.30?'metric-positive':a.conversion>=.20?'metric-warning':'metric-negative'):''],
+        ['⚡ Eficiência',a.eligible?pct.format(a.efficiency):'—','Meta 7%',a.eligible?(a.efficiency>=.07?'metric-positive':a.efficiency>=.05?'metric-warning':'metric-negative'):''],
         ['↕ Saldo serviços/dia',signedBrl(deltaServDay),`Meta/dia: ${brl.format(targetServDay)} • ${deltaServDay>=0?'acima':'abaixo'} ${brl.format(Math.abs(deltaServDay))}`,deltaServDay>=0?'metric-positive':'metric-negative'],
         ['📈 Projeção de serviços',brl.format(paceServ),sg?`${pct.format(serviceProjectionRate)} da meta`:'Sem meta definida',sg?toneFor(serviceProjectionRate):'']
       ]]
