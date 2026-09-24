@@ -738,9 +738,13 @@
     const invoiceAverage = result.worked ? result.invoiceCount / result.worked : 0;
     const overviewSellerCount = configuredSellerCount();
     const invoicePerSeller = overviewSellerCount ? result.invoiceCount / overviewSellerCount : 0;
-    setText('invoiceAverageKpi', formatCount(invoiceAverage));
+    const formatOverviewCount = (value) => Number(value || 0).toLocaleString('pt-BR', {
+      minimumFractionDigits: Number.isInteger(Number(value || 0)) ? 0 : 1,
+      maximumFractionDigits: 1
+    });
+    setText('invoiceAverageKpi', formatOverviewCount(invoiceAverage));
     setText('invoiceAverageKpiSub', `${result.worked || 0} dia(s) considerado(s)`);
-    setText('invoicePerSellerKpi', overviewSellerCount ? formatCount(invoicePerSeller) : '—');
+    setText('invoicePerSellerKpi', overviewSellerCount ? formatOverviewCount(invoicePerSeller) : '—');
     setText('invoicePerSellerKpiSub', overviewSellerCount ? `${overviewSellerCount} vendedor(es)` : 'Equipe não configurada');
     const tiers = tierGoals(goalSource), firstGoal = tiers[0].mercantile;
     const projectedRate = firstGoal ? result.projection / firstGoal : 0;
