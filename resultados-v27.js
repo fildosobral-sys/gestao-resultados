@@ -2623,20 +2623,18 @@
   function shouldUseLandscapeChartModal() {
     return window.matchMedia('(max-width: 1024px), (pointer: coarse)').matches;
   }
+  function ensureManagerLandscapeFallbackCss() {
+    if (document.getElementById('managerLandscapeFallbackCss')) return;
+    const st = document.createElement('style');
+    st.id = 'managerLandscapeFallbackCss';
+    st.textContent = `@media (max-width:1024px),(pointer:coarse){.dashboard-chart-modal.mobile-landscape.virtual-landscape{position:fixed!important;inset:0!important;display:block!important;padding:0!important;overflow:hidden!important;background:rgba(15,23,42,.72)!important}.dashboard-chart-modal.mobile-landscape.virtual-landscape .dashboard-chart-modal-dialog{position:absolute!important;left:50%!important;top:50%!important;width:100dvh!important;height:100vw!important;max-width:none!important;max-height:none!important;transform:translate(-50%,-50%) rotate(90deg)!important;transform-origin:center center!important;border-radius:0!important;overflow:auto!important;padding:10px!important}.dashboard-chart-modal.mobile-landscape.virtual-landscape .dashboard-chart-modal-head{position:sticky!important;top:0!important;z-index:8!important;background:rgba(255,255,255,.97)!important}.dashboard-chart-modal.mobile-landscape.virtual-landscape .dashboard-chart-modal-body{overflow:auto!important;max-width:100%!important}.dashboard-chart-modal.mobile-landscape.virtual-landscape .dashboard-card-expanded{min-width:680px!important}}`;
+    document.head.appendChild(st);
+  }
   async function requestLandscapePresentation(dialog) {
     const orientation = screen?.orientation;
     if (!shouldUseLandscapeChartModal()) return { mobile: false, locked: false, fullscreen: false };
     const state = { mobile: true, locked: false, fullscreen: false };
-    if (!document.fullscreenElement) {
-      const target = dialog || document.documentElement;
-      const requestFs = target?.requestFullscreen || target?.webkitRequestFullscreen || target?.msRequestFullscreen;
-      if (requestFs) {
-        try {
-          await requestFs.call(target);
-          state.fullscreen = true;
-        } catch {}
-      }
-    }
+    /* Não usa Fullscreen API no mobile: evita a faixa/aviso nativo do navegador com o domínio. */
     if (orientation?.lock) {
       try {
         await orientation.lock('landscape');
@@ -2648,9 +2646,6 @@
   async function releaseLandscapePresentation(state) {
     if (state?.locked && screen?.orientation?.unlock) {
       try { screen.orientation.unlock(); } catch {}
-    }
-    if (state?.fullscreen && document.fullscreenElement && document.exitFullscreen) {
-      try { await document.exitFullscreen(); } catch {}
     }
   }
   function ensureDashboardChartModal() {
@@ -2667,7 +2662,7 @@
     const close = async () => {
       const state = { locked: modal.dataset.landscapeLock === '1', fullscreen: modal.dataset.landscapeFullscreen === '1' };
       modal.hidden = true;
-      modal.classList.remove('mobile-landscape');
+      modal.classList.remove('mobile-landscape', 'virtual-landscape');
       document.body.classList.remove('dashboard-chart-modal-open');
       modal.dataset.landscapeLock = '0';
       modal.dataset.landscapeFullscreen = '0';
@@ -2710,7 +2705,9 @@
     }
     body.appendChild(clone);
     const isLandscapeModal = shouldUseLandscapeChartModal();
+    ensureManagerLandscapeFallbackCss();
     modal.classList.toggle('mobile-landscape', isLandscapeModal);
+    modal.classList.remove('virtual-landscape');
     modal.hidden = false;
     document.body.classList.add('dashboard-chart-modal-open');
     requestAnimationFrame(async () => {
@@ -2718,7 +2715,8 @@
       if (dialog) { dialog.scrollTop = 0; dialog.scrollLeft = 0; }
       const state = await requestLandscapePresentation(dialog);
       modal.dataset.landscapeLock = state.locked ? '1' : '0';
-      modal.dataset.landscapeFullscreen = state.fullscreen ? '1' : '0';
+      modal.dataset.landscapeFullscreen = '0';
+      modal.classList.toggle('virtual-landscape', isLandscapeModal && !state.locked);
     });
   }
   document.addEventListener('click', event => {
