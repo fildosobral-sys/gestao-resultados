@@ -3138,7 +3138,7 @@
         <label id="biCompareYearLabel">Ano de comparação<input id="biCompareYear" type="number" min="2000" max="2099" value="${Number(db.month.slice(0,4))-1}"></label>
         <label id="biStartLabel" hidden>Início<input id="biStart" type="month" value="${esc(relativeMonth(db.month,-2))}"></label>
         <label id="biEndLabel" hidden>Fim<input id="biEnd" type="month" value="${esc(db.month)}"></label>
-        <label class="bi-check bi-partial-toggle"><input type="checkbox" id="biIncludePartial"> <span>Incluir meses parciais</span></label>
+        <label id="biPartialLabel" class="bi-check bi-partial-toggle"><input type="checkbox" id="biIncludePartial"> <span>Incluir meses parciais</span></label>
       </div>
       <p id="biPeriodNote" class="method-note"></p><div id="biCharts"></div></article>`);
     const type=document.getElementById('biType'),unit=document.getElementById('biUnit');
@@ -3606,9 +3606,15 @@
     const compare=Number(compareInput.value),year=Number(reference.slice(0,4));
     const settings={reference,period,mode,compare,offset:year-compare,start:document.getElementById('biStart').value,end:document.getElementById('biEnd').value};
     const custom=period==='custom';
-    document.getElementById('biStartLabel').hidden=!custom;document.getElementById('biEndLabel').hidden=!custom;
+    const compareYears=mode==='years';
+    // O filtro mestre deve mostrar somente os campos necessários ao contexto atual.
+    // Períodos prontos usam o mês de referência; início/fim só aparecem no Personalizado.
+    document.getElementById('biStartLabel').hidden=!custom;
+    document.getElementById('biEndLabel').hidden=!custom;
     document.getElementById('biReferenceLabel').hidden=custom;
-    document.getElementById('biCompareYearLabel').hidden=mode!=='years';
+    document.getElementById('biCompareYearLabel').hidden=!compareYears;
+    const partialLabel=document.getElementById('biPartialLabel');
+    if(partialLabel) partialLabel.hidden=false;
     const includePartial=document.getElementById('biIncludePartial').checked;
     const integrity=biImportedIntegrity();
     const imported=integrity.records;
@@ -3617,7 +3623,7 @@
     const records=merged.filter(record=>includePartial||record.completeness==='closed');
     const excluded=merged.length-records.length;
     const syncMonths=synced.length;
-    document.getElementById('biPeriodNote').textContent=`Filtro central ativo em todo o BI · ${mode==='years'?'Comparação com '+compare:'Evolução mês a mês'} · ${includePartial?'inclui meses parciais':'somente meses fechados'}. Faturamento vem do diário; departamentos, pagamentos e eficiências usam apenas competências importadas.`;
+    document.getElementById('biPeriodNote').textContent=`Filtro central aplicado a todo o BI · ${mode==='years'?'comparação com '+compare:'evolução mês a mês'} · ${includePartial?'inclui meses parciais':'somente meses fechados'}. Cada seção mantém seus próprios dados, mas todas obedecem ao mesmo período.`;
     const health=document.getElementById('biDataHealth');
     if(health){
       const dep=imported.filter(r=>r.type==='department'&&!integrity.quarantined.has(r)).length;

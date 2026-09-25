@@ -666,6 +666,28 @@ body.seller-modal-open{overflow:hidden}
 .bi-service-group-title>div{min-width:0}.bi-service-group-title span:first-child{display:block;font-size:11px;font-weight:800;letter-spacing:.12em;color:#536f95}.bi-service-group-title h3{margin:4px 0 3px;font-size:20px;color:#18334f}.bi-service-group-title p{margin:0;color:#6f7f91;font-size:13px;line-height:1.4}.bi-standby-badge{white-space:nowrap;padding:8px 11px;border-radius:999px;background:#eef3ff;color:#4660c7;font-size:11px;font-weight:800}.bi-kind-serviceEfficiencyDepartment,.bi-kind-serviceEfficiencyPayment{border-color:#dce7f5}.bi-kind-serviceEfficiencyDepartment .bi-section-head,.bi-kind-serviceEfficiencyPayment .bi-section-head{background:linear-gradient(135deg,#f6fbff,#f8f6ff)}.bi-standby-note{display:block;margin-top:4px;color:#748399;font-size:11px;font-weight:600}
 @media(max-width:700px){.bi-service-group-title{align-items:flex-start;flex-direction:column;padding:15px 16px}.bi-standby-badge{align-self:flex-start}.bi-service-group-title h3{font-size:18px}}
 </style>
+
+<style id="results-bi-v79-clarity">
+/* BI v79 — filtro central mais claro + identidade lateral por módulo */
+#biDashboard .bi-master-filter [hidden]{display:none!important}
+#biDashboard .bi-master-filter{position:relative;background:linear-gradient(180deg,#f8fbff,#fbfcfe);border:1px solid #dfe8f2;border-radius:18px;padding:14px!important;gap:12px!important}
+#biDashboard .bi-master-filter label{min-width:0}
+#biDashboard .bi-master-filter label>input,#biDashboard .bi-master-filter label>select{min-height:46px;border-radius:14px}
+#biDashboard #biPeriodNote{margin-top:9px!important}
+#biDashboard .bi-chart-section{border-left-width:4px!important;border-left-style:solid!important}
+#biDashboard .bi-kind-revenue{border-left-color:#2b8cf0!important}
+#biDashboard .bi-kind-department{border-left-color:#d99a2b!important}
+#biDashboard .bi-kind-payment{border-left-color:#16a18c!important}
+#biDashboard .bi-kind-serviceEfficiencyDepartment{border-left-color:#7868df!important}
+#biDashboard .bi-kind-serviceEfficiencyPayment{border-left-color:#a962c7!important}
+#biDashboard .bi-kind-serviceEfficiencyDepartment .bi-section-icon{background:#eeeaff;color:#5e50c7}
+#biDashboard .bi-kind-serviceEfficiencyPayment .bi-section-icon{background:#f6eaff;color:#8b4ba8}
+#biDashboard .bi-kind-serviceEfficiencyDepartment .bi-section-head{background:linear-gradient(90deg,#f4f1ff,#fbfaff)}
+#biDashboard .bi-kind-serviceEfficiencyPayment .bi-section-head{background:linear-gradient(90deg,#fbf0ff,#fffaff)}
+@media(min-width:1051px){#biDashboard .bi-master-filter{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
+@media(max-width:1050px){#biDashboard .bi-master-filter{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(max-width:700px){#biDashboard .bi-master-filter{grid-template-columns:1fr!important;padding:12px!important}#biDashboard .bi-chart-section{border-left-width:3px!important}}
+</style>
 </head>
 <body>
 <main class="app">
@@ -969,7 +991,7 @@ body.seller-modal-open{overflow:hidden}
 })();
 </script>
 <script src="cloud-sync.js?v=1"></script>
-<script src="resultados-v27.js?v=178"></script>
+<script src="resultados-v27.js?v=179"></script>
 
 <script id="results-meeting-backup-v26-js">
 (() => {
