@@ -1685,7 +1685,7 @@
     if(!rows.length) return '<div class="empty">Sem dados no período selecionado.</div>';
     const merc=rows.map(([,d])=>num(d.general));
     const eff=rows.map(([,d])=>{const sv=num(d.warranty)+num(d.other)+num(d.mixed),el=num(d.eligible);return el?sv/el*100:0});
-    const W=expanded?Math.max(1280,Math.min(2400,220+rows.length*92)):780,H=expanded?500:340,left=78,right=78,top=74,bottom=52,plotH=H-top-bottom;
+    const W=expanded?Math.max(1500,Math.min(3600,260+rows.length*118)):780,H=expanded?560:340,left=78,right=78,top=74,bottom=52,plotH=H-top-bottom;
     const mPos=Math.max(0,...merc),mNeg=Math.min(0,...merc),ePos=Math.max(0,...eff),eNeg=Math.min(0,...eff);
     const hasNeg=mNeg<0||eNeg<0,negFrac=hasNeg?Math.min(.42,Math.max(.20,Math.abs(mNeg)/(Math.max(1,mPos)+Math.abs(mNeg)),Math.abs(eNeg)/(Math.max(1,ePos)+Math.abs(eNeg)))):0;
     const zeroY=H-bottom-plotH*negFrac,posH=zeroY-top,negH=H-bottom-zeroY;
@@ -1704,25 +1704,25 @@
       const values=[merc[i],eff[i]],maps=[ym,ye],colors=[['#1688ec','#6550e8'],['#f59e0b','#f7c55c']],cx=left+(i+.5)*unit,base=cx-groupW/2;
       return values.map((v,j)=>{
         const xx=base+j*(bw+gap),yv=maps[j](v),yy=Math.min(zeroY,yv),hh=Math.max(2,Math.abs(zeroY-yv)),labelY=v>=0?Math.max(top+12,yy-(expanded?(j===0?(i%2?22:9):(i%2?9:22)):8)):Math.min(H-bottom-4,yy+hh+(expanded?(j===0?(i%2?24:14):(i%2?14:24)):14)),tone=j===0?'#1268bd':'#b66b00',gid=`bd-${i}-${j}-${expanded?1:0}`,txt=j===0?brl.format(v):`${Number(v).toFixed(2).replace('.',',')}%`;
-        return `<defs><linearGradient id="${gid}" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${colors[j][0]}"/><stop offset="1" stop-color="${colors[j][1]}"/></linearGradient></defs><rect x="${xx}" y="${yy}" width="${bw}" height="${hh}" rx="4" fill="url(#${gid})"/><text x="${xx+bw/2}" y="${labelY}" text-anchor="middle" fill="${tone}" font-size="${expanded?8.2:6.4}" font-weight="900" style="paint-order:stroke;stroke:#fff;stroke-width:${expanded?3:2}px;stroke-linejoin:round">${txt}</text>`;
+        return `<defs><linearGradient id="${gid}" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${colors[j][0]}"/><stop offset="1" stop-color="${colors[j][1]}"/></linearGradient></defs><rect x="${xx}" y="${yy}" width="${bw}" height="${hh}" rx="4" fill="url(#${gid})"/><text x="${xx+bw/2}" y="${labelY}" text-anchor="middle" fill="${tone}" font-size="${expanded?8.0:6.4}" font-weight="900" style="paint-order:stroke;stroke:#fff;stroke-width:${expanded?3:2}px;stroke-linejoin:round">${txt}</text>`;
       }).join('');
     }).join('');
-    return `<div class="dual-chart-legend"><span><i class="merc"></i>Venda mercantil (R$)</span><span><i class="eff"></i>Eficiência (%)</span></div><svg class="svg-chart dual-compare-svg" viewBox="0 0 ${W} ${H}" role="img">${grid}<line x1="${left}" y1="${zeroY}" x2="${W-right}" y2="${zeroY}" stroke="#9aa9ba" stroke-width="1.4"/>${bars}${labs}</svg>`;
+    return `<div class="dual-chart-legend"><span><i class="merc"></i>Venda mercantil (R$)</span><span><i class="eff"></i>Eficiência (%)</span></div><div style="overflow-x:${expanded?'auto':'visible'};padding-bottom:${expanded?'8px':'0'}"><svg class="svg-chart dual-compare-svg" style="${expanded?`width:${W}px;max-width:none;min-width:${W}px;`:``}" viewBox="0 0 ${W} ${H}" role="img">${grid}<line x1="${left}" y1="${zeroY}" x2="${W-right}" y2="${zeroY}" stroke="#9aa9ba" stroke-width="1.4"/>${bars}${labs}</svg></div>`;
   }
   function dashboardMercEfficiencyTrendSvg(rows, labels, expanded=false){
     if(!rows.length) return '<div class="empty">Sem dados no período selecionado.</div>';
     const merc=rows.map(([,d])=>num(d.general)),eff=rows.map(([,d])=>{const sv=num(d.warranty)+num(d.other)+num(d.mixed),el=num(d.eligible);return el?sv/el*100:0});
-    const W=expanded?Math.max(1280,Math.min(2400,220+rows.length*92)):780,H=expanded?500:340,left=72,right=72,top=78,bottom=52;
+    const W=expanded?Math.max(1500,Math.min(3600,260+rows.length*118)):780,H=expanded?560:340,left=72,right=72,top=78,bottom=52;
     const ml=Math.min(0,...merc),mh=Math.max(0,...merc),ms=(mh-ml)||1,mMin=ml<0?ml-ms*.12:0,mMax=mh+ms*.12,el=Math.min(0,...eff),eh=Math.max(0,...eff),es=(eh-el)||1,eMin=el<0?el-es*.12:0,eMax=eh+es*.12;
     const x=i=>left+i*((W-left-right)/Math.max(1,rows.length-1)),ym=v=>top+(mMax-v)/(mMax-mMin)*(H-top-bottom),ye=v=>top+(eMax-v)/(eMax-eMin)*(H-top-bottom);
     const ticks=5,mTicks=Array.from({length:ticks},(_,i)=>mMax-(mMax-mMin)*i/(ticks-1)),eTicks=Array.from({length:ticks},(_,i)=>eMax-(eMax-eMin)*i/(ticks-1));
     const grid=mTicks.map((v,i)=>{const yy=top+(H-top-bottom)*i/(ticks-1);return `<line x1="${left}" y1="${yy}" x2="${W-right}" y2="${yy}" stroke="#e7edf4"/><text x="8" y="${yy+4}" fill="#718096" font-size="10">${dashboardAxisFormat(v,'merc')}</text><text x="${W-right+8}" y="${yy+4}" fill="#718096" font-size="10">${Number(eTicks[i]).toFixed(1).replace('.',',')}%</text>`}).join('');
     const path=(arr,fn)=>arr.map((v,i)=>`${x(i)},${fn(v)}`).join(' '),step=expanded?1:Math.max(1,Math.ceil(labels.length/8));
     const labs=labels.map((l,i)=>`<text class="dual-x-label ${i%step===0?'':'dual-x-compact'}" x="${x(i)}" y="${H-12}" text-anchor="middle" fill="#718096" font-size="${expanded?12.1:11}">${esc(l)}</text>`).join('');
-    const labelSize=expanded?8.2:6.2;
+    const labelSize=expanded?8.0:6.2;
     const mp=merc.map((v,i)=>{const yy=ym(v),offset=expanded?(i%2?28:13):10,ty=yy<top+offset+4?yy+16:yy-offset;return `<circle cx="${x(i)}" cy="${yy}" r="3.5" fill="#1688ec"><title>${esc(labels[i])} • Mercantil ${brl.format(v)}</title></circle><text x="${x(i)}" y="${ty}" text-anchor="middle" fill="#1268bd" font-size="${labelSize}" font-weight="800" style="paint-order:stroke;stroke:#fff;stroke-width:${expanded?3:2}px;stroke-linejoin:round">${brl.format(v)}</text>`}).join('');
     const ep=eff.map((v,i)=>{const yy=ye(v),offset=expanded?(i%2?16:31):16,ty=yy>H-bottom-offset-4?yy-14:yy+offset;return `<circle cx="${x(i)}" cy="${yy}" r="3.5" fill="#f59e0b"><title>${esc(labels[i])} • Eficiência ${v.toFixed(2).replace('.',',')}%</title></circle><text x="${x(i)}" y="${ty}" text-anchor="middle" fill="#b66b00" font-size="${labelSize}" font-weight="800" style="paint-order:stroke;stroke:#fff;stroke-width:${expanded?3:2}px;stroke-linejoin:round">${v.toFixed(2).replace('.',',')}%</text>`}).join('');
-    return `<div class="dual-chart-legend"><span><i class="merc"></i>Mercantil (R$)</span><span><i class="eff"></i>Eficiência (%)</span></div><svg class="svg-chart dual-trend-svg" viewBox="0 0 ${W} ${H}" role="img">${grid}<polyline points="${path(merc,ym)}" fill="none" stroke="#1688ec" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><polyline points="${path(eff,ye)}" fill="none" stroke="#f59e0b" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>${mp}${ep}${labs}</svg>`;
+    return `<div class="dual-chart-legend"><span><i class="merc"></i>Mercantil (R$)</span><span><i class="eff"></i>Eficiência (%)</span></div><div style="overflow-x:${expanded?'auto':'visible'};padding-bottom:${expanded?'8px':'0'}"><svg class="svg-chart dual-trend-svg" style="${expanded?`width:${W}px;max-width:none;min-width:${W}px;`:``}" viewBox="0 0 ${W} ${H}" role="img">${grid}<polyline points="${path(merc,ym)}" fill="none" stroke="#1688ec" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><polyline points="${path(eff,ye)}" fill="none" stroke="#f59e0b" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>${mp}${ep}${labs}</svg></div>`;
   }
   function dashboardMercServicesCompareSection(rows, customLabels=null){
     const multiMonth=new Set(rows.map(([k])=>String(k).slice(0,7))).size>1;
