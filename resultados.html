@@ -199,6 +199,14 @@
 .daily-achievement.passed{background:#e6f7ee;border-color:#9cd4b6;color:#087747}.daily-achievement.failed{background:#fff0f1;border-color:#ecc1c7;color:#b4233b}
 @media(max-width:900px){.daily-achievements{grid-template-columns:1fr 1fr}}
 @media print{#daily .table-wrap{max-height:none;overflow:visible}}
+
+.config-history-toggle{grid-column:1/-1;width:100%;border:0;text-align:left;display:grid!important;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:10px;cursor:pointer;font:inherit}
+.config-history-toggle:hover{filter:brightness(.99)}
+.config-history-summary{font-size:11px;font-weight:750;color:#61758a;text-transform:none;white-space:nowrap}
+.config-history-chevron{font-size:18px;line-height:1;transition:transform .18s ease}
+.config-history-toggle[aria-expanded="true"] .config-history-chevron{transform:rotate(180deg)}
+#auditList[hidden]{display:none!important}
+@media(max-width:700px){.config-history-toggle{grid-template-columns:minmax(0,1fr) auto}.config-history-summary{grid-column:1/-1;white-space:normal}.config-history-chevron{grid-column:2;grid-row:1}}
 </style><style id="results-bi-v27">.bi-panel{margin-top:18px}.bi-panel>p{color:#526175;line-height:1.5}.bi-form{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0}.bi-form label{font-weight:800;font-size:12px;color:#405269}.bi-form input,.bi-form select{display:block;width:100%;margin-top:7px;padding:12px;border:1px solid #d5deea;border-radius:10px;background:#fff;color:#102a43}.bi-form label[hidden]{display:none}.bi-form .bi-check{display:flex;align-items:center;gap:10px}.bi-check input{width:auto;margin:0}.bi-actions{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0;align-items:center}.bi-preview{max-width:100%;max-height:450px;object-fit:contain;background:#132d39;border-radius:12px}.bi-preview[hidden]{display:none}#biStatus{padding:12px;border-radius:10px;background:#edf5ff;color:#174c88;font-weight:700}#biRaw{white-space:pre-wrap;max-height:250px;overflow:auto}.bi-review-scroll{overflow:auto;max-height:480px}.bi-review-table{min-width:720px}.bi-review-table input,.bi-review-table select{width:100%;min-width:120px}.bi-review-table th{position:sticky;top:0}.bi-chart-section{border-top:1px solid #dbe4ef;padding:22px 0}.bi-chart-section h3{margin:0;background:#0879e8;color:white;padding:14px;border-radius:12px;font-size:18px}.bi-chart-section:nth-child(2) h3{background:#a56d00}.bi-chart-section:nth-child(3) h3{background:#007e72}.bi-coverage{font-size:12px;color:#526175}.bi-category-chart{display:grid;gap:17px;margin:20px 0;max-width:1000px}.bi-bar-label{display:flex;justify-content:space-between;gap:12px;margin-bottom:6px}.bi-track{height:22px;background:#edf2fa;border-radius:5px;overflow:hidden}.bi-bar{display:block;background:#688ce8;height:100%;min-width:0;border-radius:3px}.bi-bar.previous{background:#21ac95}.bi-category-chart small{font-size:11px;color:#526175}.bi-legend{display:flex;gap:18px;font-weight:800;margin:16px 0}.bi-blue{color:#4b6ccc}.bi-green{color:#087b69}.bi-month-chart{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:16px 0}.bi-month{background:#f3f7fc;padding:14px;border-radius:12px}.bi-month>strong{text-transform:uppercase}.bi-month-series{margin:12px 0}.bi-month-series .bi-bar{height:15px;margin-bottom:5px}.bi-month small{font-size:11px}.bi-comparison,.bi-saved-list{display:grid;gap:10px;margin:14px 0}.bi-comparison>div,.bi-saved-list>div{display:flex;flex-wrap:wrap;align-items:center;gap:15px;border:1px solid #dce4ee;border-radius:10px;padding:12px;font-size:12px}.bi-comparison strong,.bi-saved-list strong{min-width:160px}.bi-saved-list{max-height:350px;overflow:auto}#biReview[hidden]{display:none}
 @media(max-width:1000px){.bi-form{grid-template-columns:1fr 1fr}.bi-month-chart{grid-template-columns:1fr 1fr}}
 @media(max-width:600px){.bi-form,.bi-month-chart{grid-template-columns:1fr}.bi-bar-label{font-size:12px}.bi-panel{padding:14px}.bi-actions button{width:100%}.bi-actions input{max-width:100%}}
@@ -225,6 +233,15 @@
 .bi-saved-title{display:flex;justify-content:space-between;gap:12px;align-items:end;margin-top:24px}.bi-saved-title h3{margin:0 0 4px}.bi-saved-title p{margin:0;color:#65758a;font-size:11px;line-height:1.45}
 .bi-saved-list{max-height:none!important;overflow:visible!important;gap:12px!important}
 .bi-saved-month{border:1px solid #dde6ef;border-radius:16px;background:#fff;overflow:hidden}
+.bi-saved-month-toggle{width:100%;border:0;background:transparent;text-align:left;padding:0;cursor:pointer;color:inherit;font:inherit}
+.bi-saved-month-toggle:focus-visible{outline:3px solid rgba(8,121,232,.18);outline-offset:-3px}
+.bi-saved-month>header{position:relative}
+.bi-saved-month-headline{display:grid;grid-template-columns:minmax(180px,auto) minmax(0,1fr) auto;gap:14px;align-items:center;width:100%}
+.bi-saved-month-title{display:flex;flex-direction:column;gap:2px}.bi-saved-month-title strong{text-transform:capitalize;color:#18364d}.bi-saved-month-title small{font-size:10px;color:#718096}
+.bi-saved-statuses{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.bi-status-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border-radius:999px;background:#f0f4f8;color:#63758a;font-size:9px;font-weight:850;white-space:nowrap}.bi-status-chip.done{background:#eaf8f1;color:#087a4b}.bi-status-chip.review{background:#fff4da;color:#8a5b05}.bi-status-chip.empty{background:#f4f6f8;color:#8b98a8}.bi-status-chip .dot{font-size:9px}.bi-saved-chevron{font-size:18px;color:#53677b;transition:transform .18s ease}.bi-saved-month.is-open .bi-saved-chevron{transform:rotate(180deg)}
+.bi-saved-month:not(.is-open) .bi-saved-month-body{display:none!important}
+@media(max-width:900px){.bi-saved-month-headline{grid-template-columns:minmax(0,1fr) auto}.bi-saved-statuses{grid-column:1/-1}.bi-saved-chevron{grid-column:2;grid-row:1}}
+
 .bi-saved-month>header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 14px;background:#f7faff;border-bottom:1px solid #e6edf4}.bi-saved-month>header>div{display:flex;flex-direction:column;gap:2px}.bi-saved-month>header strong{text-transform:capitalize;color:#18364d}.bi-saved-month>header small{font-size:10px;color:#718096}
 .bi-saved-month-body{display:grid}.bi-saved-row{display:grid!important;grid-template-columns:minmax(0,1fr) auto;gap:12px!important;align-items:center!important;border:0!important;border-bottom:1px solid #edf1f5!important;border-radius:0!important;padding:12px 14px!important}.bi-saved-row:last-child{border-bottom:0!important}.bi-saved-row>span{display:flex;flex-direction:column;gap:3px}.bi-saved-row b{font-size:12px;color:#253c55}.bi-saved-row small{font-size:10px;line-height:1.4;color:#6c7d91}.bi-saved-row>strong{font-size:11px;color:#526175;white-space:nowrap}.bi-saved-row.is-synced{background:#f1fbf6}.bi-saved-row.is-synced b{color:#176a49}.bi-saved-row.is-overridden{opacity:.66}.bi-saved-row.is-empty{background:#fbfcfe}.bi-saved-row.is-empty b{color:#68788b}.bi-saved-row.is-empty small{color:#93a0af}.bi-saved-actions{display:flex;align-items:center;justify-content:flex-end}.bi-saved-actions .btn{white-space:nowrap}
 .bi-delete-month{white-space:nowrap!important}
@@ -688,6 +705,16 @@ body.seller-modal-open{overflow:hidden}
 @media(max-width:1050px){#biDashboard .bi-master-filter{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
 @media(max-width:700px){#biDashboard .bi-master-filter{grid-template-columns:1fr!important;padding:12px!important}#biDashboard .bi-chart-section{border-left-width:3px!important}}
 </style>
+
+<style id="v81-overview-invoice-split">
+.overview-invoice-seller-card .overview-invoice-seller-split{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-top:12px;border:1px solid #e3eaf2;border-radius:13px;overflow:hidden;background:#f9fbfe}
+.overview-invoice-seller-card .overview-invoice-seller-split>div{min-width:0;padding:10px 12px;display:flex;flex-direction:column;justify-content:center}
+.overview-invoice-seller-card .overview-invoice-seller-split>div+div{border-left:1px solid #e3eaf2}
+.overview-invoice-seller-card .overview-invoice-seller-split span{font-size:10px;font-weight:850;color:#6b7b90;text-transform:uppercase;letter-spacing:.02em}
+.overview-invoice-seller-card .overview-invoice-seller-split strong{font-size:24px;line-height:1.05;color:#102a43;margin-top:5px}
+.overview-invoice-seller-card>.sub{margin-top:9px}
+@media(max-width:560px){.overview-invoice-seller-card .overview-invoice-seller-split strong{font-size:20px}.overview-invoice-seller-card .overview-invoice-seller-split span{font-size:9px}}
+</style>
 </head>
 <body>
 <main class="app">
@@ -871,8 +898,12 @@ body.seller-modal-open{overflow:hidden}
         <div class="field"><label for="auditOwner">Responsável pela configuração</label><input id="auditOwner" placeholder="Nome do gestor"></div>
         <div class="field"><label for="auditSource">Origem / referência</label><input id="auditSource" placeholder="Ex.: Comunicado de metas do mês"></div>
         <div class="field wide"><label for="auditNote">Observação da alteração</label><textarea id="auditNote" rows="2" placeholder="Explique o que mudou ou registre a regra recebida"></textarea></div>
-        <div class="config-section">Histórico de configurações</div>
-        <div class="audit-list" id="auditList"></div>
+        <button type="button" class="config-section config-history-toggle" id="auditHistoryToggle" aria-expanded="false" aria-controls="auditList">
+          <span>Histórico de configurações</span>
+          <span class="config-history-summary" id="auditHistorySummary">Nenhuma alteração registrada</span>
+          <span class="config-history-chevron" aria-hidden="true">⌄</span>
+        </button>
+        <div class="audit-list" id="auditList" hidden></div>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px"><button class="btn" id="importBtn">Importar backup</button><input id="importFile" type="file" accept="application/json" hidden><button class="btn danger" id="clearBtn">Limpar competência atual</button></div>
     </article>
@@ -991,7 +1022,7 @@ body.seller-modal-open{overflow:hidden}
 })();
 </script>
 <script src="cloud-sync.js?v=1"></script>
-<script src="resultados-v27.js?v=179"></script>
+<script src="resultados-v28.js?v=181"></script>
 
 <script id="results-meeting-backup-v26-js">
 (() => {
