@@ -9,52 +9,60 @@
   const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9 ]+/g,' ').replace(/\s+/g,' ').trim().toLowerCase();
 
-  const weekdayEmoji = {
-    0: { hit:['🏆','🎉','🚀','✅'], progress:['💪','📈','⚡','🔥'], zero:['🌤️','🙂','⏳','🤝'] },
-    1: { hit:['🚀','🥇','🎯','👏'], progress:['🏃','💪','📊','⚡'], zero:['☕','🌱','🙂','⏱️'] },
-    2: { hit:['🎉','🏆','🔥','⭐'], progress:['📈','💪','🚴','🎯'], zero:['🌤️','🙂','🤝','⏳'] },
-    3: { hit:['🥳','✅','🚀','🏅'], progress:['🏃‍♂️','🏃‍♀️','⚡','📈'], zero:['☀️','🙂','🌱','💭'] },
-    4: { hit:['🏆','🎊','💥','👏'], progress:['🔥','💪','🎯','📈'], zero:['☕','🌤️','🙂','⏳'] },
-    5: { hit:['🎉','🚀','🥇','✅'], progress:['⚡','🏃','💪','🔥'], zero:['🌞','🙂','🤝','⏰'] },
-    6: { hit:['🏅','🎯','👏','⭐'], progress:['📈','💪','🔥','⚡'], zero:['🌤️','🙂','🌱','🤝'] }
+  const tierEmoji = {
+    perfect:['👑','🏆','🥇','⭐'],
+    strong:['🚀','🎯','🏅','🥈'],
+    good:['👏','✅','💪','🎉'],
+    one:['📈','🔥','⚡','👍'],
+    regular:['🙂','🧭','🤝','⏳'],
+    zero:['🌱','☕','🙂','⏱️']
+  };
+
+  const tierMeta = {
+    perfect:{tier:'perfect', rowClass:'perfect', label:'Excelência total', badge:'4/4 metas batidas', short:'Todas as metas batidas'},
+    strong:{tier:'strong', rowClass:'strong', label:'Ótimo desempenho', badge:'3/4 metas batidas', short:'Três metas batidas'},
+    good:{tier:'good', rowClass:'good', label:'Bom desempenho', badge:'2/4 metas batidas', short:'Duas metas batidas'},
+    one:{tier:'one', rowClass:'one', label:'Bom início', badge:'1/4 meta batida', short:'Uma meta batida'},
+    regular:{tier:'regular', rowClass:'regular', label:'Regular', badge:'0/4 metas batidas', short:'Ainda sem bater meta'},
+    zero:{tier:'zero', rowClass:'zero', label:'Ainda sem venda registrada', badge:'0/4 metas batidas', short:'Sem indicadores lançados'}
   };
 
   const messages = {
-    hit: [
-      'Meta alcançada! Excelente ritmo — continue ampliando o resultado.',
-      'Missão cumprida! Mantenha a energia e siga construindo um dia forte.',
-      'Parabéns pelo resultado! Agora é manter a consistência até o fechamento.',
-      'Objetivo do dia alcançado. Excelente execução — continue avançando.',
-      'Meta batida! Seu ritmo está fazendo diferença no resultado da equipe.',
-      'Excelente entrega! Aproveite o embalo e siga em busca do próximo resultado.',
-      'Você chegou à meta do dia. Continue firme para ampliar a superação.',
-      'Resultado conquistado! Consistência e foco para fechar ainda melhor.',
-      'Muito bem! Meta do dia alcançada e espaço aberto para superar ainda mais.',
-      'Ótimo trabalho! Continue no mesmo ritmo e ajude a equipe a crescer.'
+    perfect:[
+      'Parabéns! Você bateu os 4 indicadores do dia. Resultado completo e excelente.',
+      'Excelência total! Os 4 indicadores foram batidos. Mantenha esse nível até o fechamento.',
+      'Resultado fora da curva! Mercantil, serviços, conversão e eficiência foram batidos.',
+      'Desempenho completo! Você entregou os 4 indicadores do dia com muita consistência.'
     ],
-    progress: [
-      'Bom avanço até aqui. Mantenha o ritmo que a meta está ao alcance.',
-      'Você já entrou no jogo. Continue firme e transforme o progresso em meta batida.',
-      'O resultado está caminhando. Mais alguns bons atendimentos podem virar o dia.',
-      'Siga no ritmo. Cada atendimento conta para aproximar você do objetivo.',
-      'Boa evolução! Mantenha foco, abordagem e constância até o fechamento.',
-      'Você está avançando. Continue construindo resultado venda por venda.',
-      'O caminho está aberto. Mantenha energia e atenção às oportunidades.',
-      'Continue acelerando. Ainda há espaço para buscar e superar a meta.',
-      'O progresso já apareceu. Agora é manter constância para chegar ao objetivo.',
-      'Bom trabalho até aqui. Foque nas próximas oportunidades e siga avançando.'
+    strong:[
+      'Excelente resultado! Você bateu 3 dos 4 indicadores e ficou muito perto do fechamento perfeito.',
+      'Ótimo desempenho! Três metas batidas mostram consistência e força comercial.',
+      'Muito bem! Você entregou 3 dos 4 indicadores do dia. Continue firme para buscar o pacote completo.',
+      'Parabéns! Três indicadores já foram batidos. Seu desempenho está muito forte hoje.'
     ],
-    zero: [
-      'O dia ainda está aberto. Uma boa oportunidade pode mudar o cenário rapidamente.',
-      'Ainda dá tempo. Mantenha presença, abordagem e confiança nas próximas oportunidades.',
-      'Comece pela próxima oportunidade. O primeiro resultado pode destravar o restante do dia.',
-      'O placar ainda pode mudar. Foco no atendimento e confiança no processo.',
-      'Cada novo cliente é uma nova chance. Siga atento e preparado.',
-      'O dia está em construção. Concentre-se na próxima oportunidade e avance.',
-      'Resultado zerado até agora, mas ainda há tempo para virar o jogo.',
-      'Mantenha a energia. Um bom atendimento pode ser o começo da recuperação.',
-      'A próxima oportunidade pode fazer diferença. Continue firme.',
-      'Ainda há caminho pela frente. Foque no que pode ser feito a partir de agora.'
+    good:[
+      'Bom resultado! Você já bateu 2 dos 4 indicadores do dia. Continue avançando.',
+      'Boa entrega! Dois indicadores batidos mostram um dia produtivo e com boa consistência.',
+      'Muito bom! Você bateu 2 metas e segue em bom ritmo para ampliar o resultado.',
+      'Resultado positivo! Dois indicadores já foram conquistados. Agora é buscar os próximos.'
+    ],
+    one:[
+      'Bom começo! Você já bateu 1 dos 4 indicadores do dia. Continue evoluindo.',
+      'Primeira meta batida! Agora é manter o foco para crescer nos demais indicadores.',
+      'Boa arrancada! Um indicador já foi conquistado e o restante segue ao alcance.',
+      'Você já marcou presença no dia. Continue firme para transformar uma meta em mais metas batidas.'
+    ],
+    regular:[
+      'O resultado já começou, mas ainda falta bater meta. Continue insistindo nas próximas oportunidades.',
+      'Você está no jogo. Agora é manter presença e foco para transformar movimento em meta batida.',
+      'Há produção acontecendo. Continue ajustando o ritmo para converter em metas batidas.',
+      'O caminho está aberto. Falta transformar o avanço em indicadores efetivamente batidos.'
+    ],
+    zero:[
+      'Ainda há tempo para virar o jogo. Foque na próxima oportunidade.',
+      'O dia está começando. Mantenha presença, energia e confiança no processo.',
+      'Ainda sem resultado registrado, mas uma boa oportunidade pode mudar o cenário rapidamente.',
+      'Siga firme. O primeiro resultado do dia pode destravar todo o restante.'
     ]
   };
 
@@ -111,22 +119,33 @@
     savePartial(store);
   }
   function deterministicIndex(seed,len){ let h=0; for(const c of seed) h=(h*31+c.charCodeAt(0))>>>0; return len ? h%len : 0; }
-  function motivationFor(s,status,date){
+  function motivationFor(s,tier,date){
     const store=loadPartial(); store.history ||= {}; const key=sellerKey(s.name); store.history[key] ||= [];
     const history=store.history[key]; const cutoff=Date.now()-90*24*60*60*1000;
     const recent=history.filter(x=>x.ts>=cutoff);
-    const pool=messages[status];
+    const pool=messages[tier] || messages.zero;
     const unused=pool.filter(m=>!recent.some(x=>x.message===m));
     const chosenPool=unused.length?unused:pool;
-    const idx=deterministicIndex(`${date}|${key}|${status}|${recent.length}`, chosenPool.length);
+    const idx=deterministicIndex(`${date}|${key}|${tier}|${recent.length}`, chosenPool.length);
     const message=chosenPool[idx];
-    const weekday=new Date(date+'T12:00:00').getDay(); const emotes=weekdayEmoji[weekday]?.[status] || ['🙂'];
-    const emoji=emotes[deterministicIndex(`${key}|${date}|emoji`,emotes.length)];
-    const already=history.find(x=>x.date===date && x.status===status);
+    const emotes=tierEmoji[tier] || ['🙂'];
+    const emoji=emotes[deterministicIndex(`${key}|${date}|emoji|${tier}`,emotes.length)];
+    const already=history.find(x=>x.date===date && x.tier===tier);
     if(already) return {message:already.message,emoji:already.emoji};
-    history.push({date,status,message,emoji,ts:Date.now()});
+    history.push({date,tier,message,emoji,ts:Date.now()});
     store.history[key]=history.slice(-240); savePartial(store);
     return {message,emoji};
+  }
+
+  function evaluateTier(metrics){
+    const indicatorsPositive = metrics.filter(m => Number(m.actual) > 0.0001).length;
+    const indicatorsMet = metrics.filter(m => Number(m.actual) >= Number(m.target)).length;
+    if(indicatorsMet >= 4) return {...tierMeta.perfect, indicatorsPositive, indicatorsMet};
+    if(indicatorsMet === 3) return {...tierMeta.strong, indicatorsPositive, indicatorsMet};
+    if(indicatorsMet === 2) return {...tierMeta.good, indicatorsPositive, indicatorsMet};
+    if(indicatorsMet === 1) return {...tierMeta.one, indicatorsPositive, indicatorsMet};
+    if(indicatorsPositive > 0) return {...tierMeta.regular, indicatorsPositive, indicatorsMet};
+    return {...tierMeta.zero, indicatorsPositive, indicatorsMet};
   }
 
   function pctText(v, digits=0){
@@ -182,27 +201,26 @@
       const cappedAverage = metrics.reduce((sum,m)=>sum + Math.min(Math.max(m.actual / (m.target || 1),0),2),0) / metrics.length;
       const excessTotal = metrics.reduce((sum,m)=>sum + Math.max((m.actual / (m.target || 1)) - 1, 0),0);
       const totalActualPct = metrics.reduce((sum,m)=>sum + Math.max(m.actual,0),0);
+      const completionScore = metrics.reduce((sum,m)=>sum + Math.min(Math.max(m.actual / (m.target || 1),0),1.6),0);
+      const tierInfo = evaluateTier(metrics);
 
-      let status = 'zero';
-      if (merc > 0 || services > 0 || conversion > 0 || efficiency > 0) status = 'progress';
-      if (indicatorsMet >= 2 || mercPct >= 100 || servicesPct >= 100) status = 'hit';
-
-      const mot = motivationFor(s,status,date);
+      const mot = motivationFor(s,tierInfo.tier,date);
       return {
         s, r, date, merc, services, conversion, efficiency,
         mercTarget, servTarget,
         mercPct, servicesPct,
-        indicatorsPositive, indicatorsMet, cappedAverage, excessTotal, totalActualPct,
-        status, mot, metrics
+        indicatorsPositive, indicatorsMet, cappedAverage, excessTotal, totalActualPct, completionScore,
+        tierInfo, mot, metrics
       };
     });
   }
 
   function sortOverall(rows){
     return [...rows].sort((a,b) =>
-      (b.indicatorsPositive - a.indicatorsPositive) ||
       (b.indicatorsMet - a.indicatorsMet) ||
+      (b.completionScore - a.completionScore) ||
       (b.cappedAverage - a.cappedAverage) ||
+      (b.indicatorsPositive - a.indicatorsPositive) ||
       (b.excessTotal - a.excessTotal) ||
       (b.totalActualPct - a.totalActualPct) ||
       (b.mercPct - a.mercPct) ||
@@ -276,10 +294,16 @@
 
     host.innerHTML=rows.map((x,i)=>{
       const first=esc(x.s.name.split(' ')[0]);
-      const statusText=x.status==='hit'?'Meta do dia alcançada':x.status==='progress'?'Em andamento':'Ainda sem venda registrada';
-      return `<article class="team-partial-row status-${x.status}" data-seller="${esc(x.s.name)}">
+      return `<article class="team-partial-row status-${x.tierInfo.rowClass}" data-seller="${esc(x.s.name)}">
         <div class="team-partial-rank"><strong>${i+1}º</strong><span>${x.mot.emoji}</span></div>
-        <div class="team-partial-person"><strong>${esc(x.s.name)}</strong><small>${statusText}</small><p>${first}, ${esc(x.mot.message.charAt(0).toLowerCase()+x.mot.message.slice(1))}</p></div>
+        <div class="team-partial-person">
+          <strong>${esc(x.s.name)}</strong>
+          <div class="team-partial-badges">
+            <small class="team-main-badge">${x.tierInfo.label}</small>
+            <small class="team-count-badge">${x.tierInfo.badge}</small>
+          </div>
+          <p>${first}, ${esc(x.mot.message.charAt(0).toLowerCase()+x.mot.message.slice(1))}</p>
+        </div>
         <div class="team-partial-kpis">
           ${metricCard('Mercantil',x.mercPct,100,'mercantil')}
           ${metricCard('Serviços',x.servicesPct,100,'servicos')}
@@ -294,9 +318,12 @@
   }
 
   function updateSummary(rows){
-    const hit=rows.filter(x=>x.status==='hit').length, progress=rows.filter(x=>x.status==='progress').length, zero=rows.filter(x=>x.status==='zero').length;
+    const perfect = rows.filter(x=>x.tierInfo.tier==='perfect').length;
+    const strong = rows.filter(x=>x.tierInfo.tier==='strong' || x.tierInfo.tier==='good').length;
+    const developing = rows.filter(x=>x.tierInfo.tier==='one' || x.tierInfo.tier==='regular').length;
+    const zero = rows.filter(x=>x.tierInfo.tier==='zero').length;
     const el=document.getElementById('teamPartialSummary'); if(!el) return;
-    el.innerHTML=`<div class="sum-team"><i>👥</i><span>Equipe</span><strong>${rows.length}</strong></div><div class="sum-hit"><i>🎯</i><span>Meta batida</span><strong>${hit}</strong></div><div class="sum-progress"><i>◔</i><span>Em andamento</span><strong>${progress}</strong></div><div class="sum-zero"><i>✕</i><span>Zerados</span><strong>${zero}</strong></div>`;
+    el.innerHTML=`<div class="sum-team"><i>👥</i><span>Equipe</span><strong>${rows.length}</strong></div><div class="sum-hit"><i>👑</i><span>4 de 4 metas</span><strong>${perfect}</strong></div><div class="sum-progress"><i>🚀</i><span>2 a 3 metas</span><strong>${strong}</strong></div><div class="sum-zero"><i>📈</i><span>0 a 1 meta</span><strong>${developing + zero}</strong></div>`;
   }
 
   function buildManualRows(){
@@ -437,22 +464,22 @@
       const date=selectedDate();
       const wrap=document.createElement('div');
       wrap.className='team-export-stage team-export-ranking';
-      wrap.style.cssText='position:fixed;left:-12000px;top:0;width:2400px;background:#edf5ff;padding:36px;z-index:-1;box-sizing:border-box';
+      wrap.style.cssText='position:fixed;left:-12000px;top:0;width:2800px;background:#edf5ff;padding:36px;z-index:-1;box-sizing:border-box';
       const clone=partial.cloneNode(true);
       wrap.appendChild(clone); document.body.appendChild(wrap);
       clone.querySelectorAll('button,.team-partial-actions,.team-partial-empty').forEach(x=>x.remove());
       const head=clone.querySelector('.team-partial-head');
       if(head){
-        head.innerHTML=`<div class="export-title-copy"><span class="team-partial-eyebrow">ACOMPANHAMENTO PARCIAL</span><h3>Resultado parcial da equipe</h3><p>Classificação geral por conjunto de indicadores entregues e desempenho percentual do dia.</p></div><span class="team-export-date">📅 ${date.split('-').reverse().join('/')}</span><span class="team-export-trophy">🏆</span>`;
+        head.innerHTML=`<div class="export-title-copy"><span class="team-partial-eyebrow">ACOMPANHAMENTO PARCIAL</span><h3>Resultado parcial da equipe</h3><p>Classificação geral por metas batidas, consistência do conjunto e desempenho percentual do dia.</p></div><span class="team-export-date">📅 ${date.split('-').reverse().join('/')}</span><span class="team-export-trophy">🏆</span>`;
       }
       const sub=document.createElement('div');
       sub.className='team-export-ranking-head';
-      sub.innerHTML='<div><h4>Ranking parcial geral</h4><p>Critério: quantidade de indicadores entregues + média percentual do conjunto.</p></div><span>Atualização durante o dia</span>';
+      sub.innerHTML='<div><h4>Ranking parcial geral</h4><p>Critério: quantidade de metas batidas, consistência do conjunto e média percentual.</p></div><span>Atualização durante o dia</span>';
       const summary=clone.querySelector('.team-partial-summary'); if(summary) summary.before(sub);
 
       if(document.fonts?.ready){ try { await document.fonts.ready; } catch(_) {} }
       await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
-      const canvas=await html2canvas(wrap,{scale:4.8,backgroundColor:'#edf5ff',useCORS:true,logging:false,windowWidth:2400,imageTimeout:30000});
+      const canvas=await html2canvas(wrap,{scale:5.6,backgroundColor:'#edf5ff',useCORS:true,logging:false,windowWidth:2800,imageTimeout:30000});
       wrap.remove();
       const a=document.createElement('a'); a.download=`resultado-parcial-equipe-${date}.png`; a.href=canvas.toDataURL('image/png',1); a.click();
     }catch(e){ alert('Não foi possível gerar o acompanhamento neste aparelho. Tente novamente com internet ativa.'); }
