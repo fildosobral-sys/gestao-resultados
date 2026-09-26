@@ -1471,11 +1471,144 @@ body.seller-modal-open{overflow:hidden}
 @media(max-width:520px){.team-metric-scale{grid-template-columns:minmax(0,1fr) 34px}.team-partial-kpis{gap:6px}.team-metric{padding:8px}.team-metric>strong{font-size:16px}.team-metric-topline>em{font-size:7px}.team-import-option{padding:11px}.team-report-paste{min-height:180px}.ocr-review-row.compact{grid-template-columns:1fr}.ocr-review-row.compact>strong{grid-column:1}.team-modal-card.wide{max-height:92vh;overflow:auto}.team-image-reader input[type=file]{width:100%;min-width:0}.team-image-reader .btn{width:100%}.mini-rank-item strong{font-size:11px}.team-partial-person small{font-size:10px}}
 
 </style>
+<style id="team-partial-v101-overrides">
+/* v101 — destaque lateral dos cards e nomes por status */
+.team-partial-row{border-left-width:8px;border-left-style:solid;box-shadow:0 6px 18px rgba(20,39,66,.04)}
+.team-partial-row.status-perfect{border-left-color:#26b56f}
+.team-partial-row.status-strong{border-left-color:#39b97b}
+.team-partial-row.status-good{border-left-color:#6abf83}
+.team-partial-row.status-one{border-left-color:#f0c44f}
+.team-partial-row.status-regular{border-left-color:#ee9b4a}
+.team-partial-row.status-zero{border-left-color:#df6478}
+.status-perfect .team-partial-person strong{color:#0b7a43}
+.status-strong .team-partial-person strong{color:#157d4c}
+.status-good .team-partial-person strong{color:#1f7f57}
+.status-one .team-partial-person strong{color:#9a6c08}
+.status-regular .team-partial-person strong{color:#b06611}
+.status-zero .team-partial-person strong{color:#b13a4c}
+
+/* exportação limpa: só cards, empilhados, com o mesmo visual */
+.team-export-stage.export-cards-only .team-partial-panel{border-radius:28px;overflow:hidden;background:#fff}
+.team-export-stage.export-cards-only .team-partial-list{padding:18px 28px 30px;gap:16px}
+.team-export-stage.export-cards-only .team-partial-row{border-left-width:12px;border-radius:24px;padding:24px 26px;box-shadow:0 10px 28px rgba(18,35,60,.06)}
+.team-export-stage.export-cards-only .team-partial-rank strong{font-size:42px}
+.team-export-stage.export-cards-only .team-partial-rank span{font-size:54px}
+.team-export-stage.export-cards-only .team-partial-person strong{font-size:40px;line-height:1.02}
+.team-export-stage.export-cards-only .team-partial-person p{font-size:24px;line-height:1.38;color:#2f4b68;font-weight:600;margin-top:12px}
+.team-export-stage.export-cards-only .team-partial-person small{font-size:16px;padding:8px 12px}
+.team-export-stage.export-cards-only .team-partial-kpis{gap:12px}
+.team-export-stage.export-cards-only .team-metric-topline>span{font-size:16px;letter-spacing:.04em;color:#4f627b}
+.team-export-stage.export-cards-only .team-metric>strong{font-size:38px}
+.team-export-stage.export-cards-only .team-metric>small{font-size:14px}
+.team-export-stage.export-cards-only .team-metric-track,.team-export-stage.export-cards-only .team-metric-excess{height:14px}
+.team-export-stage.export-cards-only .team-metric{border-radius:22px;padding:14px 16px}
+</style>
 <script src="portal-context.js?v=2"></script>
 <script src="mobile-polish-v11.js?v=11"></script>
 <script src="access-admin-v1.js?v=7"></script>
 <script src="pwa-update.js?v=3"></script>
 <script src="resultados-parcial-v5.js?v=5"></script>
+
+<script id="team-partial-v101-export">
+(function(){
+  function loadScript(src){
+    return new Promise(function(resolve,reject){
+      const s=document.createElement('script');
+      s.src=src; s.onload=resolve; s.onerror=reject;
+      document.head.appendChild(s);
+    });
+  }
+
+  function getDateParts(){
+    const d=new Date();
+    const yyyy=d.getFullYear();
+    const mm=String(d.getMonth()+1).padStart(2,'0');
+    const dd=String(d.getDate()).padStart(2,'0');
+    return { iso:`${yyyy}-${mm}-${dd}`, br:`${dd}/${mm}/${yyyy}` };
+  }
+
+  async function exportCardsOnly(){
+    const panel=document.querySelector('.team-partial-panel');
+    if(!panel) return;
+    try{
+      if(!window.html2canvas){
+        await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
+      }
+      const {iso,br}=getDateParts();
+      const wrap=document.createElement('div');
+      wrap.className='team-export-stage export-cards-only';
+      wrap.style.cssText='position:fixed;left:-12000px;top:0;width:1440px;background:#edf5ff;padding:28px;z-index:-1;box-sizing:border-box';
+
+      const clone=panel.cloneNode(true);
+      wrap.appendChild(clone);
+      document.body.appendChild(wrap);
+
+      clone.querySelectorAll('.team-partial-summary,.team-partial-miniranks,.team-partial-actions,.team-partial-empty').forEach(el=>el.remove());
+      const head=clone.querySelector('.team-partial-head');
+      if(head){
+        head.innerHTML = `
+          <div>
+            <span class="team-partial-eyebrow">ACOMPANHAMENTO PARCIAL</span>
+            <h3>Resultado parcial da equipe</h3>
+            <p>Cards individuais em ordem de classificação geral do dia.</p>
+          </div>
+          <span class="team-export-date">${br}</span>`;
+      }
+
+      if(document.fonts && document.fonts.ready){
+        try{ await document.fonts.ready; }catch(e){}
+      }
+      await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+
+      const canvas=await window.html2canvas(wrap,{
+        scale:2.2,
+        backgroundColor:'#edf5ff',
+        useCORS:true,
+        logging:false,
+        windowWidth:1440,
+        imageTimeout:30000,
+        scrollX:0,
+        scrollY:0
+      });
+      wrap.remove();
+      const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png',1));
+      if(!blob) throw new Error('Falha ao gerar PNG');
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url;
+      a.download=`resultado-parcial-equipe-${iso}.png`;
+      a.click();
+      setTimeout(()=>URL.revokeObjectURL(url),1500);
+    }catch(err){
+      console.error(err);
+      alert('Não foi possível gerar a imagem agora. Tente novamente com internet ativa.');
+    }
+  }
+
+  function bindDownloadButton(){
+    const btn=document.getElementById('teamPartialDownload');
+    if(!btn || btn.dataset.v101Bound==='1') return;
+    const fresh=btn.cloneNode(true);
+    btn.replaceWith(fresh);
+    fresh.dataset.v101Bound='1';
+    fresh.addEventListener('click',function(ev){
+      ev.preventDefault();
+      ev.stopPropagation();
+      exportCardsOnly();
+    });
+  }
+
+  function init(){
+    bindDownloadButton();
+    const observer=new MutationObserver(bindDownloadButton);
+    observer.observe(document.body,{childList:true,subtree:true});
+  }
+
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init,{once:true});
+  else init();
+})();
+</script>
+
 
 </body>
 </html>
