@@ -152,6 +152,14 @@
     const n = Number(v || 0);
     return `${n.toLocaleString('pt-BR',{minimumFractionDigits:digits,maximumFractionDigits:digits})}%`;
   }
+  function metricDisplayDigits(actual, tone){
+    const n = Number(actual || 0);
+    if(!Number.isFinite(n) || n === 0) return 0;
+    const hasDecimals = Math.abs(n - Math.round(n)) > 0.0001;
+    if(tone === 'conversao' || tone === 'eficiencia') return hasDecimals ? 2 : 0;
+    if(hasDecimals) return Math.abs(n) < 10 ? 2 : 1;
+    return 0;
+  }
   function metricCard(label, actualPct, targetPct, tone){
     const target = Number(targetPct || 0);
     const actual = Number(actualPct || 0);
@@ -161,7 +169,7 @@
     const excessPct = !neg && target > 0 ? Math.max(0, ((actual - target) / target) * 100) : 0;
     const excessFill = Math.max(0, Math.min(100, excessPct));
     const deficitPct = neg && target > 0 ? Math.abs(actual / target) * 100 : 0;
-    const displayDigits = Math.abs(actual) < 10 && actual !== 0 ? 1 : 0;
+    const displayDigits = metricDisplayDigits(actual, tone);
     return `<div class="team-metric team-metric-${tone}${neg?' is-negative':''}">
       <div class="team-metric-topline"><span>${label}</span>${excessPct>0?`<em>+${pctText(excessPct,0)} acima</em>`:neg?`<em class="negative">-${pctText(deficitPct,0)}</em>`:''}</div>
       <strong>${pctText(actual, displayDigits)}</strong>
