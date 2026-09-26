@@ -1502,6 +1502,7 @@ body.seller-modal-open{overflow:hidden}
 .team-export-stage.export-cards-only .team-metric>small{font-size:14px}
 .team-export-stage.export-cards-only .team-metric-track,.team-export-stage.export-cards-only .team-metric-excess{height:14px}
 .team-export-stage.export-cards-only .team-metric{border-radius:22px;padding:14px 16px}
+.team-export-stage.export-cards-only .team-partial-summary,.team-export-stage.export-cards-only .team-partial-miniranks,.team-export-stage.export-cards-only .team-partial-actions,.team-export-stage.export-cards-only .team-partial-empty,.team-export-stage.export-cards-only .team-export-ranking-head{display:none!important}
 </style>
 <script src="portal-context.js?v=2"></script>
 <script src="mobile-polish-v11.js?v=11"></script>
@@ -1509,7 +1510,7 @@ body.seller-modal-open{overflow:hidden}
 <script src="pwa-update.js?v=3"></script>
 <script src="resultados-parcial-v5.js?v=5"></script>
 
-<script id="team-partial-v101-export">
+<script id="team-partial-v102-export">
 (function(){
   function loadScript(src){
     return new Promise(function(resolve,reject){
@@ -1543,7 +1544,11 @@ body.seller-modal-open{overflow:hidden}
       wrap.appendChild(clone);
       document.body.appendChild(wrap);
 
-      clone.querySelectorAll('.team-partial-summary,.team-partial-miniranks,.team-partial-actions,.team-partial-empty').forEach(el=>el.remove());
+      clone.querySelectorAll('.team-partial-summary,.team-partial-miniranks,.team-partial-actions,.team-partial-empty,.team-export-ranking-head').forEach(el=>el.remove());
+
+      clone.querySelectorAll('.team-partial-panel > :not(.team-partial-head):not(.team-partial-list)').forEach(function(el){
+        if(!el.classList.contains('team-partial-list')) el.remove();
+      });
       const head=clone.querySelector('.team-partial-head');
       if(head){
         head.innerHTML = `
@@ -1587,10 +1592,10 @@ body.seller-modal-open{overflow:hidden}
 
   function bindDownloadButton(){
     const btn=document.getElementById('teamPartialDownload');
-    if(!btn || btn.dataset.v101Bound==='1') return;
+    if(!btn || btn.dataset.v102Bound==='1') return;
     const fresh=btn.cloneNode(true);
     btn.replaceWith(fresh);
-    fresh.dataset.v101Bound='1';
+    fresh.dataset.v102Bound='1';
     fresh.addEventListener('click',function(ev){
       ev.preventDefault();
       ev.stopPropagation();
