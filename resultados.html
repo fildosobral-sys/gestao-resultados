@@ -754,6 +754,20 @@ body.seller-modal-open{overflow:hidden}
     #goalGrid .goal::before{width:4px}
   }
 </style>
+
+<style id="v93-goals-accent-cards">
+/* V93 — diferenciação visual dos vendedores na aba Metas */
+#goalSuggestionCards .history-card{position:relative;overflow:hidden;border-left:5px solid var(--seller-accent,#1688ec)!important;background:#fff!important;box-shadow:0 7px 20px rgba(15,42,67,.05)}
+#goalSuggestionCards .history-card::before{content:"";position:absolute;left:0;right:0;top:0;height:76px;background:linear-gradient(90deg,var(--seller-soft,#eef6ff),rgba(255,255,255,.92));border-bottom:1px solid rgba(148,163,184,.12);pointer-events:none}
+#goalSuggestionCards .history-card>*{position:relative;z-index:1}
+#goalSuggestionCards .history-card:nth-child(4n+1){--seller-accent:#1688ec;--seller-soft:#eef6ff}
+#goalSuggestionCards .history-card:nth-child(4n+2){--seller-accent:#16a085;--seller-soft:#eefaf7}
+#goalSuggestionCards .history-card:nth-child(4n+3){--seller-accent:#f59e0b;--seller-soft:#fff8e8}
+#goalSuggestionCards .history-card:nth-child(4n+4){--seller-accent:#7c5ce7;--seller-soft:#f5f1ff}
+#goalSuggestionCards .history-card h3{color:#17324d}
+@media(max-width:760px){#goalSuggestionCards .history-card{border-left-width:4px!important}#goalSuggestionCards .history-card::before{height:72px}}
+</style>
+
 </head>
 <body>
 <main class="app">
@@ -1441,7 +1455,7 @@ body.seller-modal-open{overflow:hidden}
 <script src="mobile-polish-v11.js?v=11"></script>
 <script src="access-admin-v1.js?v=7"></script>
 <script src="pwa-update.js?v=3"></script>
-<script src="resultados-parcial-v1.js?v=1"></script>
+<script src="resultados-parcial-v2.js?v=2"></script>
 
 </body>
 </html>

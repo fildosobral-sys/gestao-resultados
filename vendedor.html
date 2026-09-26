@@ -216,6 +216,27 @@ html,body{max-width:100%;overflow-x:hidden}
     #home .seller-dist-group::before{width:4px}
   }
 </style>
+
+<style id="v93-analysis-accent-cards">
+/* V93 — leitura visual por módulo e indicador na aba Análises */
+.analysis-shell>.analysis-section{position:relative;overflow:hidden;border-left:5px solid var(--module-accent,#1688ec)!important}
+.analysis-shell>.analysis-section>.analysis-title{margin:-14px -14px 14px!important;padding:13px 14px 11px;background:linear-gradient(90deg,var(--module-soft,#eef6ff),rgba(255,255,255,.94));border-bottom:1px solid rgba(148,163,184,.14)}
+.analysis-shell>.analysis-section:nth-of-type(2){--module-accent:#1688ec;--module-soft:#eef6ff}
+.analysis-shell>.analysis-section:nth-of-type(3){--module-accent:#7c5ce7;--module-soft:#f5f1ff}
+.analysis-shell>.analysis-section:nth-of-type(4){--module-accent:#16a085;--module-soft:#eefaf7}
+.analysis-compare-card,.analysis-projection-card,.analysis-simple-card{position:relative;overflow:hidden;border-left:4px solid var(--indicator-accent,#1688ec)!important;background:#fff!important}
+.analysis-compare-card>header,.analysis-projection-card>header,.analysis-simple-card>header{margin:-13px -13px 11px;padding:11px 13px;background:linear-gradient(90deg,var(--indicator-soft,#eef6ff),rgba(255,255,255,.96));border-bottom:1px solid rgba(148,163,184,.13)}
+.analysis-shell>.analysis-section:nth-of-type(2) .analysis-compare-card:nth-child(1){--indicator-accent:#1688ec;--indicator-soft:#edf6ff}
+.analysis-shell>.analysis-section:nth-of-type(2) .analysis-compare-card:nth-child(2){--indicator-accent:#16a085;--indicator-soft:#edf9f6}
+.analysis-shell>.analysis-section:nth-of-type(3) .analysis-projection-card:nth-child(1){--indicator-accent:#7c5ce7;--indicator-soft:#f4f0ff}
+.analysis-shell>.analysis-section:nth-of-type(3) .analysis-projection-card:nth-child(2){--indicator-accent:#f59e0b;--indicator-soft:#fff7e7}
+.analysis-shell>.analysis-section:nth-of-type(4) .analysis-simple-card:nth-child(1){--indicator-accent:#e84a74;--indicator-soft:#fff0f5}
+.analysis-shell>.analysis-section:nth-of-type(4) .analysis-simple-card:nth-child(2){--indicator-accent:#f5a000;--indicator-soft:#fff8e5}
+.analysis-shell>.analysis-section:nth-of-type(4) .analysis-simple-card:nth-child(3){--indicator-accent:#1ba6a6;--indicator-soft:#ecfbfb}
+.analysis-shell>.analysis-section:nth-of-type(4) .analysis-simple-card:nth-child(4){--indicator-accent:#5b6ee1;--indicator-soft:#f0f2ff}
+@media(max-width:620px){.analysis-shell>.analysis-section{border-left-width:4px!important}.analysis-shell>.analysis-section>.analysis-title{margin:-12px -12px 12px!important;padding:12px}.analysis-compare-card>header,.analysis-projection-card>header,.analysis-simple-card>header{margin:-13px -13px 10px}}
+</style>
+
 </head><body>
 <div class="app">
 <header class="top"><div class="brand"><small>Central Inteligente de Vendas</small><h1>Meu Resultado</h1></div><div class="top-side"><div class="sync-pill busy" id="syncState" title="Status da sincronização">☁️</div><button class="user profile-trigger" id="profileTrigger" type="button" aria-label="Abrir meu perfil"><span class="seller-avatar" id="sellerAvatar">V</span><span class="seller-user-copy"><strong id="who">Vendedor</strong><small id="where"></small></span><span class="profile-caret">⌄</span></button></div></header>
