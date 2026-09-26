@@ -191,12 +191,37 @@ html,body{max-width:100%;overflow-x:hidden}
 @media(max-width:760px){.seller-week-donut-grid{grid-template-columns:repeat(3,1fr);gap:5px}.seller-week-donut{width:74px;height:74px}.seller-week-donut:after{inset:11px}.seller-week-chart-grid{grid-template-columns:1fr}.week-grid{grid-template-columns:1fr 1fr}.seller-week-toggle>div>strong{font-size:17px}}
 </style>
 <style id="analysis-full-width-v70">#periodCompare{display:block!important;width:100%!important;max-width:none!important}#periodCompare>.analysis-shell{width:100%!important;max-width:none!important}</style>
+
+<style id="v91-seller-overview-bands">
+  #home .overview-band,
+  #home .rhythm-group,
+  #home .seller-dist-group{position:relative;overflow:hidden}
+  #home .overview-band::before,
+  #home .rhythm-group::before,
+  #home .seller-dist-group::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--band-color,#d8e1ec);pointer-events:none;z-index:1}
+  #home .overview-band>* , #home .rhythm-group>* , #home .seller-dist-group>*{position:relative;z-index:2}
+  #home .seller-band-hero{--band-color:#2b8cf0}
+  #home .rhythm-group.merc{--band-color:#2b8cf0}
+  #home .rhythm-group.indicators{--band-color:#41a2c6}
+  #home .rhythm-group.services{--band-color:#16a34a}
+  #home .rhythm-group.aux{--band-color:#7b67e8}
+  #home .seller-dist-group.merc{--band-color:#2b8cf0}
+  #home .seller-dist-group.services{--band-color:#7b67e8}
+  #home .seller-band-ecommerce{--band-color:#16a18c}
+  #home .seller-band-finance{--band-color:#20a16b}
+  #home .seller-band-motivation{--band-color:#d6a029}
+  @media(max-width:620px){
+    #home .overview-band::before,
+    #home .rhythm-group::before,
+    #home .seller-dist-group::before{width:4px}
+  }
+</style>
 </head><body>
 <div class="app">
 <header class="top"><div class="brand"><small>Central Inteligente de Vendas</small><h1>Meu Resultado</h1></div><div class="top-side"><div class="sync-pill busy" id="syncState" title="Status da sincronização">☁️</div><button class="user profile-trigger" id="profileTrigger" type="button" aria-label="Abrir meu perfil"><span class="seller-avatar" id="sellerAvatar">V</span><span class="seller-user-copy"><strong id="who">Vendedor</strong><small id="where"></small></span><span class="profile-caret">⌄</span></button></div></header>
 <nav class="tabs"><button class="tab active" data-view="home">🏠 Início</button><button class="tab" data-view="daily">📝 Diário</button><button class="tab" data-view="weekly">📊 Semanal</button><button class="tab" data-view="goals">🎯 Metas</button><button class="tab" data-view="dashboard">📊 Dashboard</button><button class="tab" data-view="periods">📈 Análises</button></nav>
 <section class="view active" id="home">
-  <article class="panel hero-panel">
+  <article class="panel hero-panel overview-band seller-band-hero">
     <div class="seller-home-head"><div class="home-copy"><h2 id="welcome">Meu desempenho</h2><div class="hint">Seu mês em uma leitura rápida, simples e atualizada.</div></div><button class="btn primary" id="downloadImage">⬇️ Baixar imagem</button></div>
     <div class="seller-hero">
       <article class="seller-hero-main"><div class="eyebrow">Venda mercantil total do vendedor</div><div class="hero-value" id="sellerRevenueHero">R$ 0,00</div><div class="hero-meta"><span><strong id="sellerWorkedHero">0</strong><br>dias trabalhados</span><span><strong id="sellerRemainingHero">0</strong><br>dias restantes</span><span><strong id="sellerDailyHero">R$ 0,00</strong><br>média por dia</span></div></article>
@@ -206,9 +231,9 @@ html,body{max-width:100%;overflow-x:hidden}
   </article>
   <article class="panel distribution-panel"><div class="section-title"><div><h2>Distribuição do que falta no mês</h2><div class="hint"></div></div><span class="pill" id="sellerDistributionTag">Meta individual</span></div><div class="seller-dist-grid" id="sellerDistributionGrid"></div><div class="seller-quick-note" id="sellerDistributionNote"></div></article>
   <article class="panel"><div class="title"><div><h2>📊 Ritmo do mês</h2><div class="hint">Realizado, projeção, indicadores e o que falta para concluir suas metas.</div></div></div><div class="grid" id="homeMetrics"></div></article>
-  <article class="panel ecommerce-panel"><div class="title"><div><h2>🌐 E-commerce</h2><div class="hint">Informe os acumulados da competência. A venda entra no mercantil e a comissão entra em seus ganhos.</div></div></div><div class="form ecommerce-form"><div class="field"><label>Venda e-commerce no mês</label><input id="sellerEcommerce" inputmode="decimal" placeholder="R$ 0,00"></div><div class="field"><label>Comissão e-commerce (R$)</label><input id="sellerEcommerceCommission" inputmode="decimal" placeholder="R$ 0,00"></div><button class="btn soft" id="saveEcommerce">💾 Salvar e-commerce</button></div><div class="save-feedback" id="ecommerceFeedback"></div></article>
-  <article class="panel finance-panel"><div class="title"><div><h2>💵 Meus ganhos</h2><div class="hint">Comissões, DSR e projeção financeira pelo ritmo atual.</div></div></div><div class="finance-grid" id="financeMetrics"></div></article>
-  <article class="panel motivation-panel"><div id="motivation" class="notice"></div></article>
+  <article class="panel ecommerce-panel overview-band seller-band-ecommerce"><div class="title"><div><h2>🌐 E-commerce</h2><div class="hint">Informe os acumulados da competência. A venda entra no mercantil e a comissão entra em seus ganhos.</div></div></div><div class="form ecommerce-form"><div class="field"><label>Venda e-commerce no mês</label><input id="sellerEcommerce" inputmode="decimal" placeholder="R$ 0,00"></div><div class="field"><label>Comissão e-commerce (R$)</label><input id="sellerEcommerceCommission" inputmode="decimal" placeholder="R$ 0,00"></div><button class="btn soft" id="saveEcommerce">💾 Salvar e-commerce</button></div><div class="save-feedback" id="ecommerceFeedback"></div></article>
+  <article class="panel finance-panel overview-band seller-band-finance"><div class="title"><div><h2>💵 Meus ganhos</h2><div class="hint">Comissões, DSR e projeção financeira pelo ritmo atual.</div></div></div><div class="finance-grid" id="financeMetrics"></div></article>
+  <article class="panel motivation-panel overview-band seller-band-motivation"><div id="motivation" class="notice"></div></article>
 </section>
 <section class="view" id="goals"><article class="panel"><div class="title"><div><h2>🎯 Minhas metas</h2><div class="hint">Cadastre somente as duas metas que foram definidas para você. A distribuição diária e os dias da filial vêm automaticamente da gestão.</div></div></div><div class="form seller-goal-form"><div class="field"><label>Meta mercantil mensal</label><input id="goalMerc" inputmode="decimal" placeholder="R$ 0,00"></div><div class="field"><label>Meta de serviços mensal</label><input id="goalServices" inputmode="decimal" placeholder="R$ 0,00"></div><button class="btn primary" id="saveGoals">💾 Salvar metas</button></div><div class="save-feedback" id="goalsFeedback"></div><div class="grid fixed-goals" style="margin-top:12px"><div class="metric"><span>🎯 Conversão</span><strong>35,00%</strong><small>Meta padrão</small></div><div class="metric"><span>⚡ Eficiência</span><strong>7,00%</strong><small>Meta padrão</small></div><div class="metric"><span>💵 Comissões</span><strong>Em R$</strong><small>Informadas nos lançamentos</small></div><div class="metric"><span>📅 Dias da filial</span><strong id="managedDays">—</strong><small>Definidos pela gestão</small></div></div></article></section>
 <section class="view" id="daily"><article class="panel"><div class="title"><div><h2>📝 Lançamento diário</h2><div class="hint">Você só informa seus números. As metas do dia são calculadas automaticamente pela gestão.</div></div></div><div class="day-list" id="dayList"></div></article></section>
@@ -218,4 +243,4 @@ html,body{max-width:100%;overflow-x:hidden}
 <div class="footer">Developed by <strong>Fildo Sobral</strong> • FS Soluções</div>
 </div>
 <div class="profile-backdrop" id="profileBackdrop" hidden><section class="profile-sheet" role="dialog" aria-modal="true" aria-label="Meu perfil"><div class="profile-sheet-handle"></div><div class="profile-head"><div class="profile-avatar" id="profileAvatar">V</div><div><strong id="profileName">Vendedor</strong><span id="profileMeta">Meu acesso</span></div><button type="button" class="profile-close" id="profileClose" aria-label="Fechar">×</button></div><div class="profile-actions"><button type="button" id="profileData">👤 Meus dados</button><label class="profile-photo-label" for="profilePhotoInput">📷 Trocar foto</label><input id="profilePhotoInput" class="profile-photo-input" type="file" accept="image/*"><button type="button" id="profileReport">🧾 Meu relatório</button><button type="button" id="profileSupport">💬 Suporte FS</button><button type="button" id="profileSwitch">🔄 Trocar usuário</button><button type="button" class="danger" id="profileLogout">🚪 Sair da plataforma</button></div><div class="profile-details" id="profileDetails" hidden></div></section></div>
-<script src="vendedor-v39.js?v=5076"></script></body></html>
+<script src="vendedor-v39.js?v=5091"></script></body></html>

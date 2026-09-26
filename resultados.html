@@ -723,6 +723,37 @@ body.seller-modal-open{overflow:hidden}
 .overview-invoice-seller-card>.sub{margin-top:9px}
 @media(max-width:560px){.overview-invoice-seller-card .overview-invoice-seller-split strong{font-size:20px}.overview-invoice-seller-card .overview-invoice-seller-split span{font-size:9px}}
 </style>
+
+<style id="v91-overview-bands">
+  #overview .overview-band,
+  #overview .overview-kpi-group,
+  #overview .monthly-gap-group,
+  #goalGrid .goal{position:relative;overflow:hidden}
+  #overview .overview-band::before,
+  #overview .overview-kpi-group::before,
+  #overview .monthly-gap-group::before,
+  #goalGrid .goal::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--band-color,#d8e1ec);pointer-events:none;z-index:1}
+  #overview .overview-band>* , #overview .overview-kpi-group>* , #overview .monthly-gap-group>* , #goalGrid .goal>*{position:relative;z-index:2}
+  #overview .branch-band-hero{--band-color:#2b8cf0}
+  #overview .branch-band-projection{--band-color:#7b67e8}
+  #overview .overview-kpi-group.merc{--band-color:#2b8cf0}
+  #overview .overview-kpi-group.indicators{--band-color:#41a2c6}
+  #overview .overview-kpi-group.services{--band-color:#16a34a}
+  #overview .monthly-gap-group.merc{--band-color:#2b8cf0}
+  #overview .monthly-gap-group.services{--band-color:#7b67e8}
+  #overview .branch-band-ecommerce{--band-color:#50d7aa}
+  #overview .branch-band-services-goal{--band-color:#16a34a}
+  #overview .branch-band-insights{--band-color:#6f7ef1}
+  #goalGrid .goal:nth-child(1){--band-color:#2b8cf0}
+  #goalGrid .goal:nth-child(2){--band-color:#7b67e8}
+  #goalGrid .goal:nth-child(3){--band-color:#16a34a}
+  @media(max-width:760px){
+    #overview .overview-band::before,
+    #overview .overview-kpi-group::before,
+    #overview .monthly-gap-group::before,
+    #goalGrid .goal::before{width:4px}
+  }
+</style>
 </head>
 <body>
 <main class="app">
@@ -751,8 +782,8 @@ body.seller-modal-open{overflow:hidden}
 
   <section class="view active" id="overview">
     <div class="hero">
-      <article class="hero-main"><div class="eyebrow" id="heroEyebrow">Venda mercantil total da filial</div><div class="hero-value" id="revenueHero">R$ 0,00</div><div class="hero-meta"><span><strong id="workedHero">0</strong><br>dias trabalhados</span><span><strong id="remainingHero">0</strong><br>dias restantes</span><span><strong id="dailyHero">R$ 0,00</strong><br>média por dia</span></div></article>
-      <article class="panel projection"><div class="eyebrow muted">Projeção de fechamento</div><div class="projection-value" id="projectionHero">R$ 0,00</div><div class="muted" id="projectionText">Preencha os resultados diários para calcular.</div><div class="bar"><span id="projectionBar"></span></div></article>
+      <article class="hero-main overview-band branch-band-hero"><div class="eyebrow" id="heroEyebrow">Venda mercantil total da filial</div><div class="hero-value" id="revenueHero">R$ 0,00</div><div class="hero-meta"><span><strong id="workedHero">0</strong><br>dias trabalhados</span><span><strong id="remainingHero">0</strong><br>dias restantes</span><span><strong id="dailyHero">R$ 0,00</strong><br>média por dia</span></div></article>
+      <article class="panel projection overview-band branch-band-projection"><div class="eyebrow muted">Projeção de fechamento</div><div class="projection-value" id="projectionHero">R$ 0,00</div><div class="muted" id="projectionText">Preencha os resultados diários para calcular.</div><div class="bar"><span id="projectionBar"></span></div></article>
     </div>
     <div class="kpis">
       <article class="kpi"><div class="label">Venda elegível</div><div class="value" id="eligibleKpi">R$ 0,00</div><div class="sub">Usada somente como base da eficiência de serviços</div></article>
@@ -764,12 +795,12 @@ body.seller-modal-open{overflow:hidden}
     </div>
     <div class="overview-detail-layout" id="overviewDetailLayout">
       <article class="panel monthly-gap-panel"><div class="section-title"><div><h2>Distribuição do que falta no mês</h2><div class="hint">Mercantil e serviços, no total e divididos por dia, por vendedor e por dia de cada vendedor.</div></div><span class="pill">Meta 1</span></div><div class="monthly-gap-grid" id="monthlyGapGrid"></div></article>
-      <article class="panel ecommerce-panel" id="ecommerceOverview"><div class="section-title"><h2>Loja + e-commerce</h2><span class="pill">Visão consolidada</span></div><div class="commerce-total" id="consolidatedSalesOverview">R$ 0,00</div><div class="commerce-caption">Venda total consolidada</div><div class="commerce-snapshot"><div class="commerce-mini"><span>Venda mercantil da loja</span><strong id="storeSalesOverview">R$ 0,00</strong></div><div class="commerce-mini"><span>Venda e-commerce</span><strong id="ecommerceSalesOverview">R$ 0,00</strong></div><div class="commerce-mini"><span>Média total / dia</span><strong id="consolidatedDailyOverview">R$ 0,00</strong></div></div><div class="ecommerce-goal-bars" id="ecommerceGoalBars"></div></article>
+      <article class="panel ecommerce-panel overview-band branch-band-ecommerce" id="ecommerceOverview"><div class="section-title"><h2>Loja + e-commerce</h2><span class="pill">Visão consolidada</span></div><div class="commerce-total" id="consolidatedSalesOverview">R$ 0,00</div><div class="commerce-caption">Venda total consolidada</div><div class="commerce-snapshot"><div class="commerce-mini"><span>Venda mercantil da loja</span><strong id="storeSalesOverview">R$ 0,00</strong></div><div class="commerce-mini"><span>Venda e-commerce</span><strong id="ecommerceSalesOverview">R$ 0,00</strong></div><div class="commerce-mini"><span>Média total / dia</span><strong id="consolidatedDailyOverview">R$ 0,00</strong></div></div><div class="ecommerce-goal-bars" id="ecommerceGoalBars"></div></article>
     </div>
     <div class="goal-grid" id="goalGrid"></div>
     <div class="section-grid">
-      <article class="panel"><div class="section-title"><h2>Meta de serviços</h2><span class="pill" id="servicesRate">0%</span></div><div class="projection-value" id="servicesCurrent">R$ 0,00</div><div class="muted">Meta: <strong id="servicesGoal">R$ 0,00</strong></div><div class="bar"><span id="servicesBar"></span></div><div class="hint" id="servicesProjection">Projeção: R$ 0,00</div></article>
-      <article class="panel"><div class="section-title"><h2>Leitura rápida</h2><button class="btn small" data-go="daily">Atualizar números</button></div><div id="insights"></div></article>
+      <article class="panel overview-band branch-band-services-goal"><div class="section-title"><h2>Meta de serviços</h2><span class="pill" id="servicesRate">0%</span></div><div class="projection-value" id="servicesCurrent">R$ 0,00</div><div class="muted">Meta: <strong id="servicesGoal">R$ 0,00</strong></div><div class="bar"><span id="servicesBar"></span></div><div class="hint" id="servicesProjection">Projeção: R$ 0,00</div></article>
+      <article class="panel overview-band branch-band-insights"><div class="section-title"><h2>Leitura rápida</h2><button class="btn small" data-go="daily">Atualizar números</button></div><div id="insights"></div></article>
     </div>
   </section>
 
