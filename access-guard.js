@@ -9,7 +9,6 @@
   if(!authorized()){try{sessionStorage.setItem('fs_requested_module',location.pathname+location.search);}catch(e){}location.replace('./index.html?acesso=necessario');return;}
   document.documentElement.classList.remove('fs-module-auth-lock');
 
-  // V90: mantém compatibilidade com o banco legado, mas não exibe mais gênero da saudação na Administração.
   function hideLegacyGender(){
     var gender=document.getElementById('admGender');
     if(gender){gender.value='AUTOMATICO';var field=gender.closest('label');if(field)field.style.display='none';}
@@ -17,11 +16,16 @@
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',hideLegacyGender);else hideLegacyGender();
   try{new MutationObserver(hideLegacyGender).observe(document.documentElement,{childList:true,subtree:true});}catch(e){}
 
-  // V90: ciclo mensal inteligente do vendedor carregado sem alterar a estrutura principal já homologada.
+  function addScript(src,id){
+    if(document.getElementById(id))return;
+    var s=document.createElement('script');s.id=id;s.src=src;s.defer=true;document.head.appendChild(s);
+  }
+
   if(/(?:^|\/)vendedor\.html$/i.test(location.pathname)){
-    var monthly=document.createElement('script');
-    monthly.src='./vendedor-monthly-v90.js?v=90';
-    monthly.defer=true;
-    document.head.appendChild(monthly);
+    addScript('./vendedor-monthly-v91.js?v=91','monthlyCycleV91Loader');
+  }
+
+  if(/(?:^|\/)resultados\.html$/i.test(location.pathname)){
+    addScript('./resultados-modal-v91.js?v=91','resultadosModalV91Loader');
   }
 })();
