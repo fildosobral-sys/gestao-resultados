@@ -450,16 +450,24 @@ body.seller-modal-open{overflow:hidden}
 .seller-directory-actions .action-icon{font-size:16px}
 .seller-directory-actions .action-label{display:none!important}
 .branch-dashboard-root:empty{display:none}
-.branch-theme-merc .dashboard-section-head,#seller-dash-merc .dashboard-section-head{background:#eef7ff;border:1px solid #d9e8ff;border-radius:15px;padding:12px 14px}
+.dashboard-section{border-left:5px solid #cfd9e6;padding-left:14px}.branch-theme-merc.dashboard-section,#seller-dash-merc.dashboard-section{border-left-color:#2b8cf0}.branch-theme-services.dashboard-section,#seller-dash-services.dashboard-section{border-left-color:#16a34a}.branch-theme-mercservices.dashboard-section{border-left-color:#7b67e8}#seller-dash-conversion.dashboard-section{border-left-color:#d14b7f}#seller-dash-efficiency.dashboard-section{border-left-color:#d6a029}#seller-dash-ticket.dashboard-section{border-left-color:#41a2c6}#seller-dash-invoice.dashboard-section{border-left-color:#6f7ef1}#seller-dash-gain.dashboard-section{border-left-color:#20a16b}.branch-theme-merc .dashboard-section-head,#seller-dash-merc .dashboard-section-head{background:#eef7ff;border:1px solid #d9e8ff;border-radius:15px;padding:12px 14px}
 .branch-theme-services .dashboard-section-head,#seller-dash-services .dashboard-section-head{background:#eefaf2;border:1px solid #d7ebdc;border-radius:15px;padding:12px 14px}
+.branch-theme-mercservices .dashboard-section-head{background:linear-gradient(135deg,#eef7ff,#fff8ea);border:1px solid #e6ddc6;border-radius:15px;padding:12px 14px}
 #seller-dash-conversion .dashboard-section-head{background:#fff5f8;border:1px solid #f2dbe3;border-radius:15px;padding:12px 14px}
 #seller-dash-efficiency .dashboard-section-head{background:#fffbed;border:1px solid #f1e3b4;border-radius:15px;padding:12px 14px}
 #seller-dash-ticket .dashboard-section-head{background:#f4fbff;border:1px solid #d8e9f2;border-radius:15px;padding:12px 14px}
+#seller-dash-invoice .dashboard-section-head{background:#f4f5ff;border:1px solid #dde1ff;border-radius:15px;padding:12px 14px}
+#seller-dash-gain .dashboard-section-head{background:#f1fbf3;border:1px solid #d7eadc;border-radius:15px;padding:12px 14px}
 .branch-theme-merc .dashboard-section-head h3,.branch-theme-merc .dashboard-section-total,#seller-dash-merc .dashboard-section-head h3,#seller-dash-merc .dashboard-section-total{color:#1d4f86}
 .branch-theme-services .dashboard-section-head h3,.branch-theme-services .dashboard-section-total,#seller-dash-services .dashboard-section-head h3,#seller-dash-services .dashboard-section-total{color:#176c45}
+.branch-theme-mercservices .dashboard-section-head h3,.branch-theme-mercservices .dashboard-section-total{color:#5f55ad}
 #seller-dash-conversion .dashboard-section-head h3,#seller-dash-conversion .dashboard-section-total{color:#b63255}
 #seller-dash-efficiency .dashboard-section-head h3,#seller-dash-efficiency .dashboard-section-total{color:#8b6500}
 #seller-dash-ticket .dashboard-section-head h3,#seller-dash-ticket .dashboard-section-total{color:#285f87}
+#seller-dash-invoice .dashboard-section-head h3,#seller-dash-invoice .dashboard-section-total{color:#4f5fcc}
+#seller-dash-gain .dashboard-section-head h3,#seller-dash-gain .dashboard-section-total{color:#1b7d49}
+@media(max-width:760px){.dashboard-section{border-left-width:4px;padding-left:12px}}
+
 @media(max-width:900px){.seller-directory-card{grid-template-columns:1fr 1fr!important}.seller-head-actions{width:100%;max-width:none}}
 @media(max-width:620px){.seller-head-actions{grid-template-columns:1fr 1fr!important;width:100%}.seller-head-actions .btn{min-height:86px;font-size:13px}.seller-directory-card{grid-template-columns:1fr 1fr!important;padding:12px!important}.seller-directory-card .seller-card-footer{grid-template-columns:1fr!important}.seller-directory-actions{justify-content:start}.seller-card-head-copy strong{font-size:15px}.seller-card-head-copy small{font-size:10px}}
 @media(max-width:390px){.seller-head-actions{grid-template-columns:1fr!important}.seller-directory-card .seller-card-head{padding:10px}.seller-card-rank{width:30px;height:30px;flex-basis:30px}}
