@@ -471,23 +471,19 @@
       if(!window.html2canvas) await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js','html2canvas');
       const date=selectedDate();
       const wrap=document.createElement('div');
-      wrap.className='team-export-stage team-export-ranking';
-      wrap.style.cssText='position:fixed;left:-12000px;top:0;width:2160px;background:#edf5ff;padding:24px;z-index:-1;box-sizing:border-box';
+      wrap.className='team-export-stage team-export-ranking export-cards-only';
+      wrap.style.cssText='position:fixed;left:-12000px;top:0;width:1440px;background:#edf5ff;padding:26px;z-index:-1;box-sizing:border-box';
       const clone=partial.cloneNode(true);
       wrap.appendChild(clone); document.body.appendChild(wrap);
-      clone.querySelectorAll('button,.team-partial-actions,.team-partial-empty').forEach(x=>x.remove());
+      clone.querySelectorAll('button,.team-partial-actions,.team-partial-empty,.team-partial-summary,.team-partial-miniranks').forEach(x=>x.remove());
       const head=clone.querySelector('.team-partial-head');
       if(head){
-        head.innerHTML=`<div class="export-title-copy"><span class="team-partial-eyebrow">ACOMPANHAMENTO PARCIAL</span><h3>Resultado parcial da equipe</h3><p>Classificação geral por metas batidas, consistência do conjunto e desempenho percentual do dia.</p></div><span class="team-export-date">📅 ${date.split('-').reverse().join('/')}</span><span class="team-export-trophy">🏆</span>`;
+        head.innerHTML=`<div class="export-title-copy"><span class="team-partial-eyebrow">ACOMPANHAMENTO PARCIAL</span><h3>Resultado parcial da equipe</h3><p>Cards em ordem de classificação geral do dia.</p></div><span class="team-export-date">📅 ${date.split('-').reverse().join('/')}</span><span class="team-export-trophy">🏆</span>`;
       }
-      const sub=document.createElement('div');
-      sub.className='team-export-ranking-head';
-      sub.innerHTML='<div><h4>Ranking parcial geral</h4><p>Critério: quantidade de metas batidas, consistência do conjunto e média percentual.</p></div><span>Atualização durante o dia</span>';
-      const summary=clone.querySelector('.team-partial-summary'); if(summary) summary.before(sub);
 
       if(document.fonts?.ready){ try { await document.fonts.ready; } catch(_) {} }
       await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
-      const canvas=await html2canvas(wrap,{scale:2,backgroundColor:'#edf5ff',useCORS:true,logging:false,windowWidth:2160,imageTimeout:30000,scrollX:0,scrollY:0});
+      const canvas=await html2canvas(wrap,{scale:2.2,backgroundColor:'#edf5ff',useCORS:true,logging:false,windowWidth:1440,imageTimeout:30000,scrollX:0,scrollY:0});
       wrap.remove();
       const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png',1));
       if(!blob) throw new Error('Falha ao gerar PNG');
