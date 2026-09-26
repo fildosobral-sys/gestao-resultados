@@ -28,4 +28,8 @@
   if(/(?:^|\/)resultados\.html$/i.test(location.pathname)){
     addScript('./resultados-modal-v91.js?v=91','resultadosModalV91Loader');
   }
+  if(/(?:^|\/)resultados\.html$/i.test(location.pathname)){
+    addScript('./resultados-ranking-v92.js?v=92','resultadosRankingV92Loader');
+  }
+
 })();
