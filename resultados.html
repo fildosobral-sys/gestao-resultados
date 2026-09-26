@@ -1510,7 +1510,7 @@ body.seller-modal-open{overflow:hidden}
 <script src="pwa-update.js?v=3"></script>
 <script src="resultados-parcial-v5.js?v=5"></script>
 
-<script id="team-partial-v102-export">
+<script id="team-partial-v103-export">
 (function(){
   function loadScript(src){
     return new Promise(function(resolve,reject){
@@ -1528,15 +1528,65 @@ body.seller-modal-open{overflow:hidden}
     return { iso:`${yyyy}-${mm}-${dd}`, br:`${dd}/${mm}/${yyyy}` };
   }
 
+  function applyExportCardStyles(scope){
+    const palette={
+      perfect:{bg:'linear-gradient(180deg,#e9fbf0,#f6fff9)',border:'#7fce9b',left:'#26b56f',name:'#0b7a43',badgeBg:'#d5f5df',badgeColor:'#0b7a43'},
+      strong:{bg:'linear-gradient(180deg,#eefbf3,#fbfffd)',border:'#a8dfbe',left:'#39b97b',name:'#157d4c',badgeBg:'#def7e6',badgeColor:'#157d4c'},
+      good:{bg:'linear-gradient(180deg,#f2fbf6,#fcfffd)',border:'#c8e8d6',left:'#6abf83',name:'#1f7f57',badgeBg:'#e9f8ee',badgeColor:'#1f7f57'},
+      one:{bg:'linear-gradient(180deg,#fff7dd,#fffdf4)',border:'#edd38a',left:'#f0c44f',name:'#9a6c08',badgeBg:'#ffe8a9',badgeColor:'#8a6210'},
+      regular:{bg:'linear-gradient(180deg,#fff3e8,#fffaf5)',border:'#efc08e',left:'#ee9b4a',name:'#b06611',badgeBg:'#ffe2bf',badgeColor:'#9b5f12'},
+      zero:{bg:'linear-gradient(180deg,#fff1f3,#fff9fa)',border:'#efb0b8',left:'#df6478',name:'#b13a4c',badgeBg:'#ffe0e4',badgeColor:'#b13a4c'}
+    };
+    const pick=row=>{
+      for(const key of Object.keys(palette)){
+        if(row.classList.contains(`status-${key}`)) return palette[key];
+      }
+      return null;
+    };
+    scope.querySelectorAll('.team-partial-row').forEach(function(row){
+      const theme=pick(row);
+      row.style.border='1px solid '+(theme?theme.border:'#e0e8f2');
+      row.style.borderLeftWidth='12px';
+      row.style.borderLeftStyle='solid';
+      row.style.borderLeftColor=theme?theme.left:'#d0d9e4';
+      row.style.borderRadius='24px';
+      row.style.background=theme?theme.bg:'#ffffff';
+      row.style.boxShadow='0 10px 28px rgba(18,35,60,.06)';
+      const name=row.querySelector('.team-partial-person strong');
+      if(name && theme) name.style.color=theme.name;
+      const message=row.querySelector('.team-partial-person p');
+      if(message){
+        message.style.color='#2f4b68';
+        message.style.fontWeight='600';
+      }
+      const mainBadge=row.querySelector('.team-main-badge');
+      if(mainBadge && theme){
+        mainBadge.style.background=theme.badgeBg;
+        mainBadge.style.color=theme.badgeColor;
+      }
+      row.querySelectorAll('.team-count-badge').forEach(function(b){
+        b.style.background='#eef3f8';
+        b.style.color='#55708b';
+      });
+      row.querySelectorAll('.team-metric').forEach(function(card){
+        card.style.background='rgba(255,255,255,.88)';
+        card.style.border='1px solid rgba(218,226,238,.9)';
+        card.style.borderRadius='22px';
+        card.style.boxShadow='none';
+      });
+    });
+  }
+
   async function exportCardsOnly(){
     const panel=document.querySelector('.team-partial-panel');
     if(!panel) return;
+    let wrap=null;
     try{
       if(!window.html2canvas){
         await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
       }
       const {iso,br}=getDateParts();
-      const wrap=document.createElement('div');
+      wrap=document.createElement('div');
       wrap.className='team-export-stage export-cards-only';
       wrap.style.cssText='position:fixed;left:-12000px;top:0;width:1440px;background:#edf5ff;padding:28px;z-index:-1;box-sizing:border-box';
 
@@ -1545,7 +1595,6 @@ body.seller-modal-open{overflow:hidden}
       document.body.appendChild(wrap);
 
       clone.querySelectorAll('.team-partial-summary,.team-partial-miniranks,.team-partial-actions,.team-partial-empty,.team-export-ranking-head').forEach(el=>el.remove());
-
       clone.querySelectorAll('.team-partial-panel > :not(.team-partial-head):not(.team-partial-list)').forEach(function(el){
         if(!el.classList.contains('team-partial-list')) el.remove();
       });
@@ -1560,9 +1609,12 @@ body.seller-modal-open{overflow:hidden}
           <span class="team-export-date">${br}</span>`;
       }
 
+      applyExportCardStyles(clone);
+
       if(document.fonts && document.fonts.ready){
         try{ await document.fonts.ready; }catch(e){}
       }
+      await new Promise(r=>setTimeout(r,120));
       await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
 
       const canvas=await window.html2canvas(wrap,{
@@ -1575,7 +1627,6 @@ body.seller-modal-open{overflow:hidden}
         scrollX:0,
         scrollY:0
       });
-      wrap.remove();
       const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png',1));
       if(!blob) throw new Error('Falha ao gerar PNG');
       const url=URL.createObjectURL(blob);
@@ -1587,15 +1638,17 @@ body.seller-modal-open{overflow:hidden}
     }catch(err){
       console.error(err);
       alert('Não foi possível gerar a imagem agora. Tente novamente com internet ativa.');
+    }finally{
+      if(wrap) wrap.remove();
     }
   }
 
   function bindDownloadButton(){
     const btn=document.getElementById('teamPartialDownload');
-    if(!btn || btn.dataset.v102Bound==='1') return;
+    if(!btn || btn.dataset.v103Bound==='1') return;
     const fresh=btn.cloneNode(true);
     btn.replaceWith(fresh);
-    fresh.dataset.v102Bound='1';
+    fresh.dataset.v103Bound='1';
     fresh.addEventListener('click',function(ev){
       ev.preventDefault();
       ev.stopPropagation();
