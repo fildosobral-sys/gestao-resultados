@@ -472,7 +472,7 @@
       const date=selectedDate();
       const wrap=document.createElement('div');
       wrap.className='team-export-stage team-export-ranking';
-      wrap.style.cssText='position:fixed;left:-12000px;top:0;width:2800px;background:#edf5ff;padding:36px;z-index:-1;box-sizing:border-box';
+      wrap.style.cssText='position:fixed;left:-12000px;top:0;width:2160px;background:#edf5ff;padding:24px;z-index:-1;box-sizing:border-box';
       const clone=partial.cloneNode(true);
       wrap.appendChild(clone); document.body.appendChild(wrap);
       clone.querySelectorAll('button,.team-partial-actions,.team-partial-empty').forEach(x=>x.remove());
@@ -487,9 +487,13 @@
 
       if(document.fonts?.ready){ try { await document.fonts.ready; } catch(_) {} }
       await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
-      const canvas=await html2canvas(wrap,{scale:5.6,backgroundColor:'#edf5ff',useCORS:true,logging:false,windowWidth:2800,imageTimeout:30000});
+      const canvas=await html2canvas(wrap,{scale:2,backgroundColor:'#edf5ff',useCORS:true,logging:false,windowWidth:2160,imageTimeout:30000,scrollX:0,scrollY:0});
       wrap.remove();
-      const a=document.createElement('a'); a.download=`resultado-parcial-equipe-${date}.png`; a.href=canvas.toDataURL('image/png',1); a.click();
+      const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png',1));
+      if(!blob) throw new Error('Falha ao gerar PNG');
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a'); a.download=`resultado-parcial-equipe-${date}.png`; a.href=url; a.click();
+      setTimeout(()=>URL.revokeObjectURL(url),1500);
     }catch(e){ alert('Não foi possível gerar o acompanhamento neste aparelho. Tente novamente com internet ativa.'); }
   }
 
