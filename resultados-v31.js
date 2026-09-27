@@ -2902,7 +2902,7 @@
     modal.hidden = true;
     modal.dataset.landscapeLock = '0';
     modal.dataset.landscapeFullscreen = '0';
-    modal.innerHTML = '<div class="dashboard-chart-modal-dialog" role="dialog" aria-modal="true" aria-label="Gráfico ampliado"><div class="dashboard-chart-modal-head"><strong id="dashboardChartModalTitle">Gráfico</strong><div class="dashboard-chart-modal-actions"><div class="dashboard-chart-annotate-controls" aria-label="Ferramentas do gráfico"><button type="button" data-chart-pan aria-label="Mouse / mover gráfico" title="Mouse / mover gráfico">🖱️</button><button type="button" data-chart-pen aria-label="Caneta" title="Caneta">✏️</button><button type="button" data-chart-eraser aria-label="Borracha" title="Borracha">🧽</button></div><div class="dashboard-chart-zoom-controls" aria-label="Controles de zoom"><button type="button" data-chart-zoom-out aria-label="Diminuir zoom">−</button><span data-chart-zoom-label>80%</span><button type="button" data-chart-zoom-in aria-label="Aumentar zoom">+</button><button type="button" data-chart-zoom-reset aria-label="Restaurar enquadramento">80%</button></div><button type="button" class="dashboard-chart-modal-close" aria-label="Fechar">×</button></div></div><div class="dashboard-chart-modal-body"></div></div>';
+    modal.innerHTML = '<div class="dashboard-chart-modal-dialog" role="dialog" aria-modal="true" aria-label="Gráfico ampliado"><div class="dashboard-chart-modal-head"><strong id="dashboardChartModalTitle">Gráfico</strong><div class="dashboard-chart-modal-actions"><div class="dashboard-chart-annotate-controls" aria-label="Ferramentas do gráfico"><button type="button" data-chart-pan aria-label="Mouse / mover gráfico" title="Mouse / mover gráfico">🖱️</button><button type="button" data-chart-pen aria-label="Caneta" title="Caneta">✏️</button><button type="button" data-chart-eraser aria-label="Borracha" title="Borracha">🧽</button></div><div class="dashboard-chart-zoom-controls" aria-label="Controles de zoom"><button type="button" data-chart-zoom-out aria-label="Diminuir zoom">−</button><span data-chart-zoom-label>100%</span><button type="button" data-chart-zoom-in aria-label="Aumentar zoom">+</button><button type="button" data-chart-zoom-reset aria-label="Restaurar zoom para 100%">100%</button></div><button type="button" class="dashboard-chart-modal-close" aria-label="Fechar">×</button></div></div><div class="dashboard-chart-modal-body"></div></div>';
     document.body.appendChild(modal);
     const close = async () => {
       const state = { locked: modal.dataset.landscapeLock === '1', fullscreen: modal.dataset.landscapeFullscreen === '1' };
@@ -2944,7 +2944,7 @@
     stage.appendChild(surface);
     body.appendChild(stage);
 
-    let zoom = .8, baseW = 0, baseH = 0;
+    let zoom = 1, baseW = 0, baseH = 0, workW = 0, workH = 0;
     let dragging = false, startX = 0, startY = 0, startLeft = 0, startTop = 0;
     let drawMode = 'pan', activeStroke = null;
     let strokes = loadDashboardChartNotes(noteKey);
@@ -2986,22 +2986,35 @@
         ink.appendChild(path);
       });
     };
+    const resizeWorkspace = () => {
+      // Mantém o gráfico ancorado no topo/esquerda, mas amplia a área branca editável
+      // para a direita e para baixo. Assim, ao reduzir o zoom, a caneta pode usar
+      // praticamente toda a área visível do modal sem deslocar o conteúdo original.
+      const visibleW = Math.max(1, body.clientWidth - 8);
+      const visibleH = Math.max(1, body.clientHeight - 8);
+      workW = Math.max(workW || 0, baseW, (visibleW / Math.max(.5, zoom)) * .90);
+      workH = Math.max(workH || 0, baseH, (visibleH / Math.max(.5, zoom)) * .90);
+      surface.style.width = `${Math.ceil(workW)}px`;
+      surface.style.height = `${Math.ceil(workH)}px`;
+      ink.setAttribute('viewBox', `0 0 ${Math.ceil(workW)} ${Math.ceil(workH)}`);
+      ink.setAttribute('width', String(Math.ceil(workW)));
+      ink.setAttribute('height', String(Math.ceil(workH)));
+      stage.style.width = `${Math.ceil(workW * zoom)}px`;
+      stage.style.height = `${Math.ceil(workH * zoom)}px`;
+    };
     const measure = () => {
       const prev = surface.style.transform;
       surface.style.transform = 'scale(1)';
       surface.style.width = 'auto';
       surface.style.height = 'auto';
       baseW = Math.max(body.clientWidth - 2, clone.scrollWidth, clone.offsetWidth, 720);
-      clone.style.width = `${baseW}px`;
+      clone.style.setProperty('width', `${baseW}px`, 'important');
+      clone.style.setProperty('max-width', 'none', 'important');
       baseH = Math.max(clone.scrollHeight, clone.offsetHeight, 320);
-      surface.style.width = `${baseW}px`;
-      surface.style.height = `${baseH}px`;
-      ink.setAttribute('viewBox', `0 0 ${baseW} ${baseH}`);
-      ink.setAttribute('width', String(baseW));
-      ink.setAttribute('height', String(baseH));
+      workW = Math.max(workW, baseW);
+      workH = Math.max(workH, baseH);
       surface.style.transform = prev || `scale(${zoom})`;
-      stage.style.width = `${Math.ceil(baseW * zoom)}px`;
-      stage.style.height = `${Math.ceil(baseH * zoom)}px`;
+      resizeWorkspace();
       renderInk();
     };
     const apply = (next, anchorX=null, anchorY=null) => {
@@ -3013,8 +3026,7 @@
       const contentX = (body.scrollLeft + ax) / old;
       const contentY = (body.scrollTop + ay) / old;
       surface.style.transform = `scale(${zoom})`;
-      stage.style.width = `${Math.ceil(baseW * zoom)}px`;
-      stage.style.height = `${Math.ceil(baseH * zoom)}px`;
+      resizeWorkspace();
       clone.dataset.chartZoom = String(zoom);
       if (label) label.textContent = `${Math.round(zoom*100)}%`;
       requestAnimationFrame(() => {
@@ -3022,13 +3034,13 @@
         body.scrollTop = Math.max(0, contentY * zoom - ay);
       });
     };
-    modal.querySelector('[data-chart-zoom-in]')?.addEventListener('click', () => apply(zoom + .25));
-    modal.querySelector('[data-chart-zoom-out]')?.addEventListener('click', () => apply(zoom - .25));
-    modal.querySelector('[data-chart-zoom-reset]')?.addEventListener('click', () => { apply(.8); requestAnimationFrame(()=>{body.scrollLeft=0;body.scrollTop=0;}); });
+    modal.querySelector('[data-chart-zoom-in]')?.addEventListener('click', () => apply(zoom + .10));
+    modal.querySelector('[data-chart-zoom-out]')?.addEventListener('click', () => apply(zoom - .10));
+    modal.querySelector('[data-chart-zoom-reset]')?.addEventListener('click', () => { apply(1); requestAnimationFrame(()=>{body.scrollLeft=0;body.scrollTop=0;}); });
     body.onwheel = (e) => {
       if (!(e.ctrlKey || e.metaKey || e.altKey)) return;
       e.preventDefault();
-      apply(zoom + (e.deltaY < 0 ? .15 : -.15), e.clientX, e.clientY);
+      apply(zoom + (e.deltaY < 0 ? .10 : -.10), e.clientX, e.clientY);
     };
     const toPoint = (e) => {
       const r = surface.getBoundingClientRect();
@@ -3084,10 +3096,9 @@
     body.onpointercancel = endPan;
     const fitInitialView = () => {
       measure();
-      const usableW = Math.max(1, body.clientWidth - 6);
-      const usableH = Math.max(1, body.clientHeight - 6);
-      const fit = Math.min(.8, usableW / Math.max(1, baseW), usableH / Math.max(1, baseH));
-      apply(Math.max(.5, Math.min(.8, fit)));
+      // Padrão oficial do expandido: 100%. O usuário decide se quer reduzir
+      // para ganhar área de anotação ou aumentar para inspeção detalhada.
+      apply(1);
       requestAnimationFrame(()=>{ body.scrollLeft = 0; body.scrollTop = 0; });
     };
     requestAnimationFrame(fitInitialView);
