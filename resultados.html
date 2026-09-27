@@ -1472,7 +1472,7 @@ body.seller-modal-open{overflow:hidden}
 
 </style>
 <style id="team-partial-v101-overrides">
-/* v101 — destaque lateral dos cards e nomes por status */
+/* v105 — exportação alinhada ao visual da tela e sem o bloco de ranking */
 .team-partial-row{border-left-width:8px;border-left-style:solid;box-shadow:0 6px 18px rgba(20,39,66,.04)}
 .team-partial-row.status-perfect{border-left-color:#26b56f}
 .team-partial-row.status-strong{border-left-color:#39b97b}
@@ -1486,31 +1486,34 @@ body.seller-modal-open{overflow:hidden}
 .status-one .team-partial-person strong{color:#9a6c08}
 .status-regular .team-partial-person strong{color:#b06611}
 .status-zero .team-partial-person strong{color:#b13a4c}
+.team-partial-kpis,.team-metric,.team-metric-scale{min-width:0}
+.team-metric-topline{align-items:flex-start}
+.team-metric-topline>span{font-size:10px;font-weight:1000;letter-spacing:.04em}
+.team-metric-topline>em{line-height:1.1}
 
-/* exportação limpa: só cards, empilhados, com o mesmo visual */
-.team-export-stage.export-cards-only .team-partial-panel{border-radius:28px;overflow:hidden;background:#fff}
-.team-export-stage.export-cards-only .team-partial-list{padding:18px 28px 30px;gap:16px}
-.team-export-stage.export-cards-only .team-partial-row{border-left-width:12px;border-radius:24px;padding:24px 26px;box-shadow:0 10px 28px rgba(18,35,60,.06)}
-.team-export-stage.export-cards-only .team-partial-rank strong{font-size:42px}
-.team-export-stage.export-cards-only .team-partial-rank span{font-size:54px}
-.team-export-stage.export-cards-only .team-partial-person strong{font-size:40px;line-height:1.02}
-.team-export-stage.export-cards-only .team-partial-person p{font-size:24px;line-height:1.38;color:#2f4b68;font-weight:600;margin-top:12px}
-.team-export-stage.export-cards-only .team-partial-person small{font-size:16px;padding:8px 12px}
-.team-export-stage.export-cards-only .team-partial-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-self:stretch}
-.team-export-stage.export-cards-only .team-metric-topline>span{font-size:16px;letter-spacing:.04em;color:#4f627b}
-.team-export-stage.export-cards-only .team-metric>strong{font-size:38px}
-.team-export-stage.export-cards-only .team-metric>small{font-size:14px}
-.team-export-stage.export-cards-only .team-metric-track,.team-export-stage.export-cards-only .team-metric-excess{height:14px}
-.team-export-stage.export-cards-only .team-metric{border-radius:22px;padding:14px 16px;min-height:148px;display:flex;flex-direction:column;justify-content:flex-start}
-
-.team-export-stage.export-cards-only .team-partial-person{align-self:stretch;display:flex;flex-direction:column;justify-content:center}
-.team-export-stage.export-cards-only .team-partial-badges{margin-top:8px;margin-bottom:2px}
-.team-export-stage.export-cards-only .team-partial-rank{padding-top:10px}
-.team-export-stage.export-cards-only .team-metric-topline{min-height:24px}
-.team-export-stage.export-cards-only .team-metric>strong{line-height:1.05;margin:6px 0 10px}
-.team-export-stage.export-cards-only .team-metric-scale{grid-template-columns:minmax(0,1fr) 66px;gap:8px;align-items:center;margin-top:auto}
-.team-export-stage.export-cards-only .team-metric>small{margin-top:6px}
-
+/* exportação: manter a mesma lógica visual do sistema, com os 4 indicadores na mesma linha */
+.team-export-stage.export-cards-only .team-partial-panel{border-radius:28px;overflow:hidden;background:#fff;box-shadow:none}
+.team-export-stage.export-cards-only .team-partial-head{border-radius:28px;padding:24px 28px}
+.team-export-stage.export-cards-only .team-partial-head h3{font-size:28px;line-height:1.04}
+.team-export-stage.export-cards-only .team-partial-eyebrow{font-size:11px;letter-spacing:.14em}
+.team-export-stage.export-cards-only .team-export-date{font-size:18px;padding:10px 14px;border-radius:14px}
+.team-export-stage.export-cards-only .team-partial-list{padding:14px 0 0;gap:14px}
+.team-export-stage.export-cards-only .team-partial-row{grid-template-columns:64px minmax(270px,330px) minmax(0,1fr);padding:18px 18px 18px 20px;gap:14px;align-items:center;border-left-width:12px;border-radius:24px;box-shadow:0 10px 28px rgba(18,35,60,.06)}
+.team-export-stage.export-cards-only .team-partial-rank strong{font-size:20px}
+.team-export-stage.export-cards-only .team-partial-rank span{font-size:36px;line-height:1}
+.team-export-stage.export-cards-only .team-partial-person strong{font-size:22px;line-height:1.02}
+.team-export-stage.export-cards-only .team-partial-person p{font-size:13px;line-height:1.5;color:#2f4b68;font-weight:600;margin-top:10px}
+.team-export-stage.export-cards-only .team-partial-person small{font-size:12px;padding:6px 10px}
+.team-export-stage.export-cards-only .team-partial-kpis{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;align-self:stretch}
+.team-export-stage.export-cards-only .team-metric{border-radius:18px;padding:11px 12px;min-height:112px;display:flex;flex-direction:column;justify-content:flex-start}
+.team-export-stage.export-cards-only .team-metric-topline{min-height:20px;gap:4px}
+.team-export-stage.export-cards-only .team-metric-topline>span{font-size:11px;letter-spacing:.04em;color:#4f627b}
+.team-export-stage.export-cards-only .team-metric-topline>em{font-size:9px;padding:3px 6px}
+.team-export-stage.export-cards-only .team-metric>strong{font-size:22px;line-height:1.04;margin:5px 0 8px}
+.team-export-stage.export-cards-only .team-metric-scale{grid-template-columns:minmax(0,1fr) 48px;gap:6px;align-items:center;margin-top:auto}
+.team-export-stage.export-cards-only .team-metric-track,.team-export-stage.export-cards-only .team-metric-excess{height:10px}
+.team-export-stage.export-cards-only .team-metric>small{font-size:10px;margin-top:4px}
+.team-export-stage.export-cards-only .team-metric-excess{opacity:1}
 .team-export-stage.export-cards-only .team-partial-summary,.team-export-stage.export-cards-only .team-partial-miniranks,.team-export-stage.export-cards-only .team-partial-actions,.team-export-stage.export-cards-only .team-partial-empty,.team-export-stage.export-cards-only .team-export-ranking-head{display:none!important}
 </style>
 <script src="portal-context.js?v=2"></script>
@@ -1519,7 +1522,7 @@ body.seller-modal-open{overflow:hidden}
 <script src="pwa-update.js?v=3"></script>
 <script src="resultados-parcial-v5.js?v=5"></script>
 
-<script id="team-partial-v104-export">
+<script id="team-partial-v105-export">
 (function(){
   function loadScript(src){
     return new Promise(function(resolve,reject){
@@ -1535,6 +1538,88 @@ body.seller-modal-open{overflow:hidden}
     const mm=String(d.getMonth()+1).padStart(2,'0');
     const dd=String(d.getDate()).padStart(2,'0');
     return { iso:`${yyyy}-${mm}-${dd}`, br:`${dd}/${mm}/${yyyy}` };
+  }
+
+  function parsePercent(text){
+    if(!text) return 0;
+    const cleaned=String(text).replace(/[^0-9,.-]/g,'').replace(/\.(?=.*\.)/g,'').replace(',','.');
+    const value=parseFloat(cleaned);
+    return Number.isFinite(value)?value:0;
+  }
+
+  function metricThemeByRatio(ratio){
+    if(ratio < 0.5){
+      return {
+        fill:'linear-gradient(90deg,#f4a4af,#df6478)',
+        excess:'linear-gradient(90deg,#f4a4af,#df6478)',
+        chipBg:'#fff0f2', chipColor:'#be4256',
+        trackBg:'#eef1f5', excessBg:'#fff0f2'
+      };
+    }
+    if(ratio < 1){
+      return {
+        fill:'linear-gradient(90deg,#ffd166,#f3a321)',
+        excess:'linear-gradient(90deg,#ffd166,#f3a321)',
+        chipBg:'#fff4dd', chipColor:'#9d6505',
+        trackBg:'#eef1f5', excessBg:'#fff4dd'
+      };
+    }
+    if(ratio <= 1.1){
+      return {
+        fill:'linear-gradient(90deg,#58d39b,#23b26f)',
+        excess:'linear-gradient(90deg,#58d39b,#23b26f)',
+        chipBg:'#e6f8ee', chipColor:'#107a48',
+        trackBg:'#eef1f5', excessBg:'#e6f8ee'
+      };
+    }
+    return {
+      fill:'linear-gradient(90deg,#58d39b,#23b26f)',
+      excess:'linear-gradient(90deg,#14985b,#0b7a43)',
+      chipBg:'#dbf5e7', chipColor:'#0b7341',
+      trackBg:'#eef1f5', excessBg:'#dcf4e6'
+    };
+  }
+
+  function applyMetricSemanticColors(scope){
+    scope.querySelectorAll('.team-metric').forEach(function(metric){
+      const strong=metric.querySelector('strong');
+      const small=metric.querySelector('small');
+      const track=metric.querySelector('.team-metric-track');
+      const fill=track ? track.querySelector('i') : null;
+      const excess=metric.querySelector('.team-metric-excess');
+      const excessFill=excess ? excess.querySelector('i') : null;
+      const chip=metric.querySelector('.team-metric-topline em');
+      if(!strong || !small || !track || !fill) return;
+
+      const value=parsePercent(strong.textContent);
+      const goalMatch=(small.textContent||'').match(/Meta:\s*([\d.,]+)%/i);
+      const goal=goalMatch ? parsePercent(goalMatch[1]) : 100;
+      const ratio=goal>0 ? value/goal : 0;
+      const theme=metricThemeByRatio(ratio);
+
+      fill.style.background=theme.fill;
+      track.style.background=theme.trackBg;
+      track.style.boxShadow='inset 0 0 0 1px rgba(158,171,188,.15)';
+      if(excess){
+        excess.style.background=theme.excessBg;
+        excess.classList.toggle('active', ratio>1);
+        excess.classList.toggle('negative', ratio<0.5);
+      }
+      if(excessFill){
+        excessFill.style.background=theme.excess;
+      }
+      if(chip){
+        chip.style.background=theme.chipBg;
+        chip.style.color=theme.chipColor;
+        chip.classList.remove('negative');
+      }
+      if(ratio<0.5){
+        metric.classList.add('is-negative');
+      }else{
+        metric.classList.remove('is-negative');
+        strong.style.color='#102346';
+      }
+    });
   }
 
   function applyExportCardStyles(scope){
@@ -1578,60 +1663,74 @@ body.seller-modal-open{overflow:hidden}
         b.style.color='#55708b';
       });
       row.querySelectorAll('.team-metric').forEach(function(card){
-        card.style.background='rgba(255,255,255,.88)';
-        card.style.border='1px solid rgba(218,226,238,.9)';
-        card.style.borderRadius='22px';
+        card.style.background='rgba(255,255,255,.9)';
+        card.style.border='1px solid rgba(218,226,238,.95)';
+        card.style.borderRadius='18px';
         card.style.boxShadow='none';
       });
     });
+    applyMetricSemanticColors(scope);
+  }
+
+  function applyScreenEnhancements(){
+    const panel=document.querySelector('.team-partial-panel');
+    if(!panel) return;
+    panel.querySelectorAll('.team-partial-row').forEach(function(row){
+      const name=row.querySelector('.team-partial-person strong');
+      if(name) name.style.letterSpacing='0';
+    });
+    applyMetricSemanticColors(panel);
+  }
+
+  function buildExportStage(){
+    const list=document.getElementById('teamPartialResult');
+    if(!list || !list.children.length) return null;
+    const {br}=getDateParts();
+    const wrap=document.createElement('div');
+    wrap.className='team-export-stage export-cards-only';
+    wrap.style.cssText='position:fixed;left:-12000px;top:0;width:1820px;background:#edf5ff;padding:28px;z-index:-1;box-sizing:border-box';
+
+    const panel=document.createElement('section');
+    panel.className='team-partial-panel';
+    panel.innerHTML=`
+      <div class="team-partial-head">
+        <div>
+          <span class="team-partial-eyebrow">ACOMPANHAMENTO PARCIAL</span>
+          <h3>Resultado parcial da equipe</h3>
+        </div>
+        <span class="team-export-date">${br}</span>
+      </div>`;
+
+    const clonedList=list.cloneNode(true);
+    panel.appendChild(clonedList);
+    wrap.appendChild(panel);
+    return wrap;
   }
 
   async function exportCardsOnly(){
-    const panel=document.querySelector('.team-partial-panel');
-    if(!panel) return;
     let wrap=null;
     try{
       if(!window.html2canvas){
         await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
       }
-      const {iso,br}=getDateParts();
-      wrap=document.createElement('div');
-      wrap.className='team-export-stage export-cards-only';
-      wrap.style.cssText='position:fixed;left:-12000px;top:0;width:1440px;background:#edf5ff;padding:28px;z-index:-1;box-sizing:border-box';
-
-      const clone=panel.cloneNode(true);
-      wrap.appendChild(clone);
+      const {iso}=getDateParts();
+      wrap=buildExportStage();
+      if(!wrap) return;
       document.body.appendChild(wrap);
-
-      clone.querySelectorAll('.team-partial-summary,.team-partial-miniranks,.team-partial-actions,.team-partial-empty,.team-export-ranking-head').forEach(el=>el.remove());
-      clone.querySelectorAll('.team-partial-panel > :not(.team-partial-head):not(.team-partial-list)').forEach(function(el){
-        if(!el.classList.contains('team-partial-list')) el.remove();
-      });
-      const head=clone.querySelector('.team-partial-head');
-      if(head){
-        head.innerHTML = `
-          <div>
-            <span class="team-partial-eyebrow">ACOMPANHAMENTO PARCIAL</span>
-            <h3>Resultado parcial da equipe</h3>
-            <p>Cards individuais em ordem de classificação geral do dia.</p>
-          </div>
-          <span class="team-export-date">${br}</span>`;
-      }
-
-      applyExportCardStyles(clone);
+      applyExportCardStyles(wrap);
 
       if(document.fonts && document.fonts.ready){
         try{ await document.fonts.ready; }catch(e){}
       }
-      await new Promise(r=>setTimeout(r,120));
+      await new Promise(r=>setTimeout(r,160));
       await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
 
       const canvas=await window.html2canvas(wrap,{
-        scale:2.2,
+        scale:2,
         backgroundColor:'#edf5ff',
         useCORS:true,
         logging:false,
-        windowWidth:1440,
+        windowWidth:1820,
         imageTimeout:30000,
         scrollX:0,
         scrollY:0
@@ -1654,10 +1753,10 @@ body.seller-modal-open{overflow:hidden}
 
   function bindDownloadButton(){
     const btn=document.getElementById('teamPartialDownload');
-    if(!btn || btn.dataset.v104Bound==='1') return;
+    if(!btn || btn.dataset.v105Bound==='1') return;
     const fresh=btn.cloneNode(true);
     btn.replaceWith(fresh);
-    fresh.dataset.v104Bound='1';
+    fresh.dataset.v105Bound='1';
     fresh.addEventListener('click',function(ev){
       ev.preventDefault();
       ev.stopPropagation();
@@ -1667,7 +1766,11 @@ body.seller-modal-open{overflow:hidden}
 
   function init(){
     bindDownloadButton();
-    const observer=new MutationObserver(bindDownloadButton);
+    applyScreenEnhancements();
+    const observer=new MutationObserver(function(){
+      bindDownloadButton();
+      applyScreenEnhancements();
+    });
     observer.observe(document.body,{childList:true,subtree:true});
   }
 
