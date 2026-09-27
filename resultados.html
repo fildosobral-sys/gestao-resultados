@@ -1532,24 +1532,20 @@ body.seller-modal-open{overflow:hidden}
 .team-export-stage.export-cards-only .team-partial-row{break-inside:avoid;page-break-inside:avoid}
 </style>
 
-<style id="team-partial-v109-export-rankings">
-/* V109: exportação igual à tela + ranking compacto no topo */
+<style id="team-partial-v110-export-rankings-refine">
+/* V110: refino final da exportação com ranks + otimização visual */
 .team-export-stage.export-cards-with-ranks{font-family:inherit!important}
 .team-export-stage.export-cards-with-ranks .team-partial-panel{margin:0;padding:0;border:0;border-radius:22px;background:transparent;box-shadow:none;overflow:visible}
 .team-export-stage.export-cards-with-ranks .team-partial-head{display:flex;align-items:center;justify-content:space-between;border-radius:20px;padding:18px 22px;background:linear-gradient(135deg,#1878ea 0%,#7447e8 100%)}
-.team-export-stage.export-cards-with-ranks .team-partial-head h3{font-size:28px;line-height:1.04;margin:0}
-.team-export-stage.export-cards-with-ranks .team-partial-head p{display:block!important;margin:6px 0 0;font-size:12px;color:rgba(255,255,255,.84)}
+.team-export-stage.export-cards-with-ranks .team-partial-head h3{font-size:29px;line-height:1.04;margin:0}
+.team-export-stage.export-cards-with-ranks .team-partial-head p{display:block!important;margin:6px 0 0;font-size:12px;color:rgba(255,255,255,.86)}
 .team-export-stage.export-cards-with-ranks .team-partial-eyebrow{font-size:11px;letter-spacing:.14em;color:rgba(255,255,255,.86)}
 .team-export-stage.export-cards-with-ranks .team-export-date{font-size:18px;padding:10px 14px;border-radius:14px;background:rgba(255,255,255,.18);color:#fff}
-.team-export-stage.export-cards-with-ranks .team-export-ranking-head{display:flex!important;align-items:center;justify-content:space-between;gap:12px;margin:14px 0 8px;padding:0 8px}
-.team-export-stage.export-cards-with-ranks .team-export-ranking-head h4{margin:0;font-size:18px;line-height:1.1;color:#17324a}
-.team-export-stage.export-cards-with-ranks .team-export-ranking-head p{margin:3px 0 0;font-size:11px;color:#58708a;font-weight:600}
-.team-export-stage.export-cards-with-ranks .team-export-ranking-head>span{padding:6px 10px;border-radius:999px;background:#eef3f9;color:#5d728d;font-size:10px;font-weight:900;white-space:nowrap}
-.team-export-stage.export-cards-with-ranks .team-partial-miniranks{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 12px}
-.team-export-stage.export-cards-with-ranks .mini-rank-card{padding:10px 10px 9px;border-radius:14px;background:rgba(255,255,255,.92);border:1px solid rgba(219,228,238,.95)}
-.team-export-stage.export-cards-with-ranks .mini-rank-card header{margin-bottom:8px}
-.team-export-stage.export-cards-with-ranks .mini-rank-card h4{font-size:14px;font-weight:950;color:#17324a}
-.team-export-stage.export-cards-with-ranks .mini-rank-card header span{font-size:9px;padding:4px 7px;background:#f1f4f9;color:#61758e}
+.team-export-stage.export-cards-with-ranks .team-partial-miniranks{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:2px 0 10px}
+.team-export-stage.export-cards-with-ranks .mini-rank-card{padding:10px 10px 9px;border-radius:14px;background:rgba(255,255,255,.96);border:1px solid rgba(219,228,238,.95);box-shadow:0 6px 18px rgba(23,50,77,.05)}
+.team-export-stage.export-cards-with-ranks .mini-rank-card header{margin-bottom:8px;padding:7px 8px;border-radius:11px;background:linear-gradient(180deg,#fbfdff,#f2f6fb);box-shadow:inset 0 0 0 1px rgba(218,226,238,.85)}
+.team-export-stage.export-cards-with-ranks .mini-rank-card h4{font-size:14px;font-weight:950;color:#17324a;text-shadow:0 1px 0 rgba(255,255,255,.7)}
+.team-export-stage.export-cards-with-ranks .mini-rank-card header span{font-size:9px;padding:4px 7px;background:#eef3f9;color:#61758e;box-shadow:0 2px 6px rgba(55,85,116,.08)}
 .team-export-stage.export-cards-with-ranks .mini-rank-item{grid-template-columns:24px minmax(0,1fr) auto;gap:5px}
 .team-export-stage.export-cards-with-ranks .mini-rank-item b{font-size:9px}
 .team-export-stage.export-cards-with-ranks .mini-rank-item strong{font-size:11px}
@@ -1564,15 +1560,15 @@ body.seller-modal-open{overflow:hidden}
 .team-export-stage.export-cards-with-ranks .team-partial-person small{font-size:11px;padding:5px 9px}
 .team-export-stage.export-cards-with-ranks .team-partial-kpis{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:8px;align-self:stretch}
 .team-export-stage.export-cards-with-ranks .team-metric{background:rgba(255,255,255,.76);border:1px solid rgba(218,226,238,.82);border-radius:13px;padding:9px 10px;min-height:0;display:block}
-.team-export-stage.export-cards-with-ranks .team-metric-topline{min-height:0;gap:6px}
-.team-export-stage.export-cards-with-ranks .team-metric-topline>span{font-size:8px;letter-spacing:.03em;color:#60748f}
-.team-export-stage.export-cards-with-ranks .team-metric-topline>em{font-size:8px;padding:2px 5px}
+.team-export-stage.export-cards-with-ranks .team-metric-topline{min-height:0;gap:6px;align-items:center}
+.team-export-stage.export-cards-with-ranks .team-metric-topline>span{font-size:8.5px;letter-spacing:.03em;color:#60748f}
+.team-export-stage.export-cards-with-ranks .team-metric-topline>em{font-size:9.5px;padding:3px 7px;font-weight:900;border-radius:999px;box-shadow:0 2px 8px rgba(29,49,76,.08)}
 .team-export-stage.export-cards-with-ranks .team-metric>strong{font-size:18px;line-height:1.1;margin:3px 0 6px}
 .team-export-stage.export-cards-with-ranks .team-metric-scale{grid-template-columns:minmax(0,1fr) 46px;gap:5px;align-items:center;margin-top:0}
 .team-export-stage.export-cards-with-ranks .team-metric-track,.team-export-stage.export-cards-with-ranks .team-metric-excess{height:9px}
 .team-export-stage.export-cards-with-ranks .team-metric>small{font-size:8px;margin-top:4px}
 .team-export-stage.export-cards-with-ranks .team-metric-excess{opacity:1}
-.team-export-stage.export-cards-with-ranks .team-partial-summary,.team-export-stage.export-cards-with-ranks .team-partial-actions,.team-export-stage.export-cards-with-ranks .team-partial-empty,.team-export-stage.export-cards-with-ranks .pill{display:none!important}
+.team-export-stage.export-cards-with-ranks .team-partial-summary,.team-export-stage.export-cards-with-ranks .team-partial-actions,.team-export-stage.export-cards-with-ranks .team-partial-empty,.team-export-stage.export-cards-with-ranks .pill,.team-export-stage.export-cards-with-ranks .team-export-ranking-head{display:none!important}
 .team-export-stage.export-cards-with-ranks .team-partial-detail{display:none!important}
 .team-export-stage.export-cards-with-ranks .team-partial-row{break-inside:avoid;page-break-inside:avoid}
 </style>
@@ -1758,6 +1754,8 @@ body.seller-modal-open{overflow:hidden}
       const paragraph=head.querySelector('p');
       if(paragraph){
         paragraph.textContent='Acompanhamento por vendedor com mercantil, serviços, conversão e eficiência.';
+        const title=head.querySelector('h3');
+        if(title) title.textContent='Resultado parcial da equipe • Ranks do dia';
       }
       const date=document.createElement('span');
       date.className='team-export-date';
@@ -1767,10 +1765,7 @@ body.seller-modal-open{overflow:hidden}
 
     const miniRanks=clone.querySelector('.team-partial-miniranks');
     if(miniRanks && miniRanks.children.length){
-      const rankingHead=document.createElement('div');
-      rankingHead.className='team-export-ranking-head';
-      rankingHead.innerHTML='<div><h4>Rankings do dia</h4><p>Mercantil, serviços, conversão e eficiência em destaque.</p></div><span>Resumo por indicador</span>';
-      miniRanks.before(rankingHead);
+      miniRanks.style.marginTop='2px';
     }
 
     wrap.appendChild(clone);
@@ -1872,6 +1867,128 @@ body.seller-modal-open{overflow:hidden}
 @media(max-width:760px){.seller-period-card{grid-column:1/-1}.seller-day-head{grid-template-columns:minmax(0,1fr) auto 28px!important}.seller-day-detail{padding:0 12px 12px}.seller-day-detail>div:not(.seller-day-actions):not(.seller-day-occurrence){min-width:0}}
 </style>
 
+<style id="v110-chart-visual-refine">
+/* V110 — refino de leitura dos gráficos Mercantil × Eficiência */
+.dashboard-card.chart-density-tuned,.dashboard-card-expanded.chart-density-tuned{overflow:auto}
+.dashboard-card.chart-density-tuned .svg-chart,.dashboard-card-expanded.chart-density-tuned .svg-chart{display:block;height:auto}
+.dashboard-card.chart-density-tuned .svg-chart.chart-bars{min-width:980px}
+.dashboard-card.chart-density-tuned .svg-chart.chart-trend{min-width:760px}
+.dashboard-card-expanded.chart-density-tuned .svg-chart.chart-bars{min-width:1240px}
+.dashboard-card-expanded.chart-density-tuned .svg-chart.chart-trend{min-width:980px}
+.dashboard-card.chart-density-tuned h4,.dashboard-card-expanded.chart-density-tuned h4{letter-spacing:-.01em}
+.dashboard-card.chart-density-tuned .hint,.dashboard-card-expanded.chart-density-tuned .hint{line-height:1.45}
+.dashboard-card.chart-density-tuned .svg-chart text.value-label-fin,
+.dashboard-card.chart-density-tuned .svg-chart text.value-label-pct,
+.dashboard-card-expanded.chart-density-tuned .svg-chart text.value-label-fin,
+.dashboard-card-expanded.chart-density-tuned .svg-chart text.value-label-pct{font-weight:800}
+</style>
+<script id="v110-chart-visual-refine-script">
+(function(){
+  const TITLE_RX=/mercantil\s*[×x]\s*efici/i;
+  const TREND_RX=/tend[êe]ncia\s*:\s*mercantil\s*[×x]\s*efici/i;
+
+  function normalizeTitle(el){
+    return (el?.textContent||'').replace(/\s+/g,' ').trim();
+  }
+
+  function isTargetCard(card){
+    const title=normalizeTitle(card.querySelector('h4,strong,.dashboard-chart-modal-head strong'));
+    return TITLE_RX.test(title) || TREND_RX.test(title);
+  }
+
+  function isTrendCard(card){
+    const title=normalizeTitle(card.querySelector('h4,strong,.dashboard-chart-modal-head strong'));
+    return TREND_RX.test(title);
+  }
+
+  function intersects(a,b,padX=6,padY=3){
+    return !(a.right < b.left-padX || a.left > b.right+padX || a.bottom < b.top-padY || a.top > b.bottom+padY);
+  }
+
+  function setLabelStyle(textEl, isPct, isTrend){
+    textEl.classList.add(isPct?'value-label-pct':'value-label-fin');
+    textEl.style.fontSize = isTrend ? '9px' : '10px';
+    textEl.style.fontWeight = '800';
+  }
+
+  function nudgeLabel(textEl, dir, amount){
+    const rawY=parseFloat(textEl.getAttribute('y')||'NaN');
+    if(Number.isFinite(rawY)){
+      textEl.setAttribute('y', String(rawY + amount));
+    }else{
+      textEl.setAttribute('dy', dir==='up' ? '-0.6em' : '0.8em');
+    }
+  }
+
+  function tuneSvg(svg, mode, expanded){
+    if(!svg || svg.dataset.v110Tuned==='1') return;
+    svg.dataset.v110Tuned='1';
+    svg.classList.add(mode==='trend'?'chart-trend':'chart-bars');
+    const labels=[...svg.querySelectorAll('text')].filter(t=>/R\$|%/.test((t.textContent||'').trim()));
+    labels.forEach(t=>{
+      const txt=(t.textContent||'').trim();
+      setLabelStyle(t, /%/.test(txt), mode==='trend');
+    });
+
+    // primeira passada: reduzir um pouco e alternar deslocamento vertical para evitar colisão.
+    const visible=[];
+    labels.forEach((el, index)=>{
+      el.style.opacity='1';
+      const txt=(el.textContent||'').trim();
+      const isPct=/%/.test(txt);
+      let box=el.getBoundingClientRect();
+      let collision=visible.some(v=>intersects(box, v.box, 8, 4));
+      if(collision){
+        nudgeLabel(el, isPct?'up':'down', isPct ? -(mode==='trend'?10:8) : (mode==='trend'?10:8));
+        box=el.getBoundingClientRect();
+        collision=visible.some(v=>intersects(box, v.box, 8, 4));
+      }
+      if(collision){
+        el.style.fontSize = mode==='trend' ? '8px' : '9px';
+        box=el.getBoundingClientRect();
+        collision=visible.some(v=>intersects(box, v.box, 8, 4));
+      }
+      if(collision && index % 2 === 1){
+        el.style.opacity='0';
+      } else {
+        visible.push({el,box});
+      }
+    });
+  }
+
+  function tuneCard(card){
+    if(!card) return;
+    card.classList.add('chart-density-tuned');
+    const mode=isTrendCard(card)?'trend':'bars';
+    const expanded=card.classList.contains('dashboard-card-expanded');
+    const svg=card.querySelector('.svg-chart, svg');
+    if(svg){
+      tuneSvg(svg, mode, expanded);
+    }
+  }
+
+  function retuneTargets(){
+    document.querySelectorAll('.dashboard-card,.dashboard-card-expanded').forEach(card=>{
+      if(isTargetCard(card)) tuneCard(card);
+    });
+    const modal=document.querySelector('.dashboard-chart-modal:not([hidden])');
+    if(modal){
+      const strong=modal.querySelector('.dashboard-chart-modal-head strong');
+      if(TITLE_RX.test(normalizeTitle(strong))){
+        modal.querySelectorAll('.dashboard-card-expanded,.dashboard-card').forEach(card=>tuneCard(card));
+      }
+    }
+  }
+
+  const schedule=(()=>{let t; return ()=>{clearTimeout(t); t=setTimeout(retuneTargets,180);};})();
+  window.addEventListener('load', ()=>setTimeout(retuneTargets, 900));
+  document.addEventListener('click', schedule, true);
+  document.addEventListener('change', schedule, true);
+  document.addEventListener('input', schedule, true);
+  const mo=new MutationObserver(schedule);
+  mo.observe(document.documentElement,{childList:true,subtree:true});
+})();
+</script>
 <style id="seller-manager-v30-fixes">
 .seller-day-accordion.seller-day-hit{background:#f0fbf5;border-color:#b8e3ca}.seller-day-accordion.seller-day-hit .seller-day-head{background:#f7fcf9}
 .seller-day-accordion.seller-day-partial{background:#fffaf0;border-color:#efd48d}.seller-day-accordion.seller-day-partial .seller-day-head{background:#fffdf7}
