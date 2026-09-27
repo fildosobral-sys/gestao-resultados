@@ -795,6 +795,50 @@ body.seller-modal-open{overflow:hidden}
   .seller-dashboard-target .dashboard-chart-grid,#sellerProfile .seller-dashboard-shell .dashboard-chart-grid{grid-template-columns:1fr!important}
 }
 </style>
+
+<style id="v120-seller-dashboard-real-parity">
+/* V120 — correção real da paridade Vendedor x Filial.
+   O painel do vendedor é um modal próprio (z-index 99995 e largura 1180px),
+   portanto a V119 não conseguia reproduzir de fato a experiência da filial. */
+@media (min-width: 901px){
+  #sellerProfile.seller-manager-modal>article.panel:first-child:has(.seller-workspace-view.active .seller-dashboard-target){
+    width:min(1680px,calc(100vw - 36px))!important;
+    max-width:none!important;
+  }
+  #sellerProfile .seller-workspace-view.active .seller-dashboard-target .dashboard-chart-grid,
+  #sellerProfile .seller-workspace-view.active .seller-dashboard-target .branch-theme-mercservices .dashboard-chart-grid{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+    gap:12px!important;
+    align-items:stretch!important;
+  }
+  #sellerProfile .seller-workspace-view.active .seller-dashboard-target .dashboard-card{
+    min-width:0!important;
+    width:auto!important;
+    height:100%!important;
+  }
+}
+/* Em telas menores mantém empilhado por responsividade. */
+@media (max-width:900px){
+  #sellerProfile .seller-workspace-view.active .seller-dashboard-target .dashboard-chart-grid{
+    grid-template-columns:1fr!important;
+  }
+}
+/* O expandido precisa ficar ACIMA do modal do vendedor (sellerProfile = 99995). */
+#dashboardChartModal.dashboard-chart-modal{z-index:100500!important}
+#dashboardChartModal .dashboard-chart-modal-dialog{
+  width:min(1680px,96vw)!important;
+  max-width:none!important;
+  max-height:94vh!important;
+}
+#dashboardChartModal .dashboard-chart-modal-body{height:calc(94vh - 74px)!important}
+/* Garante o mesmo botão de expansão em todos os cards do vendedor. */
+#sellerProfile .seller-dashboard-target .dashboard-card{position:relative!important}
+#sellerProfile .seller-dashboard-target .dashboard-chart-expand{
+  display:inline-flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;
+}
+</style>
+
 </head>
 <body>
 <main class="app">
@@ -1134,7 +1178,7 @@ body.seller-modal-open{overflow:hidden}
 })();
 </script>
 <script src="cloud-sync.js?v=1"></script>
-<script src="resultados-v31.js?v=119"></script>
+<script src="resultados-v31.js?v=120"></script>
 
 <script id="results-meeting-backup-v26-js">
 (() => {
