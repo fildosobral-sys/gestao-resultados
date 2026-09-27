@@ -2902,7 +2902,7 @@
     modal.hidden = true;
     modal.dataset.landscapeLock = '0';
     modal.dataset.landscapeFullscreen = '0';
-    modal.innerHTML = '<div class="dashboard-chart-modal-dialog" role="dialog" aria-modal="true" aria-label="Gráfico ampliado"><div class="dashboard-chart-modal-head"><strong id="dashboardChartModalTitle">Gráfico</strong><div class="dashboard-chart-modal-actions"><div class="dashboard-chart-annotate-controls" aria-label="Anotações no gráfico"><button type="button" data-chart-pen aria-label="Caneta" title="Caneta">✎</button><button type="button" data-chart-eraser aria-label="Borracha" title="Borracha">⌫</button></div><div class="dashboard-chart-zoom-controls" aria-label="Controles de zoom"><button type="button" data-chart-zoom-out aria-label="Diminuir zoom">−</button><span data-chart-zoom-label>100%</span><button type="button" data-chart-zoom-in aria-label="Aumentar zoom">+</button><button type="button" data-chart-zoom-reset aria-label="Restaurar zoom">100%</button></div><button type="button" class="dashboard-chart-modal-close" aria-label="Fechar">×</button></div></div><div class="dashboard-chart-modal-body"></div></div>';
+    modal.innerHTML = '<div class="dashboard-chart-modal-dialog" role="dialog" aria-modal="true" aria-label="Gráfico ampliado"><div class="dashboard-chart-modal-head"><strong id="dashboardChartModalTitle">Gráfico</strong><div class="dashboard-chart-modal-actions"><div class="dashboard-chart-annotate-controls" aria-label="Ferramentas do gráfico"><button type="button" data-chart-pan aria-label="Mouse / mover gráfico" title="Mouse / mover gráfico">🖱️</button><button type="button" data-chart-pen aria-label="Caneta" title="Caneta">✏️</button><button type="button" data-chart-eraser aria-label="Borracha" title="Borracha">🧽</button></div><div class="dashboard-chart-zoom-controls" aria-label="Controles de zoom"><button type="button" data-chart-zoom-out aria-label="Diminuir zoom">−</button><span data-chart-zoom-label>80%</span><button type="button" data-chart-zoom-in aria-label="Aumentar zoom">+</button><button type="button" data-chart-zoom-reset aria-label="Restaurar enquadramento">80%</button></div><button type="button" class="dashboard-chart-modal-close" aria-label="Fechar">×</button></div></div><div class="dashboard-chart-modal-body"></div></div>';
     document.body.appendChild(modal);
     const close = async () => {
       const state = { locked: modal.dataset.landscapeLock === '1', fullscreen: modal.dataset.landscapeFullscreen === '1' };
@@ -2944,23 +2944,28 @@
     stage.appendChild(surface);
     body.appendChild(stage);
 
-    let zoom = 1, baseW = 0, baseH = 0;
+    let zoom = .8, baseW = 0, baseH = 0;
     let dragging = false, startX = 0, startY = 0, startLeft = 0, startTop = 0;
     let drawMode = 'pan', activeStroke = null;
     let strokes = loadDashboardChartNotes(noteKey);
     const label = modal.querySelector('[data-chart-zoom-label]');
+    const panBtn = modal.querySelector('[data-chart-pan]');
     const penBtn = modal.querySelector('[data-chart-pen]');
     const eraserBtn = modal.querySelector('[data-chart-eraser]');
 
     const setMode = (mode) => {
-      drawMode = drawMode === mode ? 'pan' : mode;
+      drawMode = mode === 'pen' || mode === 'eraser' ? mode : 'pan';
+      panBtn?.classList.toggle('active', drawMode === 'pan');
       penBtn?.classList.toggle('active', drawMode === 'pen');
       eraserBtn?.classList.toggle('active', drawMode === 'eraser');
       body.classList.toggle('draw-mode', drawMode !== 'pan');
+      body.classList.toggle('pan-mode', drawMode === 'pan');
       ink.style.pointerEvents = drawMode === 'pan' ? 'none' : 'auto';
     };
+    panBtn && (panBtn.onclick = () => setMode('pan'));
     penBtn && (penBtn.onclick = () => setMode('pen'));
     eraserBtn && (eraserBtn.onclick = () => setMode('eraser'));
+    setMode('pan');
 
     const pathFor = (stroke) => {
       const pts = stroke.points || [];
@@ -3001,7 +3006,7 @@
     };
     const apply = (next, anchorX=null, anchorY=null) => {
       const old = zoom;
-      zoom = Math.max(.75, Math.min(4, Math.round(next * 100) / 100));
+      zoom = Math.max(.5, Math.min(4, Math.round(next * 100) / 100));
       const rect = body.getBoundingClientRect();
       const ax = anchorX==null ? rect.width/2 : anchorX-rect.left;
       const ay = anchorY==null ? rect.height/2 : anchorY-rect.top;
@@ -3019,7 +3024,7 @@
     };
     modal.querySelector('[data-chart-zoom-in]')?.addEventListener('click', () => apply(zoom + .25));
     modal.querySelector('[data-chart-zoom-out]')?.addEventListener('click', () => apply(zoom - .25));
-    modal.querySelector('[data-chart-zoom-reset]')?.addEventListener('click', () => { apply(1); requestAnimationFrame(()=>{body.scrollLeft=0;body.scrollTop=0;}); });
+    modal.querySelector('[data-chart-zoom-reset]')?.addEventListener('click', () => { apply(.8); requestAnimationFrame(()=>{body.scrollLeft=0;body.scrollTop=0;}); });
     body.onwheel = (e) => {
       if (!(e.ctrlKey || e.metaKey || e.altKey)) return;
       e.preventDefault();
@@ -3030,7 +3035,7 @@
       return [Math.max(0, Math.min(baseW, (e.clientX-r.left) * baseW / Math.max(1,r.width))), Math.max(0, Math.min(baseH, (e.clientY-r.top) * baseH / Math.max(1,r.height)))];
     };
     const eraseAt = (pt) => {
-      const threshold = 13 / Math.max(.75, zoom);
+      const threshold = 13 / Math.max(.5, zoom);
       let removed = false;
       strokes = strokes.filter((stroke) => {
         const hit = (stroke.points||[]).some(p => Math.hypot(p[0]-pt[0],p[1]-pt[1]) <= threshold);
@@ -3077,8 +3082,17 @@
     const endPan = (e) => { dragging = false; body.classList.remove('is-panning'); try { body.releasePointerCapture(e.pointerId); } catch (_) {} };
     body.onpointerup = endPan;
     body.onpointercancel = endPan;
-    requestAnimationFrame(() => { measure(); apply(1); });
-    if (document.fonts?.ready) document.fonts.ready.then(()=>requestAnimationFrame(()=>{measure();apply(zoom);})).catch(()=>{});
+    const fitInitialView = () => {
+      measure();
+      const usableW = Math.max(1, body.clientWidth - 6);
+      const usableH = Math.max(1, body.clientHeight - 6);
+      const fit = Math.min(.8, usableW / Math.max(1, baseW), usableH / Math.max(1, baseH));
+      apply(Math.max(.5, Math.min(.8, fit)));
+      requestAnimationFrame(()=>{ body.scrollLeft = 0; body.scrollTop = 0; });
+    };
+    requestAnimationFrame(fitInitialView);
+    if (document.fonts?.ready) document.fonts.ready.then(()=>requestAnimationFrame(fitInitialView)).catch(()=>{});
+    modal.__chartZoomRefresh = () => requestAnimationFrame(fitInitialView);
   }
 
   function openDashboardChartModal(card) {
@@ -3126,6 +3140,7 @@
       modal.dataset.landscapeLock = state.locked ? '1' : '0';
       modal.dataset.landscapeFullscreen = '0';
       modal.classList.toggle('virtual-landscape', isLandscapeModal && !state.locked);
+      setTimeout(() => { try { modal.__chartZoomRefresh?.(); } catch (_) {} }, 80);
     });
   }
   document.addEventListener('click', event => {

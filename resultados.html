@@ -1933,6 +1933,20 @@ body.seller-modal-open{overflow:hidden}
 .dashboard-chart-modal-actions{flex-wrap:wrap;justify-content:flex-end}
 @media(max-width:760px){.dashboard-chart-annotate-controls{padding:3px}.dashboard-chart-annotate-controls button{width:30px;height:30px}.dashboard-chart-modal-actions{gap:5px!important}}
 </style>
+
+<style id="v116-chart-modal-ux">
+/* V116 — enquadramento inicial amplo, mouse padrão e barras de rolagem invisíveis */
+.dashboard-chart-modal-dialog{width:min(1420px,96vw)!important;max-height:94vh!important}
+.dashboard-chart-modal-body{scrollbar-width:none!important;-ms-overflow-style:none!important;padding:12px 14px 16px!important}
+.dashboard-chart-modal-body::-webkit-scrollbar{width:0!important;height:0!important;display:none!important}
+.dashboard-chart-modal-body.pan-mode{cursor:grab!important}
+.dashboard-chart-modal-body.pan-mode.is-panning{cursor:grabbing!important}
+.dashboard-chart-annotate-controls button[data-chart-pan]{font-size:16px}
+.dashboard-chart-annotate-controls button.active{background:#24415f!important;color:#fff!important;box-shadow:0 0 0 2px rgba(36,65,95,.14)!important}
+.dashboard-chart-zoom-stage{overflow:visible!important}
+.dashboard-chart-modal-head{flex:0 0 auto}
+@media(min-width:761px){.dashboard-chart-modal-body{min-height:0;height:calc(94vh - 86px)!important}}
+</style>
 </body>
 </html>
 
