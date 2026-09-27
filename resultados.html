@@ -849,7 +849,7 @@ body.seller-modal-open{overflow:hidden}
         <div class="team-partial-actions">
           <button class="btn primary" type="button" id="teamPartialManual">✍️ Preencher manualmente</button>
           <button class="btn soft" type="button" id="teamPartialImport">📥 Importar relatório</button>
-          <button class="btn success" type="button" id="teamPartialDownload">⬇️ Baixar resultado parcial</button>
+          <button class="btn success" type="button" id="teamPartialDownloadV108">⬇️ Baixar resultado parcial</button>
         </div>
         <div class="team-partial-empty" id="teamPartialEmpty" hidden></div>
         <div class="team-partial-list" id="teamPartialResult"></div>
@@ -1523,7 +1523,16 @@ body.seller-modal-open{overflow:hidden}
 <script src="pwa-update.js?v=3"></script>
 <script src="resultados-parcial-v5.js?v=5"></script>
 
-<script id="team-partial-v107-export">
+
+<style id="team-partial-v108-export-fix">
+/* V108: exportador isolado do legado. A imagem reproduz apenas cabeçalho + cards atuais. */
+.team-export-stage.export-cards-only{font-family:inherit!important}
+.team-export-stage.export-cards-only .team-partial-detail{display:none!important}
+.team-export-stage.export-cards-only .team-partial-kpis{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+.team-export-stage.export-cards-only .team-partial-row{break-inside:avoid;page-break-inside:avoid}
+</style>
+
+<script id="team-partial-v108-export">
 (function(){
   function loadScript(src){
     return new Promise(function(resolve,reject){
@@ -1761,11 +1770,11 @@ body.seller-modal-open{overflow:hidden}
   }
 
   function bindDownloadButton(){
-    const btn=document.getElementById('teamPartialDownload');
-    if(!btn || btn.dataset.v107Bound==='1') return;
+    const btn=document.getElementById('teamPartialDownloadV108');
+    if(!btn || btn.dataset.v108Bound==='1') return;
     const fresh=btn.cloneNode(true);
     btn.replaceWith(fresh);
-    fresh.dataset.v107Bound='1';
+    fresh.dataset.v108Bound='1';
     fresh.addEventListener('click',function(ev){
       ev.preventDefault();
       ev.stopPropagation();
