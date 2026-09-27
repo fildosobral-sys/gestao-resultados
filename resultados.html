@@ -1107,7 +1107,7 @@ body.seller-modal-open{overflow:hidden}
 })();
 </script>
 <script src="cloud-sync.js?v=1"></script>
-<script src="resultados-v31.js?v=113"></script>
+<script src="resultados-v31.js?v=114"></script>
 
 <script id="results-meeting-backup-v26-js">
 (() => {
@@ -1903,6 +1903,20 @@ body.seller-modal-open{overflow:hidden}
 
 <style id="v113-dashboard-comparison">
 .dashboard-year-legend{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin:8px 0 6px;font-size:.78rem;font-weight:800;color:#53677b}.dashboard-year-legend span{display:inline-flex;align-items:center;gap:6px}.dashboard-year-legend i{display:inline-block;width:12px;height:12px;border-radius:3px}.dashboard-year-compare{width:100%;min-height:270px}.dual-chart-legend i.eff{background:linear-gradient(90deg,#e55367 0 33%,#f2b233 33% 66%,#22b573 66% 100%)!important}@media(max-width:760px){.dashboard-year-compare{min-width:760px}.dashboard-card:has(.dashboard-year-compare){overflow-x:auto!important}}
+</style>
+
+<style id="v114-chart-zoom-pan">
+/* V114 — zoom/pan nos gráficos ampliados + leitura mercantil */
+.dashboard-chart-modal-head .dashboard-chart-modal-actions{display:flex;align-items:center;gap:10px}
+.dashboard-chart-zoom-controls{display:flex;align-items:center;gap:6px;padding:4px 6px;border:1px solid #dce6f1;border-radius:12px;background:rgba(255,255,255,.92)}
+.dashboard-chart-zoom-controls button{min-width:34px;height:32px;padding:0 8px;border:0;border-radius:8px;background:#eef4fb;color:#24415f;font-weight:900;font-size:16px;cursor:pointer}
+.dashboard-chart-zoom-controls button[data-chart-zoom-reset]{font-size:11px;min-width:48px}
+.dashboard-chart-zoom-controls span{min-width:48px;text-align:center;font-size:12px;font-weight:900;color:#3b536b}
+.dashboard-chart-modal-body{overscroll-behavior:contain;cursor:grab;touch-action:pan-x pan-y}
+.dashboard-chart-modal-body.is-panning{cursor:grabbing;user-select:none}
+.dashboard-chart-modal-body>.dashboard-card-expanded{transform-origin:top left}
+.dashboard-card-expanded.dual-chart-card .dual-value-label.merc{letter-spacing:.02px}
+@media(max-width:760px){.dashboard-chart-zoom-controls{gap:3px;padding:3px}.dashboard-chart-zoom-controls button{min-width:30px;height:30px}.dashboard-chart-zoom-controls span{min-width:40px}.dashboard-chart-modal-head{padding:10px 12px}.dashboard-chart-modal-head strong{font-size:16px}}
 </style>
 </body>
 </html>

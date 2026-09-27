@@ -1727,10 +1727,15 @@
         const labelY=v>=0?Math.max(top+14,yy-(expanded?posOffsets[lane]:[11,23,35][lane])):Math.min(H-bottom-4,yy+hh+(expanded?negOffsets[lane]:[15,27,39][lane]));
         const kind=j===0?'merc':'eff', target=j===0?mercTargets[i]:7, color=dualMetricTone(v,kind,target), dark=dualMetricDarkTone(v,kind,target), gid=`bd-${i}-${j}-${expanded?1:0}`;
         const txt=j===0?brl.format(v):`${Number(v).toFixed(2).replace('.',',')}%`;
+        const mercInside = hh >= (expanded ? 62 : 48);
+        const mercLabelY = yy + Math.min(hh - 8, Math.max(16, hh / 2));
+        const mercLabel = mercInside
+          ? `<text x="${xx+bw/2}" y="${mercLabelY}" text-anchor="middle" fill="#fff" font-size="${expanded?7.2:6.4}" font-weight="900" class="dual-value-label merc" transform="rotate(-90 ${xx+bw/2} ${mercLabelY})" style="paint-order:stroke;stroke:rgba(0,0,0,.22);stroke-width:.55px;letter-spacing:.05px">${txt}</text>`
+          : `<text x="${xx+bw/2}" y="${Math.max(top+12,yy-6)}" text-anchor="middle" fill="${dark}" font-size="${expanded?6.4:5.8}" font-weight="900" class="dual-value-label merc" style="paint-order:stroke;stroke:#fff;stroke-width:${expanded?1.8:1.2}px;stroke-linejoin:round">${txt}</text>`;
         const label = j===0
-          ? `<text x="${xx+bw/2}" y="${Math.min(zeroY-5,yy+16)}" text-anchor="middle" fill="#fff" font-size="${expanded?6.2:5.8}" font-weight="900" class="dual-value-label merc" style="paint-order:stroke;stroke:${dark};stroke-width:.45px">${txt}</text>`
+          ? mercLabel
           : `<text x="${xx+bw/2}" y="${labelY}" text-anchor="middle" fill="${dark}" font-size="${expanded?6.1:5.7}" font-weight="900" class="dual-value-label eff" style="paint-order:stroke;stroke:#fff;stroke-width:${expanded?2.0:1.35}px;stroke-linejoin:round">${txt}</text>`;
-        return `<defs><linearGradient id="${gid}" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${color}"/><stop offset="1" stop-color="${dark}"/></linearGradient></defs><rect x="${xx}" y="${yy}" width="${bw}" height="${hh}" rx="4" fill="url(#${gid})"/>${label}`;
+        return `<defs><linearGradient id="${gid}" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${color}"/><stop offset="1" stop-color="${dark}"/></linearGradient></defs><rect x="${xx}" y="${yy}" width="${bw}" height="${hh}" rx="4" fill="url(#${gid})"><title>${esc(labels[i])} • ${kind==='merc'?'Venda mercantil '+brl.format(v):'Eficiência '+Number(v).toFixed(2).replace('.',',')+'%'}</title></rect>${label}`;
       }).join('');
     }).join('');
     return `<div class="dual-chart-legend"><span><i class="merc"></i>Venda mercantil (meta do dia)</span><span><i class="eff"></i>Eficiência (%)</span></div><div class="dual-chart-scroll"><svg class="svg-chart dual-compare-svg" style="width:${W}px;min-width:${W}px;max-width:none" viewBox="0 0 ${W} ${H}" role="img">${grid}<line x1="${left}" y1="${zeroY}" x2="${W-right}" y2="${zeroY}" stroke="#9aa9ba" stroke-width="1.4"/>${bars}${labs}</svg></div>`;
@@ -2897,7 +2902,7 @@
     modal.hidden = true;
     modal.dataset.landscapeLock = '0';
     modal.dataset.landscapeFullscreen = '0';
-    modal.innerHTML = '<div class="dashboard-chart-modal-dialog" role="dialog" aria-modal="true" aria-label="Gráfico ampliado"><div class="dashboard-chart-modal-head"><strong id="dashboardChartModalTitle">Gráfico</strong><button type="button" class="dashboard-chart-modal-close" aria-label="Fechar">×</button></div><div class="dashboard-chart-modal-body"></div></div>';
+    modal.innerHTML = '<div class="dashboard-chart-modal-dialog" role="dialog" aria-modal="true" aria-label="Gráfico ampliado"><div class="dashboard-chart-modal-head"><strong id="dashboardChartModalTitle">Gráfico</strong><div class="dashboard-chart-modal-actions"><div class="dashboard-chart-zoom-controls" aria-label="Controles de zoom"><button type="button" data-chart-zoom-out aria-label="Diminuir zoom">−</button><span data-chart-zoom-label>100%</span><button type="button" data-chart-zoom-in aria-label="Aumentar zoom">+</button><button type="button" data-chart-zoom-reset aria-label="Restaurar zoom">100%</button></div><button type="button" class="dashboard-chart-modal-close" aria-label="Fechar">×</button></div></div><div class="dashboard-chart-modal-body"></div></div>';
     document.body.appendChild(modal);
     const close = async () => {
       const state = { locked: modal.dataset.landscapeLock === '1', fullscreen: modal.dataset.landscapeFullscreen === '1' };
@@ -2913,6 +2918,55 @@
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.hidden) close(); });
     return modal;
   }
+  function setupDashboardChartZoom(modal, body, clone) {
+    if (!modal || !body || !clone) return;
+    let zoom = 1;
+    let dragging = false, startX = 0, startY = 0, startLeft = 0, startTop = 0;
+    const label = modal.querySelector('[data-chart-zoom-label]');
+    const apply = (next, anchorX=null, anchorY=null) => {
+      const old = zoom;
+      zoom = Math.max(.75, Math.min(3, Math.round(next * 100) / 100));
+      const rect = body.getBoundingClientRect();
+      const ax = anchorX==null ? rect.width/2 : anchorX-rect.left;
+      const ay = anchorY==null ? rect.height/2 : anchorY-rect.top;
+      const contentX = (body.scrollLeft + ax) / old;
+      const contentY = (body.scrollTop + ay) / old;
+      clone.style.zoom = String(zoom);
+      clone.dataset.chartZoom = String(zoom);
+      if (label) label.textContent = `${Math.round(zoom*100)}%`;
+      requestAnimationFrame(() => {
+        body.scrollLeft = Math.max(0, contentX * zoom - ax);
+        body.scrollTop = Math.max(0, contentY * zoom - ay);
+      });
+    };
+    modal.querySelector('[data-chart-zoom-in]')?.addEventListener('click', () => apply(zoom + .25));
+    modal.querySelector('[data-chart-zoom-out]')?.addEventListener('click', () => apply(zoom - .25));
+    modal.querySelector('[data-chart-zoom-reset]')?.addEventListener('click', () => { apply(1); requestAnimationFrame(()=>{body.scrollLeft=0;body.scrollTop=0;}); });
+    body.onwheel = (e) => {
+      if (!(e.ctrlKey || e.metaKey || e.altKey)) return;
+      e.preventDefault();
+      apply(zoom + (e.deltaY < 0 ? .15 : -.15), e.clientX, e.clientY);
+    };
+    body.onpointerdown = (e) => {
+      if (e.pointerType === 'touch' || e.button === 0) {
+        dragging = true; startX = e.clientX; startY = e.clientY; startLeft = body.scrollLeft; startTop = body.scrollTop;
+        body.classList.add('is-panning');
+        try { body.setPointerCapture(e.pointerId); } catch (_) {}
+      }
+    };
+    body.onpointermove = (e) => {
+      if (!dragging) return;
+      const dx = e.clientX - startX, dy = e.clientY - startY;
+      if (Math.abs(dx) + Math.abs(dy) < 3) return;
+      body.scrollLeft = startLeft - dx;
+      body.scrollTop = startTop - dy;
+    };
+    const endPan = (e) => { dragging = false; body.classList.remove('is-panning'); try { body.releasePointerCapture(e.pointerId); } catch (_) {} };
+    body.onpointerup = endPan;
+    body.onpointercancel = endPan;
+    apply(1);
+  }
+
   function openDashboardChartModal(card) {
     if (!card) return;
     const modal = ensureDashboardChartModal();
@@ -2944,6 +2998,7 @@
       if (newSvg) oldSvg.replaceWith(newSvg);
     }
     body.appendChild(clone);
+    setupDashboardChartZoom(modal, body, clone);
     const isLandscapeModal = shouldUseLandscapeChartModal();
     ensureManagerLandscapeFallbackCss();
     modal.classList.toggle('mobile-landscape', isLandscapeModal);
