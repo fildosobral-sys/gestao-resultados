@@ -768,6 +768,33 @@ body.seller-modal-open{overflow:hidden}
 @media(max-width:760px){#goalSuggestionCards .history-card{border-left-width:4px!important}#goalSuggestionCards .history-card::before{height:72px}}
 </style>
 
+
+<style id="v119-seller-dashboard-parity">
+/* V119 — dashboard do vendedor segue o mesmo padrão visual/interativo da filial */
+@media (min-width:761px){
+  .seller-dashboard-target .dashboard-chart-grid,
+  #sellerProfile .seller-dashboard-shell .dashboard-chart-grid{
+    display:grid!important;
+    grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)!important;
+    gap:10px!important;
+    align-items:stretch!important;
+  }
+  .seller-dashboard-target .dashboard-card,
+  #sellerProfile .seller-dashboard-shell .dashboard-card{min-width:0!important;height:100%!important}
+}
+/* mantém o botão de expandir disponível também nos comparativos anuais do vendedor */
+#sellerProfile .seller-dashboard-shell .dashboard-card .dashboard-chart-expand,
+.seller-dashboard-target .dashboard-card .dashboard-chart-expand{
+  display:inline-flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;
+}
+/* o modal expandido é único para filial e vendedor: tela ampla + ferramentas completas */
+.dashboard-chart-modal-dialog{width:min(1420px,96vw)!important;max-height:94vh!important;padding:0!important;overflow:hidden!important}
+.dashboard-chart-modal-head{padding:16px 20px!important;margin:0!important}
+.dashboard-chart-modal-body{height:calc(94vh - 74px)!important;min-height:0!important;padding:12px 14px 16px!important;overflow:auto!important}
+@media(max-width:760px){
+  .seller-dashboard-target .dashboard-chart-grid,#sellerProfile .seller-dashboard-shell .dashboard-chart-grid{grid-template-columns:1fr!important}
+}
+</style>
 </head>
 <body>
 <main class="app">
@@ -1107,7 +1134,7 @@ body.seller-modal-open{overflow:hidden}
 })();
 </script>
 <script src="cloud-sync.js?v=1"></script>
-<script src="resultados-v31.js?v=114"></script>
+<script src="resultados-v31.js?v=119"></script>
 
 <script id="results-meeting-backup-v26-js">
 (() => {
