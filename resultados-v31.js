@@ -2902,7 +2902,7 @@
     modal.hidden = true;
     modal.dataset.landscapeLock = '0';
     modal.dataset.landscapeFullscreen = '0';
-    modal.innerHTML = '<div class="dashboard-chart-modal-dialog" role="dialog" aria-modal="true" aria-label="Gráfico ampliado"><div class="dashboard-chart-modal-head"><strong id="dashboardChartModalTitle">Gráfico</strong><div class="dashboard-chart-modal-actions"><div class="dashboard-chart-zoom-controls" aria-label="Controles de zoom"><button type="button" data-chart-zoom-out aria-label="Diminuir zoom">−</button><span data-chart-zoom-label>100%</span><button type="button" data-chart-zoom-in aria-label="Aumentar zoom">+</button><button type="button" data-chart-zoom-reset aria-label="Restaurar zoom">100%</button></div><button type="button" class="dashboard-chart-modal-close" aria-label="Fechar">×</button></div></div><div class="dashboard-chart-modal-body"></div></div>';
+    modal.innerHTML = '<div class="dashboard-chart-modal-dialog" role="dialog" aria-modal="true" aria-label="Gráfico ampliado"><div class="dashboard-chart-modal-head"><strong id="dashboardChartModalTitle">Gráfico</strong><div class="dashboard-chart-modal-actions"><div class="dashboard-chart-annotate-controls" aria-label="Anotações no gráfico"><button type="button" data-chart-pen aria-label="Caneta" title="Caneta">✎</button><button type="button" data-chart-eraser aria-label="Borracha" title="Borracha">⌫</button></div><div class="dashboard-chart-zoom-controls" aria-label="Controles de zoom"><button type="button" data-chart-zoom-out aria-label="Diminuir zoom">−</button><span data-chart-zoom-label>100%</span><button type="button" data-chart-zoom-in aria-label="Aumentar zoom">+</button><button type="button" data-chart-zoom-reset aria-label="Restaurar zoom">100%</button></div><button type="button" class="dashboard-chart-modal-close" aria-label="Fechar">×</button></div></div><div class="dashboard-chart-modal-body"></div></div>';
     document.body.appendChild(modal);
     const close = async () => {
       const state = { locked: modal.dataset.landscapeLock === '1', fullscreen: modal.dataset.landscapeFullscreen === '1' };
@@ -2918,20 +2918,98 @@
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.hidden) close(); });
     return modal;
   }
-  function setupDashboardChartZoom(modal, body, clone) {
+  function dashboardChartAnnotationKey(card, title) {
+    const view = card?.closest('.view')?.id || document.querySelector('.view.active')?.id || 'dashboard';
+    const scope = document.getElementById('scopeQuick')?.value || 'branch';
+    const seller = document.querySelector('#sellerProfile .profile-title h2')?.textContent?.trim() || '';
+    return ['fs-chart-note-v1', view, scope, seller, title || 'grafico', card?.dataset?.chartMetric || '', card?.dataset?.chartType || ''].join('|');
+  }
+  function loadDashboardChartNotes(key) {
+    try { return JSON.parse(localStorage.getItem(key) || '[]') || []; } catch (_) { return []; }
+  }
+  function saveDashboardChartNotes(key, strokes) {
+    try { localStorage.setItem(key, JSON.stringify(strokes || [])); } catch (_) {}
+  }
+  function setupDashboardChartZoom(modal, body, clone, noteKey) {
     if (!modal || !body || !clone) return;
-    let zoom = 1;
+    body.innerHTML = '';
+    const stage = document.createElement('div');
+    stage.className = 'dashboard-chart-zoom-stage';
+    const surface = document.createElement('div');
+    surface.className = 'dashboard-chart-zoom-surface';
+    const ink = document.createElementNS('http://www.w3.org/2000/svg','svg');
+    ink.classList.add('dashboard-chart-ink');
+    surface.appendChild(clone);
+    surface.appendChild(ink);
+    stage.appendChild(surface);
+    body.appendChild(stage);
+
+    let zoom = 1, baseW = 0, baseH = 0;
     let dragging = false, startX = 0, startY = 0, startLeft = 0, startTop = 0;
+    let drawMode = 'pan', activeStroke = null;
+    let strokes = loadDashboardChartNotes(noteKey);
     const label = modal.querySelector('[data-chart-zoom-label]');
+    const penBtn = modal.querySelector('[data-chart-pen]');
+    const eraserBtn = modal.querySelector('[data-chart-eraser]');
+
+    const setMode = (mode) => {
+      drawMode = drawMode === mode ? 'pan' : mode;
+      penBtn?.classList.toggle('active', drawMode === 'pen');
+      eraserBtn?.classList.toggle('active', drawMode === 'eraser');
+      body.classList.toggle('draw-mode', drawMode !== 'pan');
+      ink.style.pointerEvents = drawMode === 'pan' ? 'none' : 'auto';
+    };
+    penBtn && (penBtn.onclick = () => setMode('pen'));
+    eraserBtn && (eraserBtn.onclick = () => setMode('eraser'));
+
+    const pathFor = (stroke) => {
+      const pts = stroke.points || [];
+      if (!pts.length) return '';
+      return pts.map((p,i)=>`${i?'L':'M'} ${p[0].toFixed(2)} ${p[1].toFixed(2)}`).join(' ');
+    };
+    const renderInk = () => {
+      ink.innerHTML = '';
+      strokes.forEach((stroke) => {
+        const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+        path.setAttribute('d', pathFor(stroke));
+        path.setAttribute('fill','none');
+        path.setAttribute('stroke', stroke.color || '#d92d3f');
+        path.setAttribute('stroke-width', String(stroke.width || 3.2));
+        path.setAttribute('stroke-linecap','round');
+        path.setAttribute('stroke-linejoin','round');
+        path.setAttribute('vector-effect','non-scaling-stroke');
+        ink.appendChild(path);
+      });
+    };
+    const measure = () => {
+      const prev = surface.style.transform;
+      surface.style.transform = 'scale(1)';
+      surface.style.width = 'auto';
+      surface.style.height = 'auto';
+      baseW = Math.max(body.clientWidth - 2, clone.scrollWidth, clone.offsetWidth, 720);
+      clone.style.width = `${baseW}px`;
+      baseH = Math.max(clone.scrollHeight, clone.offsetHeight, 320);
+      surface.style.width = `${baseW}px`;
+      surface.style.height = `${baseH}px`;
+      ink.setAttribute('viewBox', `0 0 ${baseW} ${baseH}`);
+      ink.setAttribute('width', String(baseW));
+      ink.setAttribute('height', String(baseH));
+      surface.style.transform = prev || `scale(${zoom})`;
+      stage.style.width = `${Math.ceil(baseW * zoom)}px`;
+      stage.style.height = `${Math.ceil(baseH * zoom)}px`;
+      renderInk();
+    };
     const apply = (next, anchorX=null, anchorY=null) => {
       const old = zoom;
-      zoom = Math.max(.75, Math.min(3, Math.round(next * 100) / 100));
+      zoom = Math.max(.75, Math.min(4, Math.round(next * 100) / 100));
       const rect = body.getBoundingClientRect();
       const ax = anchorX==null ? rect.width/2 : anchorX-rect.left;
       const ay = anchorY==null ? rect.height/2 : anchorY-rect.top;
       const contentX = (body.scrollLeft + ax) / old;
       const contentY = (body.scrollTop + ay) / old;
-      clone.style.zoom = String(zoom);
+      surface.style.transform = `scale(${zoom})`;
+      stage.style.width = `${Math.ceil(baseW * zoom)}px`;
+      stage.style.height = `${Math.ceil(baseH * zoom)}px`;
       clone.dataset.chartZoom = String(zoom);
       if (label) label.textContent = `${Math.round(zoom*100)}%`;
       requestAnimationFrame(() => {
@@ -2947,7 +3025,42 @@
       e.preventDefault();
       apply(zoom + (e.deltaY < 0 ? .15 : -.15), e.clientX, e.clientY);
     };
+    const toPoint = (e) => {
+      const r = surface.getBoundingClientRect();
+      return [Math.max(0, Math.min(baseW, (e.clientX-r.left) * baseW / Math.max(1,r.width))), Math.max(0, Math.min(baseH, (e.clientY-r.top) * baseH / Math.max(1,r.height)))];
+    };
+    const eraseAt = (pt) => {
+      const threshold = 13 / Math.max(.75, zoom);
+      let removed = false;
+      strokes = strokes.filter((stroke) => {
+        const hit = (stroke.points||[]).some(p => Math.hypot(p[0]-pt[0],p[1]-pt[1]) <= threshold);
+        removed ||= hit; return !hit;
+      });
+      if (removed) { renderInk(); saveDashboardChartNotes(noteKey, strokes); }
+    };
+    ink.onpointerdown = (e) => {
+      if (drawMode === 'pen') {
+        e.preventDefault(); e.stopPropagation();
+        activeStroke = {color:'#d92d3f',width:3.2,points:[toPoint(e)]};
+        strokes.push(activeStroke); renderInk();
+        try { ink.setPointerCapture(e.pointerId); } catch (_) {}
+      } else if (drawMode === 'eraser') {
+        e.preventDefault(); e.stopPropagation(); eraseAt(toPoint(e));
+        try { ink.setPointerCapture(e.pointerId); } catch (_) {}
+      }
+    };
+    ink.onpointermove = (e) => {
+      if (drawMode === 'pen' && activeStroke) { activeStroke.points.push(toPoint(e)); renderInk(); }
+      else if (drawMode === 'eraser' && e.buttons) eraseAt(toPoint(e));
+    };
+    ink.onpointerup = (e) => {
+      if (activeStroke) { activeStroke = null; saveDashboardChartNotes(noteKey, strokes); }
+      try { ink.releasePointerCapture(e.pointerId); } catch (_) {}
+    };
+    ink.onpointercancel = ink.onpointerup;
+
     body.onpointerdown = (e) => {
+      if (drawMode !== 'pan') return;
       if (e.pointerType === 'touch' || e.button === 0) {
         dragging = true; startX = e.clientX; startY = e.clientY; startLeft = body.scrollLeft; startTop = body.scrollTop;
         body.classList.add('is-panning');
@@ -2955,7 +3068,7 @@
       }
     };
     body.onpointermove = (e) => {
-      if (!dragging) return;
+      if (!dragging || drawMode !== 'pan') return;
       const dx = e.clientX - startX, dy = e.clientY - startY;
       if (Math.abs(dx) + Math.abs(dy) < 3) return;
       body.scrollLeft = startLeft - dx;
@@ -2964,7 +3077,8 @@
     const endPan = (e) => { dragging = false; body.classList.remove('is-panning'); try { body.releasePointerCapture(e.pointerId); } catch (_) {} };
     body.onpointerup = endPan;
     body.onpointercancel = endPan;
-    apply(1);
+    requestAnimationFrame(() => { measure(); apply(1); });
+    if (document.fonts?.ready) document.fonts.ready.then(()=>requestAnimationFrame(()=>{measure();apply(zoom);})).catch(()=>{});
   }
 
   function openDashboardChartModal(card) {
@@ -2997,8 +3111,8 @@
       const newSvg = wrap.firstElementChild;
       if (newSvg) oldSvg.replaceWith(newSvg);
     }
-    body.appendChild(clone);
-    setupDashboardChartZoom(modal, body, clone);
+    const noteKey = dashboardChartAnnotationKey(card, title);
+    setupDashboardChartZoom(modal, body, clone, noteKey);
     const isLandscapeModal = shouldUseLandscapeChartModal();
     ensureManagerLandscapeFallbackCss();
     modal.classList.toggle('mobile-landscape', isLandscapeModal);

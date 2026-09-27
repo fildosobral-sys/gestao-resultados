@@ -1918,6 +1918,21 @@ body.seller-modal-open{overflow:hidden}
 .dashboard-card-expanded.dual-chart-card .dual-value-label.merc{letter-spacing:.02px}
 @media(max-width:760px){.dashboard-chart-zoom-controls{gap:3px;padding:3px}.dashboard-chart-zoom-controls button{min-width:30px;height:30px}.dashboard-chart-zoom-controls span{min-width:40px}.dashboard-chart-modal-head{padding:10px 12px}.dashboard-chart-modal-head strong{font-size:16px}}
 </style>
+
+<style id="v115-chart-zoom-pan-annotations">
+/* V115 — zoom real do conteúdo, pan 2D e anotações persistentes somente no modo expandido */
+.dashboard-chart-modal-body{overflow:auto!important;position:relative!important;cursor:grab!important;touch-action:none!important}
+.dashboard-chart-modal-body.draw-mode{cursor:crosshair!important}
+.dashboard-chart-zoom-stage{position:relative;min-width:100%;min-height:100%;overflow:visible}
+.dashboard-chart-zoom-surface{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
+.dashboard-chart-zoom-surface>.dashboard-card-expanded{width:100%!important;max-width:none!important;min-width:0!important;box-sizing:border-box}
+.dashboard-chart-ink{position:absolute;inset:0;z-index:50;overflow:visible;touch-action:none;pointer-events:none}
+.dashboard-chart-annotate-controls{display:flex;align-items:center;gap:5px;padding:4px 5px;border:1px solid #dce6f1;border-radius:12px;background:rgba(255,255,255,.92)}
+.dashboard-chart-annotate-controls button{width:34px;height:32px;border:0;border-radius:8px;background:#eef4fb;color:#24415f;font-size:17px;font-weight:900;cursor:pointer}
+.dashboard-chart-annotate-controls button.active{background:#24415f;color:#fff;box-shadow:0 0 0 2px rgba(36,65,95,.12)}
+.dashboard-chart-modal-actions{flex-wrap:wrap;justify-content:flex-end}
+@media(max-width:760px){.dashboard-chart-annotate-controls{padding:3px}.dashboard-chart-annotate-controls button{width:30px;height:30px}.dashboard-chart-modal-actions{gap:5px!important}}
+</style>
 </body>
 </html>
 
