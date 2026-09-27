@@ -1522,7 +1522,7 @@ body.seller-modal-open{overflow:hidden}
 <script src="pwa-update.js?v=3"></script>
 <script src="resultados-parcial-v5.js?v=5"></script>
 
-<script id="team-partial-v105-export">
+<script id="team-partial-v106-export">
 (function(){
   function loadScript(src){
     return new Promise(function(resolve,reject){
@@ -1767,11 +1767,22 @@ body.seller-modal-open{overflow:hidden}
   function init(){
     bindDownloadButton();
     applyScreenEnhancements();
-    const observer=new MutationObserver(function(){
-      bindDownloadButton();
-      applyScreenEnhancements();
-    });
-    observer.observe(document.body,{childList:true,subtree:true});
+
+    /* v106: observar somente a lista do resultado parcial.
+       Evita varrer o body inteiro a cada atualização do dashboard,
+       o que podia deixar a página sem resposta. */
+    const partialList=document.getElementById('teamPartialResult');
+    if(partialList){
+      let rafId=0;
+      const observer=new MutationObserver(function(){
+        if(rafId) cancelAnimationFrame(rafId);
+        rafId=requestAnimationFrame(function(){
+          rafId=0;
+          applyScreenEnhancements();
+        });
+      });
+      observer.observe(partialList,{childList:true,subtree:true});
+    }
   }
 
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init,{once:true});
