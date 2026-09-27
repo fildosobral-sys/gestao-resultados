@@ -1491,30 +1491,31 @@ body.seller-modal-open{overflow:hidden}
 .team-metric-topline>span{font-size:10px;font-weight:1000;letter-spacing:.04em}
 .team-metric-topline>em{line-height:1.1}
 
-/* exportação: manter a mesma lógica visual do sistema, com os 4 indicadores na mesma linha */
-.team-export-stage.export-cards-only .team-partial-panel{border-radius:28px;overflow:hidden;background:#fff;box-shadow:none}
-.team-export-stage.export-cards-only .team-partial-head{border-radius:28px;padding:24px 28px}
-.team-export-stage.export-cards-only .team-partial-head h3{font-size:28px;line-height:1.04}
-.team-export-stage.export-cards-only .team-partial-eyebrow{font-size:11px;letter-spacing:.14em}
-.team-export-stage.export-cards-only .team-export-date{font-size:18px;padding:10px 14px;border-radius:14px}
-.team-export-stage.export-cards-only .team-partial-list{padding:14px 0 0;gap:14px}
-.team-export-stage.export-cards-only .team-partial-row{grid-template-columns:64px minmax(270px,330px) minmax(0,1fr);padding:18px 18px 18px 20px;gap:14px;align-items:center;border-left-width:12px;border-radius:24px;box-shadow:0 10px 28px rgba(18,35,60,.06)}
-.team-export-stage.export-cards-only .team-partial-rank strong{font-size:20px}
-.team-export-stage.export-cards-only .team-partial-rank span{font-size:36px;line-height:1}
-.team-export-stage.export-cards-only .team-partial-person strong{font-size:22px;line-height:1.02}
-.team-export-stage.export-cards-only .team-partial-person p{font-size:13px;line-height:1.5;color:#2f4b68;font-weight:600;margin-top:10px}
-.team-export-stage.export-cards-only .team-partial-person small{font-size:12px;padding:6px 10px}
-.team-export-stage.export-cards-only .team-partial-kpis{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;align-self:stretch}
-.team-export-stage.export-cards-only .team-metric{border-radius:18px;padding:11px 12px;min-height:112px;display:flex;flex-direction:column;justify-content:flex-start}
-.team-export-stage.export-cards-only .team-metric-topline{min-height:20px;gap:4px}
-.team-export-stage.export-cards-only .team-metric-topline>span{font-size:11px;letter-spacing:.04em;color:#4f627b}
-.team-export-stage.export-cards-only .team-metric-topline>em{font-size:9px;padding:3px 6px}
-.team-export-stage.export-cards-only .team-metric>strong{font-size:22px;line-height:1.04;margin:5px 0 8px}
-.team-export-stage.export-cards-only .team-metric-scale{grid-template-columns:minmax(0,1fr) 48px;gap:6px;align-items:center;margin-top:auto}
-.team-export-stage.export-cards-only .team-metric-track,.team-export-stage.export-cards-only .team-metric-excess{height:10px}
-.team-export-stage.export-cards-only .team-metric>small{font-size:10px;margin-top:4px}
+/* v107 — exportação igual à tela: remove ranking/ações e mantém os cards em linha */
+.team-export-stage.export-cards-only .team-partial-panel{margin:0;padding:0;border:0;border-radius:22px;background:transparent;box-shadow:none;overflow:visible}
+.team-export-stage.export-cards-only .team-partial-head{display:flex;align-items:center;justify-content:space-between;border-radius:20px;padding:18px 22px;background:linear-gradient(135deg,#1878ea 0%,#7447e8 100%)}
+.team-export-stage.export-cards-only .team-partial-head h3{font-size:28px;line-height:1.04;margin:0}
+.team-export-stage.export-cards-only .team-partial-head p{display:block!important;margin:6px 0 0;font-size:12px;color:rgba(255,255,255,.84)}
+.team-export-stage.export-cards-only .team-partial-eyebrow{font-size:11px;letter-spacing:.14em;color:rgba(255,255,255,.86)}
+.team-export-stage.export-cards-only .team-export-date{font-size:18px;padding:10px 14px;border-radius:14px;background:rgba(255,255,255,.18);color:#fff}
+.team-export-stage.export-cards-only .team-partial-list{padding:14px 0 0;gap:10px}
+.team-export-stage.export-cards-only .team-partial-row{grid-template-columns:62px minmax(240px,.95fr) minmax(720px,2.3fr);padding:14px;gap:12px;align-items:center;border-left-width:8px;border-radius:18px;box-shadow:0 6px 18px rgba(20,39,66,.04)}
+.team-export-stage.export-cards-only .team-partial-rank strong{font-size:19px}
+.team-export-stage.export-cards-only .team-partial-rank span{font-size:29px;line-height:1}
+.team-export-stage.export-cards-only .team-partial-person strong{font-size:17px;line-height:1.02}
+.team-export-stage.export-cards-only .team-partial-person p{font-size:13px;line-height:1.56;color:#435a74;font-weight:500;margin-top:10px}
+.team-export-stage.export-cards-only .team-partial-person small{font-size:11px;padding:5px 9px}
+.team-export-stage.export-cards-only .team-partial-kpis{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;align-self:stretch}
+.team-export-stage.export-cards-only .team-metric{background:rgba(255,255,255,.76);border:1px solid rgba(218,226,238,.82);border-radius:13px;padding:9px 10px;min-height:0;display:block}
+.team-export-stage.export-cards-only .team-metric-topline{min-height:0;gap:6px}
+.team-export-stage.export-cards-only .team-metric-topline>span{font-size:8px;letter-spacing:.03em;color:#60748f}
+.team-export-stage.export-cards-only .team-metric-topline>em{font-size:8px;padding:2px 5px}
+.team-export-stage.export-cards-only .team-metric>strong{font-size:18px;line-height:1.1;margin:3px 0 6px}
+.team-export-stage.export-cards-only .team-metric-scale{grid-template-columns:minmax(0,1fr) 46px;gap:5px;align-items:center;margin-top:0}
+.team-export-stage.export-cards-only .team-metric-track,.team-export-stage.export-cards-only .team-metric-excess{height:9px}
+.team-export-stage.export-cards-only .team-metric>small{font-size:8px;margin-top:4px}
 .team-export-stage.export-cards-only .team-metric-excess{opacity:1}
-.team-export-stage.export-cards-only .team-partial-summary,.team-export-stage.export-cards-only .team-partial-miniranks,.team-export-stage.export-cards-only .team-partial-actions,.team-export-stage.export-cards-only .team-partial-empty,.team-export-stage.export-cards-only .team-export-ranking-head{display:none!important}
+.team-export-stage.export-cards-only .team-partial-summary,.team-export-stage.export-cards-only .team-partial-miniranks,.team-export-stage.export-cards-only .team-partial-actions,.team-export-stage.export-cards-only .team-partial-empty,.team-export-stage.export-cards-only .team-export-ranking-head,.team-export-stage.export-cards-only .pill{display:none!important}
 </style>
 <script src="portal-context.js?v=2"></script>
 <script src="mobile-polish-v11.js?v=11"></script>
@@ -1522,7 +1523,7 @@ body.seller-modal-open{overflow:hidden}
 <script src="pwa-update.js?v=3"></script>
 <script src="resultados-parcial-v5.js?v=5"></script>
 
-<script id="team-partial-v106-export">
+<script id="team-partial-v107-export">
 (function(){
   function loadScript(src){
     return new Promise(function(resolve,reject){
@@ -1683,27 +1684,35 @@ body.seller-modal-open{overflow:hidden}
   }
 
   function buildExportStage(){
+    const panel=document.querySelector('.team-partial-panel');
     const list=document.getElementById('teamPartialResult');
-    if(!list || !list.children.length) return null;
+    if(!panel || !list || !list.children.length) return null;
     const {br}=getDateParts();
     const wrap=document.createElement('div');
     wrap.className='team-export-stage export-cards-only';
-    wrap.style.cssText='position:fixed;left:-12000px;top:0;width:1820px;background:#edf5ff;padding:28px;z-index:-1;box-sizing:border-box';
+    wrap.style.cssText='position:fixed;left:-12000px;top:0;width:1820px;background:#edf5ff;padding:18px;z-index:-1;box-sizing:border-box';
 
-    const panel=document.createElement('section');
-    panel.className='team-partial-panel';
-    panel.innerHTML=`
-      <div class="team-partial-head">
-        <div>
-          <span class="team-partial-eyebrow">ACOMPANHAMENTO PARCIAL</span>
-          <h3>Resultado parcial da equipe</h3>
-        </div>
-        <span class="team-export-date">${br}</span>
-      </div>`;
+    const clone=panel.cloneNode(true);
+    clone.querySelector('.team-partial-summary')?.remove();
+    clone.querySelector('.team-partial-miniranks')?.remove();
+    clone.querySelector('.team-partial-actions')?.remove();
+    clone.querySelector('.team-partial-empty')?.remove();
 
-    const clonedList=list.cloneNode(true);
-    panel.appendChild(clonedList);
-    wrap.appendChild(panel);
+    const head=clone.querySelector('.team-partial-head');
+    if(head){
+      const pill=head.querySelector('.pill');
+      if(pill) pill.remove();
+      const paragraph=head.querySelector('p');
+      if(paragraph){
+        paragraph.textContent='Acompanhamento por vendedor com mercantil, serviços, conversão e eficiência.';
+      }
+      const date=document.createElement('span');
+      date.className='team-export-date';
+      date.textContent=br;
+      head.appendChild(date);
+    }
+
+    wrap.appendChild(clone);
     return wrap;
   }
 
@@ -1753,10 +1762,10 @@ body.seller-modal-open{overflow:hidden}
 
   function bindDownloadButton(){
     const btn=document.getElementById('teamPartialDownload');
-    if(!btn || btn.dataset.v105Bound==='1') return;
+    if(!btn || btn.dataset.v107Bound==='1') return;
     const fresh=btn.cloneNode(true);
     btn.replaceWith(fresh);
-    fresh.dataset.v105Bound='1';
+    fresh.dataset.v107Bound='1';
     fresh.addEventListener('click',function(ev){
       ev.preventDefault();
       ev.stopPropagation();
