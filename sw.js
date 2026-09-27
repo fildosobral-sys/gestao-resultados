@@ -1,4 +1,4 @@
-const CACHE='fs-resultados-v128-clean';
+const CACHE='fs-resultados-v130-landscape-adaptive';
 const FILES=[
   './',
   './index.html',

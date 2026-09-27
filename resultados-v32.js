@@ -2879,13 +2879,7 @@
     const orientation = screen?.orientation;
     if (!shouldUseLandscapeChartModal()) return { mobile: false, locked: false, fullscreen: false };
     const state = { mobile: true, locked: false, fullscreen: false };
-    /* Não usa Fullscreen API no mobile: evita a faixa/aviso nativo do navegador com o domínio. */
-    if (orientation?.lock) {
-      try {
-        await orientation.lock('landscape');
-        state.locked = true;
-      } catch {}
-    }
+    if (orientation?.lock) { try { await orientation.lock('landscape'); state.locked = true; } catch {} }
     return state;
   }
   async function releaseLandscapePresentation(state) {
@@ -4312,6 +4306,34 @@
     `;
   })();
 
+
+
+
+
+/* V130 — landscape adaptativo no mobile */
+(function applyV130MobileLandscapeAdaptive(){
+  if(document.getElementById('v130-mobile-landscape-adaptive'))return;
+  const st=document.createElement('style');st.id='v130-mobile-landscape-adaptive';st.textContent=`
+  @media (max-width:1024px),(pointer:coarse){
+    #dashboardChartModal.dashboard-chart-modal.mobile-landscape{padding:0!important;display:flex!important;align-items:stretch!important;justify-content:stretch!important;overflow:hidden!important;background:rgba(15,23,42,.72)!important}
+    #dashboardChartModal.dashboard-chart-modal.mobile-landscape .dashboard-chart-modal-dialog{width:100vw!important;height:100dvh!important;max-width:none!important;max-height:none!important;border-radius:0!important;padding:0!important;overflow:hidden!important;display:flex!important;flex-direction:column!important;background:#fff!important}
+    #dashboardChartModal.dashboard-chart-modal.mobile-landscape .dashboard-chart-modal-head{flex:0 0 auto!important;position:sticky!important;top:0!important;z-index:9!important;padding:7px 8px!important;margin:0!important;gap:6px!important;background:rgba(255,255,255,.98)!important;border-bottom:1px solid #e4ebf3!important;flex-wrap:nowrap!important}
+    #dashboardChartModal.dashboard-chart-modal.mobile-landscape .dashboard-chart-modal-head strong{font-size:14px!important;max-width:28vw!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+    #dashboardChartModal.dashboard-chart-modal.mobile-landscape .dashboard-chart-modal-actions{display:flex!important;align-items:center!important;gap:4px!important;flex-wrap:nowrap!important;margin-left:auto!important}
+    #dashboardChartModal.dashboard-chart-modal.mobile-landscape .dashboard-chart-annotate-controls,#dashboardChartModal.dashboard-chart-modal.mobile-landscape .dashboard-chart-zoom-controls{display:flex!important;align-items:center!important;gap:3px!important;flex-wrap:nowrap!important}
+    #dashboardChartModal.dashboard-chart-modal.mobile-landscape .dashboard-chart-annotate-controls button,#dashboardChartModal.dashboard-chart-modal.mobile-landscape .dashboard-chart-zoom-controls button,#dashboardChartModal.dashboard-chart-modal.mobile-landscape .dashboard-chart-modal-close{min-width:29px!important;width:29px!important;height:29px!important;padding:0!important;font-size:13px!important;border-radius:8px!important}
+    #dashboardChartModal.dashboard-chart-modal.mobile-landscape .dashboard-chart-zoom-controls span{min-width:34px!important;font-size:10px!important}
+    #dashboardChartModal.dashboard-chart-modal.mobile-landscape .dashboard-chart-modal-body{flex:1 1 auto!important;min-height:0!important;overflow:auto!important;padding:5px 6px 7px!important;scrollbar-width:none!important;-webkit-overflow-scrolling:touch!important}
+    #dashboardChartModal.dashboard-chart-modal.mobile-landscape .dashboard-chart-modal-body::-webkit-scrollbar{display:none!important}
+    #dashboardChartModal.dashboard-chart-modal.mobile-landscape .dashboard-card-expanded{width:100%!important;min-width:0!important;max-width:none!important;padding:0!important;overflow:visible!important}
+    #dashboardChartModal.dashboard-chart-modal.mobile-landscape .dashboard-card-expanded .svg-chart{width:100%!important;min-width:0!important;max-width:none!important;height:auto!important;max-height:calc(100dvh - 50px)!important;display:block!important}
+    #dashboardChartModal.dashboard-chart-modal.mobile-landscape .dashboard-card-expanded.dual-chart-card .svg-chart{min-width:0!important;width:100%!important;max-width:none!important}
+    #dashboardChartModal.dashboard-chart-modal.mobile-landscape.virtual-landscape .dashboard-chart-modal-dialog{position:absolute!important;left:50%!important;top:50%!important;width:100dvh!important;height:100vw!important;transform:translate(-50%,-50%) rotate(90deg)!important;transform-origin:center center!important;overflow:hidden!important;padding:0!important}
+    #dashboardChartModal.dashboard-chart-modal.mobile-landscape.virtual-landscape .dashboard-card-expanded{min-width:0!important}
+    .indicator-section-modal.mobile-landscape{padding:0!important;overflow:hidden!important}.indicator-section-modal.mobile-landscape .indicator-section-dialog{width:100vw!important;height:100dvh!important;max-height:none!important;border-radius:0!important;overflow:hidden!important;display:flex!important;flex-direction:column!important}.indicator-section-modal.mobile-landscape .indicator-section-body{flex:1 1 auto!important;min-width:0!important;min-height:0!important;overflow:auto!important;padding:6px!important}.indicator-section-modal.mobile-landscape .indicator-section-body .dashboard-chart-grid{grid-template-columns:1fr 1fr!important;gap:8px!important}.indicator-section-modal.mobile-landscape .indicator-section-body .dashboard-card .svg-chart{width:100%!important;min-width:0!important;height:auto!important}.indicator-section-modal.mobile-landscape.virtual-landscape .indicator-section-dialog{width:100dvh!important;height:100vw!important}
+  }`;
+  document.head.appendChild(st);
+})();
   initBI();
 
   renderAll();

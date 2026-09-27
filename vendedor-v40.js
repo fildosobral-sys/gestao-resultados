@@ -495,7 +495,7 @@ setupProfile();setupManagerView();setupInternalNavigationGuard();
 
 function shouldUseSellerLandscapeModal(){return window.matchMedia('(max-width: 1024px), (pointer: coarse)').matches}
 function ensureSellerLandscapeFallbackCss(){if(document.getElementById('sellerLandscapeFallbackCss'))return;const st=document.createElement('style');st.id='sellerLandscapeFallbackCss';st.textContent=`@media (max-width:1024px),(pointer:coarse){.dash-modal.mobile-landscape.virtual-landscape{position:fixed!important;inset:0!important;display:block!important;padding:0!important;overflow:hidden!important;background:rgba(15,23,42,.72)!important}.dash-modal.mobile-landscape.virtual-landscape .dash-modal-dialog{position:absolute!important;left:50%!important;top:50%!important;width:100dvh!important;height:100vw!important;max-width:none!important;max-height:none!important;transform:translate(-50%,-50%) rotate(90deg)!important;transform-origin:center center!important;border-radius:0!important;overflow:auto!important;padding:10px!important}.dash-modal.mobile-landscape.virtual-landscape .dash-modal-head{position:sticky!important;top:0!important;z-index:8!important;background:rgba(255,255,255,.97)!important}.dash-modal.mobile-landscape.virtual-landscape .dash-modal-body{overflow:auto!important;max-width:100%!important}.dash-modal.mobile-landscape.virtual-landscape .dash-card-expanded{min-width:680px!important}}`;document.head.appendChild(st)}
-async function requestSellerLandscape(dialog){const orientation=screen?.orientation;if(!shouldUseSellerLandscapeModal())return{mobile:false,locked:false,fullscreen:false};const state={mobile:true,locked:false,fullscreen:false};/* Não usa Fullscreen API no mobile: evita a faixa/aviso nativo do navegador com o domínio. */if(orientation?.lock){try{await orientation.lock('landscape');state.locked=true}catch{}}return state}
+async function requestSellerLandscape(dialog){const orientation=screen?.orientation;if(!shouldUseSellerLandscapeModal())return{mobile:false,locked:false,fullscreen:false};const state={mobile:true,locked:false,fullscreen:false};if(orientation?.lock){try{await orientation.lock('landscape');state.locked=true}catch{}}return state}
 async function releaseSellerLandscape(state){if(state?.locked&&screen?.orientation?.unlock){try{screen.orientation.unlock()}catch{}}}
 function sellerDashNoteKey(card,title){
   const metric=card?.dataset?.chartMetric||'chart',type=card?.dataset?.chartType||'view';
@@ -636,8 +636,11 @@ function setupInternalNavigationGuard(){
   async function open(section,header){const m=ensure(),body=m.querySelector('.seller-indicator-body'),title=header.querySelector('h3,strong')?.textContent?.trim()||'Indicador';m.querySelector('.seller-indicator-head strong').textContent=title;body.innerHTML='';const clone=section.cloneNode(true);clone.removeAttribute('id');body.appendChild(clone);const land=landscape();m.classList.toggle('mobile-landscape',land);m.classList.remove('virtual-landscape');m.hidden=false;document.body.classList.add('seller-indicator-modal-open');if(land){let ok=false;if(screen?.orientation?.lock){try{await screen.orientation.lock('landscape');locked=true;ok=true}catch{}}m.classList.toggle('virtual-landscape',!ok)}}
   document.addEventListener('dblclick',e=>{const header=e.target.closest(sel);if(!header)return;const section=header.closest('.rhythm-group,.weekly-indicator-group,.dash-section');if(!section)return;e.preventDefault();e.stopPropagation();open(section,header)});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modal&&!modal.hidden)close()});
-})();
 
+
+
+
+})();
 
 /* V122 — PARIDADE REAL: dashboard vendedor = experiência visual da filial */
 (function applyV122SellerDashboardParity(){
@@ -676,4 +679,29 @@ function setupInternalNavigationGuard(){
       #sellerDashModal .dash-modal-body{padding:8px!important}
     }
   `;document.head.appendChild(st)
+})();
+
+/* V130 — landscape adaptativo no dashboard do vendedor */
+(function applyV130SellerLandscapeAdaptive(){
+  if(document.getElementById('v130-seller-landscape-adaptive'))return;
+  const st=document.createElement('style');st.id='v130-seller-landscape-adaptive';st.textContent=`
+  @media (max-width:1024px),(pointer:coarse){
+    #sellerDashModal.dash-modal.mobile-landscape{padding:0!important;display:flex!important;align-items:stretch!important;justify-content:stretch!important;overflow:hidden!important;background:rgba(15,23,42,.72)!important}
+    #sellerDashModal.dash-modal.mobile-landscape .dash-modal-dialog{width:100vw!important;height:100dvh!important;max-width:none!important;max-height:none!important;border-radius:0!important;padding:0!important;overflow:hidden!important;display:flex!important;flex-direction:column!important;background:#fff!important}
+    #sellerDashModal.dash-modal.mobile-landscape .dash-modal-head{flex:0 0 auto!important;position:sticky!important;top:0!important;z-index:9!important;padding:7px 8px!important;gap:6px!important;background:rgba(255,255,255,.98)!important;border-bottom:1px solid #e4ebf3!important;flex-wrap:nowrap!important}
+    #sellerDashModal.dash-modal.mobile-landscape .dash-modal-head strong{font-size:14px!important;max-width:28vw!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+    #sellerDashModal.dash-modal.mobile-landscape .dash-modal-actions{display:flex!important;align-items:center!important;gap:4px!important;flex-wrap:nowrap!important;margin-left:auto!important;width:auto!important}
+    #sellerDashModal.dash-modal.mobile-landscape .dash-annotate-controls,#sellerDashModal.dash-modal.mobile-landscape .dash-zoom-controls{display:flex!important;align-items:center!important;gap:3px!important;flex-wrap:nowrap!important}
+    #sellerDashModal.dash-modal.mobile-landscape .dash-annotate-controls button,#sellerDashModal.dash-modal.mobile-landscape .dash-zoom-controls button,#sellerDashModal.dash-modal.mobile-landscape .dash-modal-close{min-width:29px!important;width:29px!important;height:29px!important;padding:0!important;font-size:13px!important;border-radius:8px!important}
+    #sellerDashModal.dash-modal.mobile-landscape .dash-zoom-controls span{min-width:34px!important;font-size:10px!important}
+    #sellerDashModal.dash-modal.mobile-landscape .dash-modal-body{flex:1 1 auto!important;min-height:0!important;overflow:auto!important;padding:5px 6px 7px!important;scrollbar-width:none!important;-webkit-overflow-scrolling:touch!important}
+    #sellerDashModal.dash-modal.mobile-landscape .dash-modal-body::-webkit-scrollbar{display:none!important}
+    #sellerDashModal.dash-modal.mobile-landscape .dash-card-expanded{width:100%!important;min-width:0!important;max-width:none!important;padding:0!important;overflow:visible!important}
+    #sellerDashModal.dash-modal.mobile-landscape .dash-card-expanded .dash-svg{width:100%!important;min-width:0!important;max-width:none!important;height:auto!important;max-height:calc(100dvh - 50px)!important;display:block!important}
+    #sellerDashModal.dash-modal.mobile-landscape .dash-card-expanded.dual-chart-card .dash-svg{min-width:0!important;width:100%!important;max-width:none!important}
+    #sellerDashModal.dash-modal.mobile-landscape.virtual-landscape .dash-modal-dialog{position:absolute!important;left:50%!important;top:50%!important;width:100dvh!important;height:100vw!important;transform:translate(-50%,-50%) rotate(90deg)!important;transform-origin:center center!important;overflow:hidden!important;padding:0!important}
+    #sellerDashModal.dash-modal.mobile-landscape.virtual-landscape .dash-card-expanded{min-width:0!important}
+    .seller-indicator-modal.mobile-landscape{padding:0!important;overflow:hidden!important}.seller-indicator-modal.mobile-landscape .seller-indicator-dialog{width:100vw!important;height:100dvh!important;max-height:none!important;border-radius:0!important;overflow:hidden!important;display:flex!important;flex-direction:column!important}.seller-indicator-modal.mobile-landscape .seller-indicator-body{flex:1 1 auto!important;min-width:0!important;min-height:0!important;overflow:auto!important;padding:6px!important}.seller-indicator-modal.mobile-landscape .seller-indicator-body .dash-chart-grid{grid-template-columns:1fr 1fr!important;gap:8px!important}.seller-indicator-modal.mobile-landscape .seller-indicator-body .dash-card .dash-svg{width:100%!important;min-width:0!important;height:auto!important}.seller-indicator-modal.mobile-landscape.virtual-landscape .seller-indicator-dialog{width:100dvh!important;height:100vw!important}
+  }`;
+  document.head.appendChild(st);
 })();
