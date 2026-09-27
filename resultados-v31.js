@@ -2992,8 +2992,8 @@
       // praticamente toda a área visível do modal sem deslocar o conteúdo original.
       const visibleW = Math.max(1, body.clientWidth - 8);
       const visibleH = Math.max(1, body.clientHeight - 8);
-      workW = Math.max(workW || 0, baseW, (visibleW / Math.max(.5, zoom)) * .90);
-      workH = Math.max(workH || 0, baseH, (visibleH / Math.max(.5, zoom)) * .90);
+      workW = Math.max(workW || 0, baseW, (visibleW / Math.max(.5, zoom)));
+      workH = Math.max(workH || 0, baseH, (visibleH / Math.max(.5, zoom)));
       surface.style.width = `${Math.ceil(workW)}px`;
       surface.style.height = `${Math.ceil(workH)}px`;
       ink.setAttribute('viewBox', `0 0 ${Math.ceil(workW)} ${Math.ceil(workH)}`);
@@ -3043,8 +3043,29 @@
       apply(zoom + (e.deltaY < 0 ? .10 : -.10), e.clientX, e.clientY);
     };
     const toPoint = (e) => {
-      const r = surface.getBoundingClientRect();
-      return [Math.max(0, Math.min(baseW, (e.clientX-r.left) * baseW / Math.max(1,r.width))), Math.max(0, Math.min(baseH, (e.clientY-r.top) * baseH / Math.max(1,r.height)))];
+      // Converte a posição real do ponteiro para o sistema de coordenadas do SVG.
+      // Isso mantém caneta e borracha calibradas pelo CENTRO do cursor mesmo com zoom,
+      // pan e área branca ampliada à direita/abaixo.
+      try {
+        const pt = ink.createSVGPoint();
+        pt.x = e.clientX;
+        pt.y = e.clientY;
+        const m = ink.getScreenCTM();
+        if (m) {
+          const local = pt.matrixTransform(m.inverse());
+          return [
+            Math.max(0, Math.min(workW, local.x)),
+            Math.max(0, Math.min(workH, local.y))
+          ];
+        }
+      } catch (_) {}
+      const r = ink.getBoundingClientRect();
+      const x = (e.clientX - r.left) / Math.max(.0001, zoom);
+      const y = (e.clientY - r.top) / Math.max(.0001, zoom);
+      return [
+        Math.max(0, Math.min(workW, x)),
+        Math.max(0, Math.min(workH, y))
+      ];
     };
     const eraseAt = (pt) => {
       const threshold = 13 / Math.max(.5, zoom);

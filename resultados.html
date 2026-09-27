@@ -1947,6 +1947,15 @@ body.seller-modal-open{overflow:hidden}
 .dashboard-chart-modal-head{flex:0 0 auto}
 @media(min-width:761px){.dashboard-chart-modal-body{min-height:0;height:calc(94vh - 86px)!important}}
 </style>
+
+<style id="v118-chart-annotation-calibration">
+/* V118 — área branca totalmente anotável + ponteiro calibrado pelo centro */
+.dashboard-chart-modal-body.draw-mode{cursor:crosshair!important;}
+.dashboard-chart-modal-body.draw-mode .dashboard-chart-ink{cursor:crosshair!important;}
+.dashboard-chart-zoom-stage,.dashboard-chart-zoom-surface,.dashboard-chart-ink{box-sizing:border-box;}
+.dashboard-chart-zoom-surface{overflow:visible!important;}
+.dashboard-chart-ink{display:block!important;max-width:none!important;max-height:none!important;}
+</style>
 </body>
 </html>
 
