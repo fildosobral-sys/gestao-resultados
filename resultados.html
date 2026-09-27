@@ -1532,6 +1532,51 @@ body.seller-modal-open{overflow:hidden}
 .team-export-stage.export-cards-only .team-partial-row{break-inside:avoid;page-break-inside:avoid}
 </style>
 
+<style id="team-partial-v109-export-rankings">
+/* V109: exportação igual à tela + ranking compacto no topo */
+.team-export-stage.export-cards-with-ranks{font-family:inherit!important}
+.team-export-stage.export-cards-with-ranks .team-partial-panel{margin:0;padding:0;border:0;border-radius:22px;background:transparent;box-shadow:none;overflow:visible}
+.team-export-stage.export-cards-with-ranks .team-partial-head{display:flex;align-items:center;justify-content:space-between;border-radius:20px;padding:18px 22px;background:linear-gradient(135deg,#1878ea 0%,#7447e8 100%)}
+.team-export-stage.export-cards-with-ranks .team-partial-head h3{font-size:28px;line-height:1.04;margin:0}
+.team-export-stage.export-cards-with-ranks .team-partial-head p{display:block!important;margin:6px 0 0;font-size:12px;color:rgba(255,255,255,.84)}
+.team-export-stage.export-cards-with-ranks .team-partial-eyebrow{font-size:11px;letter-spacing:.14em;color:rgba(255,255,255,.86)}
+.team-export-stage.export-cards-with-ranks .team-export-date{font-size:18px;padding:10px 14px;border-radius:14px;background:rgba(255,255,255,.18);color:#fff}
+.team-export-stage.export-cards-with-ranks .team-export-ranking-head{display:flex!important;align-items:center;justify-content:space-between;gap:12px;margin:14px 0 8px;padding:0 8px}
+.team-export-stage.export-cards-with-ranks .team-export-ranking-head h4{margin:0;font-size:18px;line-height:1.1;color:#17324a}
+.team-export-stage.export-cards-with-ranks .team-export-ranking-head p{margin:3px 0 0;font-size:11px;color:#58708a;font-weight:600}
+.team-export-stage.export-cards-with-ranks .team-export-ranking-head>span{padding:6px 10px;border-radius:999px;background:#eef3f9;color:#5d728d;font-size:10px;font-weight:900;white-space:nowrap}
+.team-export-stage.export-cards-with-ranks .team-partial-miniranks{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 12px}
+.team-export-stage.export-cards-with-ranks .mini-rank-card{padding:10px 10px 9px;border-radius:14px;background:rgba(255,255,255,.92);border:1px solid rgba(219,228,238,.95)}
+.team-export-stage.export-cards-with-ranks .mini-rank-card header{margin-bottom:8px}
+.team-export-stage.export-cards-with-ranks .mini-rank-card h4{font-size:14px;font-weight:950;color:#17324a}
+.team-export-stage.export-cards-with-ranks .mini-rank-card header span{font-size:9px;padding:4px 7px;background:#f1f4f9;color:#61758e}
+.team-export-stage.export-cards-with-ranks .mini-rank-item{grid-template-columns:24px minmax(0,1fr) auto;gap:5px}
+.team-export-stage.export-cards-with-ranks .mini-rank-item b{font-size:9px}
+.team-export-stage.export-cards-with-ranks .mini-rank-item strong{font-size:11px}
+.team-export-stage.export-cards-with-ranks .mini-rank-item span{font-size:10px}
+.team-export-stage.export-cards-with-ranks .mini-rank-item i{height:7px}
+.team-export-stage.export-cards-with-ranks .team-partial-list{padding:8px 0 0;gap:10px}
+.team-export-stage.export-cards-with-ranks .team-partial-row{grid-template-columns:62px minmax(240px,.95fr) minmax(720px,2.3fr);padding:14px;gap:12px;align-items:center;border-left-width:8px;border-radius:18px;box-shadow:0 6px 18px rgba(20,39,66,.04)}
+.team-export-stage.export-cards-with-ranks .team-partial-rank strong{font-size:19px}
+.team-export-stage.export-cards-with-ranks .team-partial-rank span{font-size:29px;line-height:1}
+.team-export-stage.export-cards-with-ranks .team-partial-person strong{font-size:17px;line-height:1.02}
+.team-export-stage.export-cards-with-ranks .team-partial-person p{font-size:13px;line-height:1.56;color:#435a74;font-weight:500;margin-top:10px}
+.team-export-stage.export-cards-with-ranks .team-partial-person small{font-size:11px;padding:5px 9px}
+.team-export-stage.export-cards-with-ranks .team-partial-kpis{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:8px;align-self:stretch}
+.team-export-stage.export-cards-with-ranks .team-metric{background:rgba(255,255,255,.76);border:1px solid rgba(218,226,238,.82);border-radius:13px;padding:9px 10px;min-height:0;display:block}
+.team-export-stage.export-cards-with-ranks .team-metric-topline{min-height:0;gap:6px}
+.team-export-stage.export-cards-with-ranks .team-metric-topline>span{font-size:8px;letter-spacing:.03em;color:#60748f}
+.team-export-stage.export-cards-with-ranks .team-metric-topline>em{font-size:8px;padding:2px 5px}
+.team-export-stage.export-cards-with-ranks .team-metric>strong{font-size:18px;line-height:1.1;margin:3px 0 6px}
+.team-export-stage.export-cards-with-ranks .team-metric-scale{grid-template-columns:minmax(0,1fr) 46px;gap:5px;align-items:center;margin-top:0}
+.team-export-stage.export-cards-with-ranks .team-metric-track,.team-export-stage.export-cards-with-ranks .team-metric-excess{height:9px}
+.team-export-stage.export-cards-with-ranks .team-metric>small{font-size:8px;margin-top:4px}
+.team-export-stage.export-cards-with-ranks .team-metric-excess{opacity:1}
+.team-export-stage.export-cards-with-ranks .team-partial-summary,.team-export-stage.export-cards-with-ranks .team-partial-actions,.team-export-stage.export-cards-with-ranks .team-partial-empty,.team-export-stage.export-cards-with-ranks .pill{display:none!important}
+.team-export-stage.export-cards-with-ranks .team-partial-detail{display:none!important}
+.team-export-stage.export-cards-with-ranks .team-partial-row{break-inside:avoid;page-break-inside:avoid}
+</style>
+
 <script id="team-partial-v108-export">
 (function(){
   function loadScript(src){
@@ -1698,12 +1743,11 @@ body.seller-modal-open{overflow:hidden}
     if(!panel || !list || !list.children.length) return null;
     const {br}=getDateParts();
     const wrap=document.createElement('div');
-    wrap.className='team-export-stage export-cards-only';
+    wrap.className='team-export-stage export-cards-with-ranks';
     wrap.style.cssText='position:fixed;left:-12000px;top:0;width:1820px;background:#edf5ff;padding:18px;z-index:-1;box-sizing:border-box';
 
     const clone=panel.cloneNode(true);
     clone.querySelector('.team-partial-summary')?.remove();
-    clone.querySelector('.team-partial-miniranks')?.remove();
     clone.querySelector('.team-partial-actions')?.remove();
     clone.querySelector('.team-partial-empty')?.remove();
 
@@ -1719,6 +1763,14 @@ body.seller-modal-open{overflow:hidden}
       date.className='team-export-date';
       date.textContent=br;
       head.appendChild(date);
+    }
+
+    const miniRanks=clone.querySelector('.team-partial-miniranks');
+    if(miniRanks && miniRanks.children.length){
+      const rankingHead=document.createElement('div');
+      rankingHead.className='team-export-ranking-head';
+      rankingHead.innerHTML='<div><h4>Rankings do dia</h4><p>Mercantil, serviços, conversão e eficiência em destaque.</p></div><span>Resumo por indicador</span>';
+      miniRanks.before(rankingHead);
     }
 
     wrap.appendChild(clone);
