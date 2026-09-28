@@ -914,7 +914,14 @@ body.seller-modal-open{overflow:hidden}
       <section class="team-partial-panel" aria-labelledby="teamPartialTitle">
         <div class="team-partial-head">
           <div><span class="team-partial-eyebrow">ACOMPANHAMENTO PARCIAL</span><h3 id="teamPartialTitle">Resultado parcial da equipe</h3><p>Todos os vendedores ativos vêm automaticamente da aba Metas, inclusive quem ainda está zerado.</p></div>
-          <span class="pill">Atualização durante o dia</span>
+          <span class="pill" id="teamPartialScopePill">Parcial do dia</span>
+        </div>
+        <div class="team-partial-scope" id="teamPartialScopeControls">
+          <div class="team-partial-scope-main"><label>Visualização<select id="teamPartialScopeMode"><option value="day">Dia</option><option value="period">Período</option><option value="month">Mês</option></select></label></div>
+          <div class="team-partial-scope-context" data-partial-day><strong>📅 Dia selecionado acima</strong><span>O resultado é comparado com a meta diária daquele dia.</span></div>
+          <div class="team-partial-scope-range" data-partial-period hidden><label>De<input type="date" id="teamPartialPeriodStart"></label><label>Até<input type="date" id="teamPartialPeriodEnd"></label></div>
+          <div class="team-partial-scope-month" data-partial-month hidden><label>Mês<input type="month" id="teamPartialMonth"></label></div>
+          <div class="team-partial-scope-note" id="teamPartialScopeNote">Usa a meta diária definida para a data selecionada.</div>
         </div>
         <div class="team-partial-summary" id="teamPartialSummary"></div>
         <div class="team-partial-miniranks" id="teamPartialMiniRankings"></div>
@@ -1593,7 +1600,14 @@ body.seller-modal-open{overflow:hidden}
 <script src="mobile-polish-v11.js?v=11"></script>
 <script src="access-admin-v1.js?v=7"></script>
 <script src="pwa-update.js?v=3"></script>
-<script src="resultados-parcial-v5.js?v=5"></script>
+
+<style id="team-partial-scope-v131">
+.team-partial-scope{display:grid;grid-template-columns:auto minmax(260px,1fr) auto;align-items:end;gap:10px;margin:12px 0;padding:10px 12px;border:1px solid #dce7f4;border-radius:15px;background:linear-gradient(135deg,#f8fbff,#faf8ff)}
+.team-partial-scope label{display:grid;gap:5px;font-size:10px;font-weight:900;color:#60748f;text-transform:uppercase}.team-partial-scope select,.team-partial-scope input{height:38px;border:1px solid #d5e0ed;border-radius:10px;background:#fff;color:#17324d;padding:0 10px;font:inherit;font-size:12px;font-weight:800;outline:none}
+.team-partial-scope-main{min-width:130px}.team-partial-scope-context{display:flex;flex-direction:column;justify-content:center;min-height:38px}.team-partial-scope-context strong{font-size:12px;color:#17324d}.team-partial-scope-context span{font-size:10px;color:#718096;margin-top:2px}.team-partial-scope-range{display:flex;gap:8px}.team-partial-scope-month{min-width:170px}.team-partial-scope-note{grid-column:1/-1;font-size:10px;color:#60748f;padding-top:2px}
+@media(max-width:760px){.team-partial-scope{grid-template-columns:1fr 1fr;align-items:stretch}.team-partial-scope-main{min-width:0}.team-partial-scope-context{grid-column:2}.team-partial-scope-range{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr}.team-partial-scope-month{min-width:0}.team-partial-scope-note{grid-column:1/-1}.team-partial-scope select,.team-partial-scope input{width:100%}}
+</style>
+<script src="resultados-parcial-v5.js?v=131"></script>
 
 
 <style id="team-partial-v108-export-fix">
@@ -1656,11 +1670,13 @@ body.seller-modal-open{overflow:hidden}
   }
 
   function getDateParts(){
-    const d=new Date();
-    const yyyy=d.getFullYear();
-    const mm=String(d.getMonth()+1).padStart(2,'0');
-    const dd=String(d.getDate()).padStart(2,'0');
-    return { iso:`${yyyy}-${mm}-${dd}`, br:`${dd}/${mm}/${yyyy}` };
+    const scope=window.fsPartialScopeInfo||null;
+    if(scope){
+      const safe=String(scope.label||scope.start||'parcial').replace(/[\/:\s]+/g,'-');
+      return {iso:safe,br:scope.label||'',rankLabel:scope.rankLabel||'Ranks do dia',scopeMode:scope.mode||'day'};
+    }
+    const d=new Date(),yyyy=d.getFullYear(),mm=String(d.getMonth()+1).padStart(2,'0'),dd=String(d.getDate()).padStart(2,'0');
+    return {iso:`${yyyy}-${mm}-${dd}`,br:`${dd}/${mm}/${yyyy}`,rankLabel:'Ranks do dia',scopeMode:'day'};
   }
 
   function parsePercent(text){
@@ -1809,13 +1825,14 @@ body.seller-modal-open{overflow:hidden}
     const panel=document.querySelector('.team-partial-panel');
     const list=document.getElementById('teamPartialResult');
     if(!panel || !list || !list.children.length) return null;
-    const {br}=getDateParts();
+    const {br,rankLabel}=getDateParts();
     const wrap=document.createElement('div');
     wrap.className='team-export-stage export-cards-with-ranks';
     wrap.style.cssText='position:fixed;left:-12000px;top:0;width:1820px;background:#edf5ff;padding:18px;z-index:-1;box-sizing:border-box';
 
     const clone=panel.cloneNode(true);
     clone.querySelector('.team-partial-summary')?.remove();
+    clone.querySelector('.team-partial-scope')?.remove();
     clone.querySelector('.team-partial-actions')?.remove();
     clone.querySelector('.team-partial-empty')?.remove();
 
@@ -1827,7 +1844,7 @@ body.seller-modal-open{overflow:hidden}
       if(paragraph){
         paragraph.textContent='Acompanhamento por vendedor com mercantil, serviços, conversão e eficiência.';
         const title=head.querySelector('h3');
-        if(title) title.textContent='Resultado parcial da equipe • Ranks do dia';
+        if(title) title.textContent=`Resultado parcial da equipe • ${rankLabel}`;
       }
       const date=document.createElement('span');
       date.className='team-export-date';

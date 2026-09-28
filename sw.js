@@ -1,4 +1,4 @@
-const CACHE='fs-resultados-v130-landscape-adaptive';
+const CACHE='fs-resultados-v131-partial-period';
 const FILES=[
   './',
   './index.html',

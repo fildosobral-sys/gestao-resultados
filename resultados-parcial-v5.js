@@ -85,6 +85,29 @@
   function savePartial(data){ localStorage.setItem(PARTIAL_STORE, JSON.stringify(data)); }
   function todayISO(){ const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
   function selectedDate(){ return document.getElementById('dailyGoalDate')?.value || todayISO(); }
+  function activeMonth(){
+    const db=loadMain();
+    return document.getElementById('teamPartialMonth')?.value || db.month || selectedDate().slice(0,7);
+  }
+  function scopeMode(){ return document.getElementById('teamPartialScopeMode')?.value || 'day'; }
+  function scopeInfo(){
+    const mode=scopeMode();
+    if(mode==='month'){
+      const month=activeMonth();
+      const [y,m]=month.split('-');
+      const label=`${m}/${y}`;
+      return {mode,key:`month:${month}`,month,start:`${month}-01`,end:`${month}-31`,label,shortLabel:'Mês',rankLabel:'Ranks do mês',pill:'Parcial do mês'};
+    }
+    if(mode==='period'){
+      const start=document.getElementById('teamPartialPeriodStart')?.value || selectedDate();
+      const end=document.getElementById('teamPartialPeriodEnd')?.value || selectedDate();
+      const a=start<=end?start:end,b=start<=end?end:start;
+      const fmt=x=>x.split('-').reverse().join('/');
+      return {mode,key:`period:${a}:${b}`,start:a,end:b,label:`${fmt(a)} a ${fmt(b)}`,shortLabel:'Período',rankLabel:'Ranks do período',pill:'Parcial do período'};
+    }
+    const date=selectedDate();
+    return {mode:'day',key:`day:${date}`,start:date,end:date,label:date.split('-').reverse().join('/'),shortLabel:'Dia',rankLabel:'Ranks do dia',pill:'Parcial do dia'};
+  }
   function sellerKey(name){ return norm(name).replace(/\s+/g,'-') || 'vendedor'; }
   function roster(){
     const db = loadMain();
@@ -92,33 +115,55 @@
       .filter(s => s && s.name && s.active !== false && s.status !== 'inactive')
       .map((s,i) => ({...s, _id:s.id || s.uuid || sellerKey(s.name) || `seller-${i}`}));
   }
-  function dayPercent(){
-    const el = document.getElementById('dailyGoalPercent');
-    return Math.max(0, Number(el?.value || 0) || 0) / 100;
+  function dayPercent(date=selectedDate()){
+    const db=loadMain();
+    if(date===selectedDate()){
+      const el=document.getElementById('dailyGoalPercent');
+      const live=Math.max(0,Number(el?.value||0)||0);
+      if(live) return live/100;
+    }
+    const stored=Number(db.daily?.[date]?.goalPercent||0)||0;
+    return Math.max(0,stored)/100;
   }
   function branchGoals(){
     const db=loadMain();
-    return {merc: Number(db.goals?.[0] || db.mercantileGoal || 0), services: Number(db.servicesGoal || db.warrantyGoal || 0)};
+    return {merc:Number(db.goals?.[0]||db.mercantileGoal||0),services:Number(db.servicesGoal||db.warrantyGoal||0)};
   }
-  function dailyTargetPerSeller(kind){
-    const sellers = roster();
-    const count = sellers.length || 1;
-    const base = branchGoals();
-    const pct = dayPercent();
-    const dayMerc = (Number(base.merc || 0) * pct) / count;
-    const dayServ = (Number(base.services || 0) * pct) / count;
-    return kind === 'merc' ? dayMerc : dayServ;
+  function dateRange(start,end){
+    const out=[]; if(!start||!end)return out;
+    const d=new Date(`${start}T12:00:00`),last=new Date(`${end}T12:00:00`);
+    for(;d<=last;d.setDate(d.getDate()+1)) out.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+    return out;
   }
-  function resultFor(name, date){
-    const store=loadPartial();
-    return store.days?.[date]?.[sellerKey(name)] || {};
+  function targetForSeller(seller,kind,scope=scopeInfo()){
+    if(scope.mode==='month') return kind==='merc'?Number(seller.assignedGoal||0):Number(seller.serviceGoal||0);
+    const sellers=roster(),count=sellers.length||1,base=branchGoals();
+    const share=scope.mode==='period'?dateRange(scope.start,scope.end).reduce((sum,d)=>sum+dayPercent(d),0):dayPercent(scope.start);
+    const target=((kind==='merc'?Number(base.merc||0):Number(base.services||0))*share)/count;
+    return target;
   }
-  function setResult(name,date,patch){
-    const store=loadPartial(); store.days ||= {}; store.days[date] ||= {};
-    store.days[date][sellerKey(name)]={...(store.days[date][sellerKey(name)]||{}),...patch,updatedAt:Date.now()};
+  function resultFor(name, scope=scopeInfo()){
+    const store=loadPartial(),key=sellerKey(name);
+    if(scope.mode==='day') return store.scopes?.[scope.key]?.[key] || store.days?.[scope.start]?.[key] || {};
+    return store.scopes?.[scope.key]?.[key] || {};
+  }
+  function setResult(name,scope,patch){
+    scope=scope&&scope.mode?scope:scopeInfo();
+    const store=loadPartial(); store.scopes ||= {}; store.scopes[scope.key] ||= {};
+    const key=sellerKey(name);
+    store.scopes[scope.key][key]={...(store.scopes[scope.key][key]||{}),...patch,updatedAt:Date.now()};
+    if(scope.mode==='day'){
+      store.days ||= {}; store.days[scope.start] ||= {};
+      store.days[scope.start][key]={...(store.days[scope.start][key]||{}),...patch,updatedAt:Date.now()};
+    }
     savePartial(store);
   }
   function deterministicIndex(seed,len){ let h=0; for(const c of seed) h=(h*31+c.charCodeAt(0))>>>0; return len ? h%len : 0; }
+  function contextualMessage(message,scope=scopeInfo()){
+    if(scope.mode==='day') return message;
+    const word=scope.mode==='month'?'mês':'período';
+    return String(message).replace(/do dia/g,`do ${word}`).replace(/no dia/g,`no ${word}`).replace(/O dia /g,scope.mode==='month'?'O mês ':'O período ').replace(/o dia /g,scope.mode==='month'?'o mês ':'o período ');
+  }
   function motivationFor(s,tier,date){
     const store=loadPartial(); store.history ||= {}; const key=sellerKey(s.name); store.history[key] ||= [];
     const history=store.history[key]; const cutoff=Date.now()-90*24*60*60*1000;
@@ -127,7 +172,7 @@
     const unused=pool.filter(m=>!recent.some(x=>x.message===m));
     const chosenPool=unused.length?unused:pool;
     const idx=deterministicIndex(`${date}|${key}|${tier}|${recent.length}`, chosenPool.length);
-    const message=chosenPool[idx];
+    const message=contextualMessage(chosenPool[idx]);
     const emotes=tierEmoji[tier] || ['🙂'];
     const emoji=emotes[deterministicIndex(`${key}|${date}|emoji|${tier}`,emotes.length)];
     const already=history.find(x=>x.date===date && x.tier===tier);
@@ -182,13 +227,14 @@
   }
 
   function buildRowData(){
-    const date = selectedDate();
-    const sellers = roster();
-    const mercTarget = dailyTargetPerSeller('merc');
-    const servTarget = dailyTargetPerSeller('services');
+    const scope=scopeInfo();
+    const date=scope.key;
+    const sellers=roster();
 
     return sellers.map(s => {
-      const r = resultFor(s.name, date);
+      const mercTarget=targetForSeller(s,'merc',scope);
+      const servTarget=targetForSeller(s,'services',scope);
+      const r=resultFor(s.name,scope);
       const merc = Number(r.mercantil || 0);
       const services = Number(r.services || 0);
       const conversion = Number(r.conversao || 0);
@@ -214,7 +260,7 @@
 
       const mot = motivationFor(s,tierInfo.tier,date);
       return {
-        s, r, date, merc, services, conversion, efficiency,
+        s, r, date, scope, merc, services, conversion, efficiency,
         mercTarget, servTarget,
         mercPct, servicesPct,
         indicatorsPositive, indicatorsMet, cappedAverage, excessTotal, totalActualPct, completionScore,
@@ -286,12 +332,29 @@
     }).join('');
   }
 
+  function updateScopeUI(){
+    const scope=scopeInfo();
+    const panel=document.querySelector('.team-partial-panel');
+    const controls=document.getElementById('teamPartialScopeControls');
+    if(controls){
+      controls.querySelector('[data-partial-day]')?.toggleAttribute('hidden',scope.mode!=='day');
+      controls.querySelector('[data-partial-period]')?.toggleAttribute('hidden',scope.mode!=='period');
+      controls.querySelector('[data-partial-month]')?.toggleAttribute('hidden',scope.mode!=='month');
+    }
+    const pill=document.getElementById('teamPartialScopePill'); if(pill) pill.textContent=scope.pill;
+    const note=document.getElementById('teamPartialScopeNote');
+    if(note) note.textContent=scope.mode==='day'?'Usa a meta diária definida para a data selecionada.':scope.mode==='month'?'Usa a meta mensal cadastrada individualmente para cada vendedor.':'Usa a soma das metas diárias programadas dentro do período selecionado.';
+    if(panel){panel.dataset.scopeMode=scope.mode;panel.dataset.scopeLabel=scope.label;panel.dataset.date=scope.start;}
+    window.fsPartialScopeInfo={...scope};
+  }
+
   function render(){
     const host=document.getElementById('teamPartialResult'); if(!host) return;
+    updateScopeUI();
     const sellers=roster();
     const empty=document.getElementById('teamPartialEmpty');
     const panel=document.querySelector('.team-partial-panel');
-    if(panel){ panel.dataset.date=selectedDate(); }
+    if(panel){ panel.dataset.date=scopeInfo().start; }
     if(!sellers.length){
       host.innerHTML=''; if(empty){empty.hidden=false; empty.innerHTML='<strong>Nenhum vendedor ativo localizado.</strong><span>Cadastre os vendedores na aba Metas. Este bloco usa automaticamente essa mesma base.</span>';}
       updateSummary([]); renderMiniRankings([]); return;
@@ -336,12 +399,12 @@
 
   function buildManualRows(){
     const host=document.getElementById('teamPartialManualRows'); if(!host) return;
-    const date=selectedDate();
-    host.innerHTML=roster().map(s=>{ const r=resultFor(s.name,date); return `<div class="team-manual-row" data-name="${esc(s.name)}"><strong>${esc(s.name)}</strong><label>Mercantil<input data-f="mercantil" inputmode="decimal" value="${Number(r.mercantil||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}"></label><label>Serviços<input data-f="services" inputmode="decimal" value="${Number(r.services||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}"></label><label>Conversão %<input data-f="conversao" inputmode="decimal" value="${Number(r.conversao||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}"></label><label>Eficiência %<input data-f="eficiencia" inputmode="decimal" value="${Number(r.eficiencia||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}"></label></div>`; }).join('');
+    const scope=scopeInfo();
+    host.innerHTML=roster().map(s=>{ const r=resultFor(s.name,scope); return `<div class="team-manual-row" data-name="${esc(s.name)}"><strong>${esc(s.name)}</strong><label>Mercantil<input data-f="mercantil" inputmode="decimal" value="${Number(r.mercantil||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}"></label><label>Serviços<input data-f="services" inputmode="decimal" value="${Number(r.services||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}"></label><label>Conversão %<input data-f="conversao" inputmode="decimal" value="${Number(r.conversao||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}"></label><label>Eficiência %<input data-f="eficiencia" inputmode="decimal" value="${Number(r.eficiencia||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}"></label></div>`; }).join('');
   }
   function saveManual(){
-    const date=selectedDate(); document.querySelectorAll('.team-manual-row').forEach(row=>{
-      const p={}; row.querySelectorAll('input[data-f]').forEach(i=>p[i.dataset.f]=num(i.value)); setResult(row.dataset.name,date,p);
+    const scope=scopeInfo(); document.querySelectorAll('.team-manual-row').forEach(row=>{
+      const p={}; row.querySelectorAll('input[data-f]').forEach(i=>p[i.dataset.f]=num(i.value)); setResult(row.dataset.name,scope,p);
     }); render(); closeModal('teamPartialManualModal');
   }
 
@@ -460,8 +523,8 @@
     }catch(e){ status.textContent='Não foi possível concluir a leitura automática. Você ainda pode preencher manualmente ou colar o texto.'; }
   }
   function saveOCR(){
-    const date=selectedDate(); document.querySelectorAll('.ocr-review-row').forEach(row=>{
-      const p={}; row.querySelectorAll('input[data-f]').forEach(i=>p[i.dataset.f]=num(i.value)); setResult(row.dataset.name,date,p);
+    const scope=scopeInfo(); document.querySelectorAll('.ocr-review-row').forEach(row=>{
+      const p={}; row.querySelectorAll('input[data-f]').forEach(i=>p[i.dataset.f]=num(i.value)); setResult(row.dataset.name,scope,p);
     }); render(); closeModal('teamPartialImportModal');
   }
 
@@ -469,7 +532,7 @@
     const partial=document.querySelector('.team-partial-panel'); if(!partial) return;
     try{
       if(!window.html2canvas) await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js','html2canvas');
-      const date=selectedDate();
+      const scope=scopeInfo(); const date=scope.start;
       const wrap=document.createElement('div');
       wrap.className='team-export-stage team-export-ranking export-cards-only';
       wrap.style.cssText='position:fixed;left:-12000px;top:0;width:1440px;background:#edf5ff;padding:26px;z-index:-1;box-sizing:border-box';
@@ -495,7 +558,11 @@
 
   function bind(){
     const date=document.getElementById('dailyGoalDate'), per=document.getElementById('dailyGoalPercent');
-    date?.addEventListener('change',render); per?.addEventListener('input',render);
+    date?.addEventListener('change',()=>{const ps=document.getElementById('teamPartialPeriodStart'),pe=document.getElementById('teamPartialPeriodEnd');if(ps&&!ps.value)ps.value=date.value;if(pe&&!pe.value)pe.value=date.value;render()}); per?.addEventListener('input',render);
+    document.getElementById('teamPartialScopeMode')?.addEventListener('change',render);
+    document.getElementById('teamPartialPeriodStart')?.addEventListener('change',render);
+    document.getElementById('teamPartialPeriodEnd')?.addEventListener('change',render);
+    document.getElementById('teamPartialMonth')?.addEventListener('change',render);
     document.getElementById('teamPartialManual')?.addEventListener('click',openManual);
     document.getElementById('teamPartialImport')?.addEventListener('click',openImport);
     document.getElementById('teamPartialSaveManual')?.addEventListener('click',saveManual);
@@ -516,6 +583,6 @@
     const team=document.getElementById('dailyGoalTeam'); if(team) observer.observe(team,{childList:true,subtree:true});
   }
 
-  function init(){ bind(); render(); }
+  function init(){ const d=selectedDate(),db=loadMain();const ps=document.getElementById('teamPartialPeriodStart'),pe=document.getElementById('teamPartialPeriodEnd'),pm=document.getElementById('teamPartialMonth');if(ps&&!ps.value)ps.value=d;if(pe&&!pe.value)pe.value=d;if(pm&&!pm.value)pm.value=db.month||d.slice(0,7); bind(); render(); }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
 })();
