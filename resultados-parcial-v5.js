@@ -115,6 +115,26 @@
       .filter(s => s && s.name && s.active !== false && s.status !== 'inactive')
       .map((s,i) => ({...s, _id:s.id || s.uuid || sellerKey(s.name) || `seller-${i}`}));
   }
+  function excludedKeys(scope=scopeInfo()){
+    const store=loadPartial();
+    const list=store.filters?.[scope.key]?.excluded;
+    return new Set(Array.isArray(list)?list:[]);
+  }
+  function selectedRoster(scope=scopeInfo()){
+    const excluded=excludedKeys(scope);
+    return roster().filter(s=>!excluded.has(sellerKey(s.name)));
+  }
+  function setSellerIncluded(name,included,scope=scopeInfo()){
+    const store=loadPartial(); store.filters ||= {}; store.filters[scope.key] ||= {};
+    const current=new Set(Array.isArray(store.filters[scope.key].excluded)?store.filters[scope.key].excluded:[]);
+    const key=sellerKey(name);
+    if(included) current.delete(key); else current.add(key);
+    store.filters[scope.key].excluded=[...current];
+    savePartial(store);
+  }
+  function selectAllSellers(scope=scopeInfo()){
+    const store=loadPartial(); store.filters ||= {}; store.filters[scope.key] ||= {}; store.filters[scope.key].excluded=[]; savePartial(store);
+  }
   function dayPercent(date=selectedDate()){
     const db=loadMain();
     if(date===selectedDate()){
@@ -136,10 +156,13 @@
     return out;
   }
   function targetForSeller(seller,kind,scope=scopeInfo()){
-    if(scope.mode==='month') return kind==='merc'?Number(seller.assignedGoal||0):Number(seller.serviceGoal||0);
+    // Regra oficial da parcial:
+    // - Dia: usa a meta diária enviada pela gestão para aquele dia.
+    // - Período/Mês: usa SEMPRE a meta mensal individual cadastrada pelo próprio vendedor.
+    if(scope.mode!=='day') return kind==='merc'?num(seller.assignedGoal):num(seller.serviceGoal);
     const sellers=roster(),count=sellers.length||1,base=branchGoals();
-    const share=scope.mode==='period'?dateRange(scope.start,scope.end).reduce((sum,d)=>sum+dayPercent(d),0):dayPercent(scope.start);
-    const target=((kind==='merc'?Number(base.merc||0):Number(base.services||0))*share)/count;
+    const share=dayPercent(scope.start);
+    const target=((kind==='merc'?num(base.merc):num(base.services))*share)/count;
     return target;
   }
   function resultFor(name, scope=scopeInfo()){
@@ -229,7 +252,7 @@
   function buildRowData(){
     const scope=scopeInfo();
     const date=scope.key;
-    const sellers=roster();
+    const sellers=selectedRoster(scope);
 
     return sellers.map(s => {
       const mercTarget=targetForSeller(s,'merc',scope);
@@ -343,20 +366,43 @@
     }
     const pill=document.getElementById('teamPartialScopePill'); if(pill) pill.textContent=scope.pill;
     const note=document.getElementById('teamPartialScopeNote');
-    if(note) note.textContent=scope.mode==='day'?'Usa a meta diária definida para a data selecionada.':scope.mode==='month'?'Usa a meta mensal cadastrada individualmente para cada vendedor.':'Usa a soma das metas diárias programadas dentro do período selecionado.';
+    if(note) note.textContent=scope.mode==='day'?'Dia: usa a meta diária definida para a data selecionada.':'Período/Mês: usa a meta mensal individual cadastrada pelo próprio vendedor para Mercantil e Serviços.';
     if(panel){panel.dataset.scopeMode=scope.mode;panel.dataset.scopeLabel=scope.label;panel.dataset.date=scope.start;}
     window.fsPartialScopeInfo={...scope};
+  }
+
+  function renderRosterSelector(){
+    const host=document.getElementById('teamPartialRosterList'),countEl=document.getElementById('teamPartialRosterCount');
+    if(!host)return;
+    const scope=scopeInfo(),all=roster(),excluded=excludedKeys(scope);
+    host.innerHTML=all.map(s=>{const checked=!excluded.has(sellerKey(s.name));return `<label class="team-partial-roster-item ${checked?'':'is-off'}"><input type="checkbox" data-partial-seller-toggle="${esc(s.name)}" ${checked?'checked':''}><span>${esc(s.name)}</span></label>`}).join('');
+    const selected=all.length-excluded.size; if(countEl)countEl.textContent=`${Math.max(0,selected)}/${all.length} selecionados`;
+    host.querySelectorAll('[data-partial-seller-toggle]').forEach(input=>input.addEventListener('change',()=>{setSellerIncluded(input.dataset.partialSellerToggle,input.checked,scope);render();}));
+  }
+  function clearCurrentPartial(){
+    const scope=scopeInfo();
+    const label=scope.mode==='day'?`do dia ${scope.label}`:scope.mode==='month'?`do mês ${scope.label}`:`do período ${scope.label}`;
+    if(!confirm(`Limpar os dados da parcial ${label}?\n\nAs metas e os vendedores cadastrados não serão apagados.`)) return;
+    const store=loadPartial();
+    if(store.scopes) delete store.scopes[scope.key];
+    if(scope.mode==='day' && store.days) delete store.days[scope.start];
+    savePartial(store);
+    const paste=document.getElementById('teamPartialTextPaste'); if(paste)paste.value='';
+    const review=document.getElementById('teamPartialOcrReview'); if(review){review.innerHTML='';review.hidden=true;}
+    const save=document.getElementById('teamPartialSaveOcr'); if(save)save.hidden=true;
+    render();
   }
 
   function render(){
     const host=document.getElementById('teamPartialResult'); if(!host) return;
     updateScopeUI();
-    const sellers=roster();
+    renderRosterSelector();
+    const sellers=selectedRoster();
     const empty=document.getElementById('teamPartialEmpty');
     const panel=document.querySelector('.team-partial-panel');
     if(panel){ panel.dataset.date=scopeInfo().start; }
     if(!sellers.length){
-      host.innerHTML=''; if(empty){empty.hidden=false; empty.innerHTML='<strong>Nenhum vendedor ativo localizado.</strong><span>Cadastre os vendedores na aba Metas. Este bloco usa automaticamente essa mesma base.</span>';}
+      host.innerHTML=''; if(empty){empty.hidden=false; empty.innerHTML='<strong>Nenhum vendedor selecionado para esta parcial.</strong><span>Marque pelo menos um vendedor em “Vendedores no relatório”.</span>';}
       updateSummary([]); renderMiniRankings([]); return;
     }
     if(empty) empty.hidden=true;
@@ -538,7 +584,7 @@
       wrap.style.cssText='position:fixed;left:-12000px;top:0;width:1440px;background:#edf5ff;padding:26px;z-index:-1;box-sizing:border-box';
       const clone=partial.cloneNode(true);
       wrap.appendChild(clone); document.body.appendChild(wrap);
-      clone.querySelectorAll('button,.team-partial-actions,.team-partial-empty,.team-partial-summary,.team-partial-miniranks').forEach(x=>x.remove());
+      clone.querySelectorAll('button,.team-partial-actions,.team-partial-empty,.team-partial-summary,.team-partial-miniranks,.team-partial-roster-box').forEach(x=>x.remove());
       const head=clone.querySelector('.team-partial-head');
       if(head){
         head.innerHTML=`<div class="export-title-copy"><span class="team-partial-eyebrow">ACOMPANHAMENTO PARCIAL</span><h3>Resultado parcial da equipe</h3><p>Cards em ordem de classificação geral do dia.</p></div><span class="team-export-date">📅 ${date.split('-').reverse().join('/')}</span><span class="team-export-trophy">🏆</span>`;
@@ -565,6 +611,8 @@
     document.getElementById('teamPartialMonth')?.addEventListener('change',render);
     document.getElementById('teamPartialManual')?.addEventListener('click',openManual);
     document.getElementById('teamPartialImport')?.addEventListener('click',openImport);
+    document.getElementById('teamPartialClear')?.addEventListener('click',clearCurrentPartial);
+    document.getElementById('teamPartialSelectAll')?.addEventListener('click',()=>{selectAllSellers();render();});
     document.getElementById('teamPartialSaveManual')?.addEventListener('click',saveManual);
     document.getElementById('teamPartialReadImage')?.addEventListener('click',readImage);
     document.getElementById('teamPartialReadText')?.addEventListener('click',readPastedText);

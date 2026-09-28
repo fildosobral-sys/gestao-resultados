@@ -1,4 +1,4 @@
-const CACHE='fs-resultados-v131-partial-period';
+const CACHE='fs-resultados-v133-partial-goals';
 const FILES=[
   './',
   './index.html',
