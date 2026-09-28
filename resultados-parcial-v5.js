@@ -5,7 +5,7 @@
   const LEGACY_MAIN_STORE = 'fs_gestao_resultados_v1';
   const PARTIAL_STORE = 'fs_resultado_parcial_equipe_v1';
 
-  const num = v => Number(String(v ?? '').replace(/[^0-9,.-]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
+  const num = v => { if (typeof v === 'number') return Number.isFinite(v) ? Math.max(0,v) : 0; let text=String(v ?? '').trim().replace(/R\$|\s/g,''); if(!text) return 0; if(text.includes(',')) text=text.replace(/\./g,'').replace(',','.'); const parsed=Number(text); return Number.isFinite(parsed)?Math.max(0,parsed):0; };
   const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9 ]+/g,' ').replace(/\s+/g,' ').trim().toLowerCase();
 
@@ -66,11 +66,18 @@
     ]
   };
 
-  function loadMain(){
+  function loadMain(monthHint=''){
     try {
       const vault = JSON.parse(localStorage.getItem(MAIN_STORE) || '{}') || {};
       if (vault && vault.records && typeof vault.records === 'object') {
-        const current = vault.records[vault.currentKey] || Object.values(vault.records)[0];
+        const records=Object.values(vault.records);
+        const current=vault.records[vault.currentKey] || records[0];
+        if(monthHint){
+          const currentBranch=String(current?.branch||'').trim().toUpperCase();
+          const exact=records.find(r=>String(r?.month||'')===String(monthHint) && (!currentBranch || String(r?.branch||'').trim().toUpperCase()===currentBranch))
+            || records.find(r=>String(r?.month||'')===String(monthHint));
+          if(exact) return exact;
+        }
         if (current) return current;
       }
       if (Array.isArray(vault.sellers)) return vault;
@@ -109,8 +116,9 @@
     return {mode:'day',key:`day:${date}`,start:date,end:date,label:date.split('-').reverse().join('/'),shortLabel:'Dia',rankLabel:'Ranks do dia',pill:'Parcial do dia'};
   }
   function sellerKey(name){ return norm(name).replace(/\s+/g,'-') || 'vendedor'; }
-  function roster(){
-    const db = loadMain();
+  function roster(scope=scopeInfo()){
+    const monthHint=scope?.mode==='month'?scope.month:String(scope?.start||'').slice(0,7);
+    const db = loadMain(monthHint);
     return (Array.isArray(db.sellers) ? db.sellers : [])
       .filter(s => s && s.name && s.active !== false && s.status !== 'inactive')
       .map((s,i) => ({...s, _id:s.id || s.uuid || sellerKey(s.name) || `seller-${i}`}));
@@ -122,7 +130,7 @@
   }
   function selectedRoster(scope=scopeInfo()){
     const excluded=excludedKeys(scope);
-    return roster().filter(s=>!excluded.has(sellerKey(s.name)));
+    return roster(scope).filter(s=>!excluded.has(sellerKey(s.name)));
   }
   function setSellerIncluded(name,included,scope=scopeInfo()){
     const store=loadPartial(); store.filters ||= {}; store.filters[scope.key] ||= {};
@@ -145,8 +153,9 @@
     const stored=Number(db.daily?.[date]?.goalPercent||0)||0;
     return Math.max(0,stored)/100;
   }
-  function branchGoals(){
-    const db=loadMain();
+  function branchGoals(scope=scopeInfo()){
+    const monthHint=scope?.mode==='month'?scope.month:String(scope?.start||'').slice(0,7);
+    const db=loadMain(monthHint);
     return {merc:Number(db.goals?.[0]||db.mercantileGoal||0),services:Number(db.servicesGoal||db.warrantyGoal||0)};
   }
   function dateRange(start,end){
@@ -155,12 +164,19 @@
     for(;d<=last;d.setDate(d.getDate()+1)) out.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
     return out;
   }
+  function sellerMonthlyGoal(seller,kind,scope=scopeInfo()){
+    const monthKey=scope?.mode==='month'?scope.month:String(scope?.start||'').slice(0,7);
+    const snap=seller?.goalSetupByMonth && typeof seller.goalSetupByMonth==='object' ? seller.goalSetupByMonth[monthKey] : null;
+    const fromSnapshot=kind==='merc'?num(snap?.mercantile):num(snap?.services);
+    if(fromSnapshot>0) return fromSnapshot;
+    return kind==='merc'?num(seller?.assignedGoal):num(seller?.serviceGoal);
+  }
   function targetForSeller(seller,kind,scope=scopeInfo()){
     // Regra oficial da parcial:
     // - Dia: usa a meta diária enviada pela gestão para aquele dia.
-    // - Período/Mês: usa SEMPRE a meta mensal individual cadastrada pelo próprio vendedor.
-    if(scope.mode!=='day') return kind==='merc'?num(seller.assignedGoal):num(seller.serviceGoal);
-    const sellers=roster(),count=sellers.length||1,base=branchGoals();
+    // - Período/Mês: usa a meta mensal cadastrada PELO PRÓPRIO VENDEDOR na competência.
+    if(scope.mode!=='day') return sellerMonthlyGoal(seller,kind,scope);
+    const sellers=roster(scope),count=sellers.length||1,base=branchGoals(scope);
     const share=dayPercent(scope.start);
     const target=((kind==='merc'?num(base.merc):num(base.services))*share)/count;
     return target;
@@ -366,7 +382,7 @@
     }
     const pill=document.getElementById('teamPartialScopePill'); if(pill) pill.textContent=scope.pill;
     const note=document.getElementById('teamPartialScopeNote');
-    if(note) note.textContent=scope.mode==='day'?'Dia: usa a meta diária definida para a data selecionada.':'Período/Mês: usa a meta mensal individual cadastrada pelo próprio vendedor para Mercantil e Serviços.';
+    if(note) note.textContent=scope.mode==='day'?'Dia: usa a meta diária definida para a data selecionada.':'Período/Mês: usa a meta mensal salva pelo próprio vendedor na competência selecionada para Mercantil e Serviços.';
     if(panel){panel.dataset.scopeMode=scope.mode;panel.dataset.scopeLabel=scope.label;panel.dataset.date=scope.start;}
     window.fsPartialScopeInfo={...scope};
   }
@@ -374,7 +390,7 @@
   function renderRosterSelector(){
     const host=document.getElementById('teamPartialRosterList'),countEl=document.getElementById('teamPartialRosterCount');
     if(!host)return;
-    const scope=scopeInfo(),all=roster(),excluded=excludedKeys(scope);
+    const scope=scopeInfo(),all=roster(scope),excluded=excludedKeys(scope);
     host.innerHTML=all.map(s=>{const checked=!excluded.has(sellerKey(s.name));return `<label class="team-partial-roster-item ${checked?'':'is-off'}"><input type="checkbox" data-partial-seller-toggle="${esc(s.name)}" ${checked?'checked':''}><span>${esc(s.name)}</span></label>`}).join('');
     const selected=all.length-excluded.size; if(countEl)countEl.textContent=`${Math.max(0,selected)}/${all.length} selecionados`;
     host.querySelectorAll('[data-partial-seller-toggle]').forEach(input=>input.addEventListener('change',()=>{setSellerIncluded(input.dataset.partialSellerToggle,input.checked,scope);render();}));
@@ -446,7 +462,7 @@
   function buildManualRows(){
     const host=document.getElementById('teamPartialManualRows'); if(!host) return;
     const scope=scopeInfo();
-    host.innerHTML=roster().map(s=>{ const r=resultFor(s.name,scope); return `<div class="team-manual-row" data-name="${esc(s.name)}"><strong>${esc(s.name)}</strong><label>Mercantil<input data-f="mercantil" inputmode="decimal" value="${Number(r.mercantil||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}"></label><label>Serviços<input data-f="services" inputmode="decimal" value="${Number(r.services||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}"></label><label>Conversão %<input data-f="conversao" inputmode="decimal" value="${Number(r.conversao||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}"></label><label>Eficiência %<input data-f="eficiencia" inputmode="decimal" value="${Number(r.eficiencia||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}"></label></div>`; }).join('');
+    host.innerHTML=roster(scope).map(s=>{ const r=resultFor(s.name,scope); return `<div class="team-manual-row" data-name="${esc(s.name)}"><strong>${esc(s.name)}</strong><label>Mercantil<input data-f="mercantil" inputmode="decimal" value="${Number(r.mercantil||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}"></label><label>Serviços<input data-f="services" inputmode="decimal" value="${Number(r.services||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}"></label><label>Conversão %<input data-f="conversao" inputmode="decimal" value="${Number(r.conversao||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}"></label><label>Eficiência %<input data-f="eficiencia" inputmode="decimal" value="${Number(r.eficiencia||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}"></label></div>`; }).join('');
   }
   function saveManual(){
     const scope=scopeInfo(); document.querySelectorAll('.team-manual-row').forEach(row=>{

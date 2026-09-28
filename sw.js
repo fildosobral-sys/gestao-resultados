@@ -1,4 +1,4 @@
-const CACHE='fs-resultados-v133-partial-goals';
+const CACHE='fs-resultados-v134-meta-vendedor';
 const FILES=[
   './',
   './index.html',
