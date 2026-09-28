@@ -6,6 +6,27 @@
   const PARTIAL_STORE = 'fs_resultado_parcial_equipe_v1';
 
   const num = v => { if (typeof v === 'number') return Number.isFinite(v) ? Math.max(0,v) : 0; let text=String(v ?? '').trim().replace(/R\$|\s/g,''); if(!text) return 0; if(text.includes(',')) text=text.replace(/\./g,'').replace(',','.'); const parsed=Number(text); return Number.isFinite(parsed)?Math.max(0,parsed):0; };
+  const moneyNum = v => {
+    if (typeof v === 'number') return Number.isFinite(v) ? Math.max(0,v) : 0;
+    let s=String(v ?? '').trim().replace(/R\$|\s|\u00a0/g,'');
+    if(!s) return 0;
+    const comma=s.lastIndexOf(','), dot=s.lastIndexOf('.');
+    if(comma>=0 && dot>=0){
+      if(comma>dot) s=s.replace(/\./g,'').replace(',','.');
+      else s=s.replace(/,/g,'');
+    }else if(comma>=0){
+      const tail=s.length-comma-1;
+      if(tail===3 && /^\d{1,3}(,\d{3})+$/.test(s)) s=s.replace(/,/g,'');
+      else s=s.replace(/\./g,'').replace(',','.');
+    }else if(dot>=0){
+      const parts=s.split('.');
+      if(parts.length>2 && parts.slice(1).every(x=>x.length===3)) s=parts.join('');
+      else if(parts.length===2 && parts[1].length===3 && /^\d{1,3}\.\d{3}$/.test(s)) s=parts.join('');
+      else if(parts.length>2){ const dec=parts.pop(); s=parts.join('')+'.'+dec; }
+    }
+    const n=Number(s);
+    return Number.isFinite(n)?Math.max(0,n):0;
+  };
   const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9 ]+/g,' ').replace(/\s+/g,' ').trim().toLowerCase();
 
@@ -167,9 +188,9 @@
   function sellerMonthlyGoal(seller,kind,scope=scopeInfo()){
     const monthKey=scope?.mode==='month'?scope.month:String(scope?.start||'').slice(0,7);
     const snap=seller?.goalSetupByMonth && typeof seller.goalSetupByMonth==='object' ? seller.goalSetupByMonth[monthKey] : null;
-    const fromSnapshot=kind==='merc'?num(snap?.mercantile):num(snap?.services);
+    const fromSnapshot=kind==='merc'?moneyNum(snap?.mercantile):moneyNum(snap?.services);
     if(fromSnapshot>0) return fromSnapshot;
-    return kind==='merc'?num(seller?.assignedGoal):num(seller?.serviceGoal);
+    return kind==='merc'?moneyNum(seller?.assignedGoal):moneyNum(seller?.serviceGoal);
   }
   function targetForSeller(seller,kind,scope=scopeInfo()){
     // Regra oficial da parcial:
@@ -265,17 +286,33 @@
     </div>`;
   }
 
+  function normalizeLegacyMonthlyTarget(target,actual,kind,scope=scopeInfo()){
+    target=moneyNum(target); actual=Math.max(0,Number(actual)||0);
+    if(scope.mode==='day' || !(target>0) || !(actual>0)) return target;
+    const ratio=actual/target;
+    // Proteção para metas antigas gravadas com ponto de milhar interpretado como decimal
+    // Ex.: 110.000 -> 110 ou 7.700 -> 7,7. Só corrige quando o resultado denuncia
+    // uma base monetária 1000x menor e a escala corrigida passa a ser plausível.
+    if(ratio>=20){
+      const scaled=target*1000, scaledRatio=actual/scaled;
+      const plausible=(kind==='merc' ? scaled>=10000 : scaled>=500) && scaledRatio>=0.001 && scaledRatio<=5;
+      if(plausible) return scaled;
+    }
+    return target;
+  }
   function buildRowData(){
     const scope=scopeInfo();
     const date=scope.key;
     const sellers=selectedRoster(scope);
 
     return sellers.map(s => {
-      const mercTarget=targetForSeller(s,'merc',scope);
-      const servTarget=targetForSeller(s,'services',scope);
+      let mercTarget=targetForSeller(s,'merc',scope);
+      let servTarget=targetForSeller(s,'services',scope);
       const r=resultFor(s.name,scope);
       const merc = Number(r.mercantil || 0);
       const services = Number(r.services || 0);
+      mercTarget=normalizeLegacyMonthlyTarget(mercTarget,merc,'merc',scope);
+      servTarget=normalizeLegacyMonthlyTarget(servTarget,services,'services',scope);
       const conversion = Number(r.conversao || 0);
       const efficiency = Number(r.eficiencia || 0);
 

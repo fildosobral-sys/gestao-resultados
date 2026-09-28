@@ -12,6 +12,7 @@ var norm=function(v){return String(v||'').normalize('NFD').replace(/[\u0300-\u03
 var digits=function(v){return String(v||'').replace(/\D/g,'')};
 var branchMatch=function(a,b){var da=digits(a),db=digits(b);return da&&db?Number(da)===Number(db):norm(a)===norm(b)};
 var num=function(v){if(typeof v==='number')return Number.isFinite(v)?Math.max(0,v):0;var s=String(v==null?'':v).replace(/R\$|\s/g,'');if(s.indexOf(',')>=0)s=s.replace(/\./g,'').replace(',','.');var n=Number(s);return Number.isFinite(n)?Math.max(0,n):0};
+var moneyNum=function(v){if(typeof v==='number')return Number.isFinite(v)?Math.max(0,v):0;var s=String(v==null?'':v).trim().replace(/R\$|\s|\u00a0/g,'');if(!s)return 0;var c=s.lastIndexOf(','),d=s.lastIndexOf('.');if(c>=0&&d>=0){if(c>d)s=s.replace(/\./g,'').replace(',','.');else s=s.replace(/,/g,'')}else if(c>=0){var tail=s.length-c-1;if(tail===3&&/^\d{1,3}(,\d{3})+$/.test(s))s=s.replace(/,/g,'');else s=s.replace(/\./g,'').replace(',','.')}else if(d>=0){var a=s.split('.');if(a.length>2&&a.slice(1).every(function(x){return x.length===3}))s=a.join('');else if(a.length===2&&a[1].length===3&&/^\d{1,3}\.\d{3}$/.test(s))s=a.join('');else if(a.length>2){var dec=a.pop();s=a.join('')+'.'+dec}}var n=Number(s);return Number.isFinite(n)?Math.max(0,n):0};
 var esc=function(v){return String(v==null?'':v).replace(/[&<>'"]/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'})[c]})};
 var now=new Date();
 var currentMonth=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
@@ -180,7 +181,7 @@ function openGoals(vault){
   body.innerHTML='<div class="monthly-goals-grid"><label class="monthly-goal-field"><span>💰 META MERCANTIL</span><input id="monthlyMercGoalV91" inputmode="decimal" placeholder="R$ 0,00"></label><label class="monthly-goal-field"><span>🛡️ META DE SERVIÇOS</span><input id="monthlyServGoalV91" inputmode="decimal" placeholder="R$ 0,00"></label></div><div class="monthly-actions"><button class="monthly-primary" id="saveMonthlyGoalsV91">Salvar e iniciar mês</button></div><div class="monthly-note" id="monthlyGoalFeedbackV91">As duas metas são obrigatórias para iniciar o novo ciclo.</div>';
   m.hidden=false;document.body.style.overflow='hidden';
   body.querySelector('#saveMonthlyGoalsV91').onclick=async function(){
-    var mg=num(body.querySelector('#monthlyMercGoalV91').value),sg=num(body.querySelector('#monthlyServGoalV91').value),fb=body.querySelector('#monthlyGoalFeedbackV91'),btn=this;
+    var mg=moneyNum(body.querySelector('#monthlyMercGoalV91').value),sg=moneyNum(body.querySelector('#monthlyServGoalV91').value),fb=body.querySelector('#monthlyGoalFeedbackV91'),btn=this;
     if(!(mg>0)||!(sg>0)){fb.textContent='Informe a Meta Mercantil e a Meta de Serviços.';fb.style.color='#b83249';return}
     btn.disabled=true;btn.textContent='Salvando…';
     try{await persistGoals(mg,sg);m.hidden=true;document.body.style.overflow='';setTimeout(function(){location.reload()},250)}
