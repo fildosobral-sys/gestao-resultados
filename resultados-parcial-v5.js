@@ -511,7 +511,8 @@
   function openManual(){ buildManualRows(); const el=document.getElementById('teamPartialManualModal'); if(el) el.hidden=false; }
   function openImport(){ const el=document.getElementById('teamPartialImportModal'); if(el) el.hidden=false; }
 
-  function loadScript(src,id){ return new Promise((resolve,reject)=>{ if(window[id]) return resolve(); const old=document.querySelector(`script[data-dynamic="${id}"]`); if(old){ old.addEventListener('load',resolve,{once:true}); return; } const s=document.createElement('script'); s.src=src; s.async=true; s.dataset.dynamic=id; s.onload=resolve; s.onerror=reject; document.head.appendChild(s); }); }
+  function loadScript(src,id){ return new Promise((resolve,reject)=>{ if(window[id]) return resolve(); const old=document.querySelector(`script[data-dynamic="${id}"]`); if(old){ old.addEventListener('load',resolve,{once:true}); old.addEventListener('error',reject,{once:true}); return; } const s=document.createElement('script'); s.src=src; s.async=true; s.dataset.dynamic=id; s.onload=resolve; s.onerror=()=>{try{s.remove()}catch(_){};reject(new Error('Falha ao carregar '+src))}; document.head.appendChild(s); }); }
+  async function ensureHtml2Canvas(){ if(window.html2canvas)return true; for(const url of ['https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js','https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js','https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js']){ try{await loadScript(url,'html2canvas'); if(window.html2canvas)return true}catch(e){} } return false; }
 
   function moneyTokens(line){
     return [...String(line||'').matchAll(/R\$?\s*([\d.]+,\d{2})/gi)].map(m=>num(m[1]));
@@ -630,7 +631,7 @@
   async function downloadComposite(){
     const partial=document.querySelector('.team-partial-panel'); if(!partial) return;
     try{
-      if(!window.html2canvas) await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js','html2canvas');
+      if(!window.html2canvas) await ensureHtml2Canvas();
       const scope=scopeInfo(); const date=scope.start;
       const wrap=document.createElement('div');
       wrap.className='team-export-stage team-export-ranking export-cards-only';
@@ -652,7 +653,7 @@
       const url=URL.createObjectURL(blob);
       const a=document.createElement('a'); a.download=`resultado-parcial-equipe-${date}.png`; a.href=url; a.click();
       setTimeout(()=>URL.revokeObjectURL(url),1500);
-    }catch(e){ alert('Não foi possível gerar o acompanhamento neste aparelho. Tente novamente com internet ativa.'); }
+    }catch(e){ console.error(e); alert('Não foi possível gerar o acompanhamento neste aparelho agora. Feche e abra a página e tente novamente.'); }
   }
 
   function bind(){

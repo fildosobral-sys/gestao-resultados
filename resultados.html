@@ -1675,9 +1675,52 @@ body.seller-modal-open{overflow:hidden}
   function loadScript(src){
     return new Promise(function(resolve,reject){
       const s=document.createElement('script');
-      s.src=src; s.onload=resolve; s.onerror=reject;
+      s.src=src; s.async=true;
+      s.onload=()=>resolve(true);
+      s.onerror=()=>{ try{s.remove()}catch(_){}; reject(new Error('Falha ao carregar '+src)); };
       document.head.appendChild(s);
     });
+  }
+
+  async function ensureHtml2Canvas(){
+    if(window.html2canvas) return true;
+    const urls=[
+      'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+      'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js'
+    ];
+    for(const url of urls){
+      try{ await loadScript(url); if(window.html2canvas) return true; }catch(e){}
+    }
+    return false;
+  }
+
+  function captureCssText(){
+    let css='';
+    for(const sheet of Array.from(document.styleSheets||[])){
+      try{ for(const rule of Array.from(sheet.cssRules||[])) css+=rule.cssText+'\n'; }catch(e){}
+    }
+    return css;
+  }
+
+  async function nativeCaptureElement(element,options={}){
+    const width=Math.ceil(options.windowWidth||element.scrollWidth||element.getBoundingClientRect().width||1440);
+    const height=Math.ceil(Math.max(element.scrollHeight||0,element.getBoundingClientRect().height||0,200));
+    const scale=Math.max(1,Number(options.scale)||2);
+    const bg=options.backgroundColor||'#edf5ff';
+    const clone=element.cloneNode(true);
+    clone.style.position='relative'; clone.style.left='0'; clone.style.top='0'; clone.style.zIndex='0';
+    clone.style.width=width+'px'; clone.style.maxWidth='none'; clone.style.margin='0';
+    const css=captureCssText().replace(/]]>/g,']]]]><![CDATA[>');
+    const html=new XMLSerializer().serializeToString(clone);
+    const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><foreignObject x="0" y="0" width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="width:${width}px;min-height:${height}px;background:${bg};"><style type="text/css"><![CDATA[${css}]]></style>${html}</div></foreignObject></svg>`;
+    const url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml;charset=utf-8'}));
+    try{
+      const img=await new Promise((resolve,reject)=>{const im=new Image(); im.onload=()=>resolve(im); im.onerror=()=>reject(new Error('Falha no renderizador nativo')); im.src=url;});
+      const canvas=document.createElement('canvas'); canvas.width=Math.ceil(width*scale); canvas.height=Math.ceil(height*scale);
+      const ctx=canvas.getContext('2d'); ctx.scale(scale,scale); ctx.fillStyle=bg; ctx.fillRect(0,0,width,height); ctx.drawImage(img,0,0,width,height);
+      return canvas;
+    }finally{ URL.revokeObjectURL(url); }
   }
 
   function getDateParts(){
@@ -1876,9 +1919,7 @@ body.seller-modal-open{overflow:hidden}
   async function exportCardsOnly(){
     let wrap=null;
     try{
-      if(!window.html2canvas){
-        await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
-      }
+      const hasHtml2Canvas=await ensureHtml2Canvas();
       const {iso}=getDateParts();
       wrap=buildExportStage();
       if(!wrap) return;
@@ -1891,16 +1932,24 @@ body.seller-modal-open{overflow:hidden}
       await new Promise(r=>setTimeout(r,160));
       await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
 
-      const canvas=await window.html2canvas(wrap,{
-        scale:2,
-        backgroundColor:'#edf5ff',
-        useCORS:true,
-        logging:false,
-        windowWidth:1820,
-        imageTimeout:30000,
-        scrollX:0,
-        scrollY:0
-      });
+      let canvas=null;
+      if(hasHtml2Canvas && window.html2canvas){
+        try{
+          canvas=await window.html2canvas(wrap,{
+            scale:2,
+            backgroundColor:'#edf5ff',
+            useCORS:true,
+            logging:false,
+            windowWidth:1820,
+            imageTimeout:30000,
+            scrollX:0,
+            scrollY:0
+          });
+        }catch(err){ console.warn('html2canvas falhou; usando renderizador nativo.',err); }
+      }
+      if(!canvas){
+        canvas=await nativeCaptureElement(wrap,{scale:2,backgroundColor:'#edf5ff',windowWidth:1820});
+      }
       const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png',1));
       if(!blob) throw new Error('Falha ao gerar PNG');
       const url=URL.createObjectURL(blob);
@@ -1911,7 +1960,7 @@ body.seller-modal-open{overflow:hidden}
       setTimeout(()=>URL.revokeObjectURL(url),1500);
     }catch(err){
       console.error(err);
-      alert('Não foi possível gerar a imagem agora. Tente novamente com internet ativa.');
+      alert('Não foi possível gerar a imagem neste aparelho agora. Feche e abra a página e tente novamente.');
     }finally{
       if(wrap) wrap.remove();
     }

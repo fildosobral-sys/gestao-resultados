@@ -1,4 +1,4 @@
-const CACHE='fs-resultados-v135-meta-money-safe';
+const CACHE='fs-resultados-v136-export-resiliente';
 const FILES=[
   './',
   './index.html',
