@@ -1,4 +1,4 @@
-const CACHE='fs-resultados-v136-export-resiliente';
+const CACHE='fs-resultados-v137-app-isolado';
 const FILES=[
   './',
   './index.html',
