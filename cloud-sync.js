@@ -76,11 +76,22 @@
   }
   function loadRemote() {
     return new Promise((resolve, reject) => {
-      const callback = `__resultsMerge_${Date.now()}`;
+      const callback = `__resultsMerge_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
       const script = document.createElement('script');
-      const cleanup = () => { delete window[callback]; script.remove(); };
-      window[callback] = response => { cleanup(); response?.ok ? resolve(response.vault || null) : reject(new Error(response?.error || 'Falha')); };
+      let timeout = null, finished = false;
+      const cleanup = () => {
+        if (finished) return;
+        finished = true;
+        if (timeout) clearTimeout(timeout);
+        try { delete window[callback]; } catch (_) {}
+        script.remove();
+      };
+      window[callback] = response => {
+        cleanup();
+        response?.ok ? resolve(response.vault || null) : reject(new Error(response?.error || 'Falha'));
+      };
       script.onerror = () => { cleanup(); reject(new Error('Falha de conexão')); };
+      timeout = setTimeout(() => { cleanup(); reject(new Error('Tempo esgotado na sincronização')); }, 10000);
       script.src = `${ENDPOINT}?action=load&token=${encodeURIComponent(TOKEN)}&callback=${callback}&_=${Date.now()}`;
       document.head.appendChild(script);
     });
@@ -93,7 +104,11 @@
     pending = null;
     status('↑ Sincronizando com a nuvem…', 'busy');
     try {
-      try { vault = mergeVaults(await loadRemote(), vault); } catch (_) { /* mantém a cópia local se a leitura remota falhar */ }
+      // Nunca envia um cofre inteiro sem antes ler a nuvem. Se a leitura falhar,
+      // mantém a alteração pendente e tenta novamente depois, evitando sobrescrever
+      // dados mais novos de vendedores em outros aparelhos.
+      const remote = await loadRemote();
+      vault = mergeVaults(remote, vault);
       localStorage.setItem(STORE, JSON.stringify(vault));
       await fetch(ENDPOINT, {
         method: 'POST', mode: 'no-cors', cache: 'no-store',
@@ -103,10 +118,10 @@
       status('✓ Dados enviados para a nuvem');
     } catch (error) {
       pending = pending || vault;
-      status('⚠ Salvo neste aparelho; nuvem indisponível', 'error');
+      status('⚠ Salvo neste aparelho; aguardando reconexão com a nuvem', 'error');
     } finally {
       sending = false;
-      if (pending) timer = setTimeout(pushNow, 1200);
+      if (pending) timer = setTimeout(pushNow, 2500);
     }
   }
 

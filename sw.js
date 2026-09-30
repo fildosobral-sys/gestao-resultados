@@ -1,4 +1,4 @@
-const CACHE='fs-resultados-v137-app-isolado';
+const CACHE='fs-resultados-v138-cloud-stable';
 const FILES=[
   './',
   './index.html',

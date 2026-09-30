@@ -18,8 +18,6 @@ function loadScript(src,id){
     s.onload=resolve;s.onerror=reject;document.head.appendChild(s);
   });
 }
-async function ensureHtml2Canvas(){if(window.html2canvas)return true;for(const u of ['https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js','https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js','https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js']){try{await loadScript(u,'html2canvas');if(window.html2canvas)return true}catch(e){}}return false;}
-
 
 function cssText(){
   return `
@@ -68,7 +66,7 @@ async function exportPartialOnly(){
   var partial=document.querySelector('.team-partial-panel');
   if(!partial){alert('O resultado parcial da equipe ainda não está disponível.');return;}
   try{
-    if(!window.html2canvas)await ensureHtml2Canvas();
+    if(!window.html2canvas)await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js','html2canvas');
 
     var wrap=document.createElement('div');
     wrap.style.cssText='position:fixed;left:-20000px;top:0;width:1272px;background:#f4f7fb;z-index:-1;padding:0;margin:0;';
@@ -111,7 +109,7 @@ async function exportPartialOnly(){
     a.href=canvas.toDataURL('image/png',1);
     a.click();
   }catch(e){
-    alert('Não foi possível gerar a imagem do ranking neste aparelho agora. Feche e abra a página e tente novamente.');
+    alert('Não foi possível gerar a imagem do ranking neste aparelho. Tente novamente com internet ativa.');
   }
 }
 
