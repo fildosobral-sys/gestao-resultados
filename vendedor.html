@@ -191,9 +191,15 @@ html,body{max-width:100%;overflow-x:hidden}
 @media(max-width:760px){.seller-week-donut-grid{grid-template-columns:repeat(3,1fr);gap:5px}.seller-week-donut{width:74px;height:74px}.seller-week-donut:after{inset:11px}.seller-week-chart-grid{grid-template-columns:1fr}.week-grid{grid-template-columns:1fr 1fr}.seller-week-toggle>div>strong{font-size:17px}}
 </style>
 <style id="analysis-full-width-v70">#periodCompare{display:block!important;width:100%!important;max-width:none!important}#periodCompare>.analysis-shell{width:100%!important;max-width:none!important}</style>
+
+<style id="seller-month-switcher-v140">
+.seller-month-switcher{display:flex;align-items:center;justify-content:flex-end;gap:9px;margin:10px 0 6px;padding:0 2px}.seller-month-switcher[hidden]{display:none!important}.seller-month-switcher label{font-size:10px;font-weight:900;color:#6f8093;text-transform:uppercase;letter-spacing:.04em}.seller-month-switcher select{height:40px;min-width:190px;border:1px solid #dce5ef;border-radius:13px;background:#fff;color:#17324d;padding:0 36px 0 12px;font:800 13px inherit}.seller-month-switcher .history-pill{display:inline-flex;align-items:center;padding:7px 10px;border-radius:999px;background:#fff4da;color:#8a5b05;font-size:10px;font-weight:900}
+@media(max-width:700px){.seller-month-switcher{justify-content:stretch;flex-wrap:wrap;padding:0 8px}.seller-month-switcher label{flex:1 1 100%}.seller-month-switcher select{flex:1 1 auto;min-width:0}.seller-month-switcher .history-pill{flex:0 0 auto}}
+</style>
 </head><body>
 <div class="app">
 <header class="top"><div class="brand"><small>Central Inteligente de Vendas</small><h1>Meu Resultado</h1></div><div class="top-side"><div class="sync-pill busy" id="syncState" title="Status da sincronização">☁️</div><button class="user profile-trigger" id="profileTrigger" type="button" aria-label="Abrir meu perfil"><span class="seller-avatar" id="sellerAvatar">V</span><span class="seller-user-copy"><strong id="who">Vendedor</strong><small id="where"></small></span><span class="profile-caret">⌄</span></button></div></header>
+<div class="seller-month-switcher" id="sellerMonthSwitcher" hidden></div>
 <nav class="tabs"><button class="tab active" data-view="home">🏠 Início</button><button class="tab" data-view="daily">📝 Diário</button><button class="tab" data-view="weekly">📊 Semanal</button><button class="tab" data-view="goals">🎯 Metas</button><button class="tab" data-view="dashboard">📊 Dashboard</button><button class="tab" data-view="periods">📈 Análises</button></nav>
 <section class="view active" id="home">
   <article class="panel hero-panel">
@@ -218,4 +224,4 @@ html,body{max-width:100%;overflow-x:hidden}
 <div class="footer">Developed by <strong>Fildo Sobral</strong> • FS Soluções</div>
 </div>
 <div class="profile-backdrop" id="profileBackdrop" hidden><section class="profile-sheet" role="dialog" aria-modal="true" aria-label="Meu perfil"><div class="profile-sheet-handle"></div><div class="profile-head"><div class="profile-avatar" id="profileAvatar">V</div><div><strong id="profileName">Vendedor</strong><span id="profileMeta">Meu acesso</span></div><button type="button" class="profile-close" id="profileClose" aria-label="Fechar">×</button></div><div class="profile-actions"><button type="button" id="profileData">👤 Meus dados</button><label class="profile-photo-label" for="profilePhotoInput">📷 Trocar foto</label><input id="profilePhotoInput" class="profile-photo-input" type="file" accept="image/*"><button type="button" id="profileReport">🧾 Meu relatório</button><button type="button" id="profileSupport">💬 Suporte FS</button><button type="button" id="profileSwitch">🔄 Trocar usuário</button><button type="button" class="danger" id="profileLogout">🚪 Sair da plataforma</button></div><div class="profile-details" id="profileDetails" hidden></div></section></div>
-<script src="vendedor-v40.js?v=126"></script></body></html>
+<script src="vendedor-v40.js?v=140"></script></body></html>

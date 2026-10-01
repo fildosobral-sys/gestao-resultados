@@ -22,7 +22,7 @@
   }
 
   if(/(?:^|\/)vendedor\.html$/i.test(location.pathname)){
-    addScript('./vendedor-monthly-v91.js?v=91','monthlyCycleV91Loader');
+    addScript('./vendedor-monthly-v91.js?v=140','monthlyCycleV91Loader');
   }
 
   if(/(?:^|\/)resultados\.html$/i.test(location.pathname)){

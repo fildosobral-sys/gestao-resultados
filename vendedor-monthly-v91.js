@@ -22,7 +22,10 @@ var qs=new URLSearchParams(location.search);
 var managerView=qs.get('managerView')==='1';
 var requestedSellerId=String(qs.get('sellerId')||'').trim();
 var requestedSellerName=String(qs.get('seller')||'').trim();
+var requestedViewMonth=String(qs.get('month')||'').trim();
 if(managerView)return;
+/* Ao consultar uma competência histórica, não abrir novamente o fechamento/novo ciclo. */
+if(/^\d{4}-\d{2}$/.test(requestedViewMonth)&&requestedViewMonth!==currentMonth)return;
 
 function localVault(){try{return JSON.parse(localStorage.getItem(STORE)||'null')}catch(e){return null}}
 function exactRecord(v,key){return Object.values(v&&v.records||{}).find(function(r){return branchMatch(r.branch,branchText)&&r.month===key})||null}
@@ -73,36 +76,122 @@ function saveLocal(v){v._cloudUpdatedAt=new Date().toISOString();localStorage.se
 
 var banks={
  good:[
-  'Resultado acima da referência. Identifique o comportamento que mais contribuiu e transforme-o em rotina.',
-  'O indicador fechou em nível positivo. Preserve as práticas que funcionaram e procure repetir o padrão com consistência.',
-  'Bom fechamento neste indicador. Use o resultado como base para elevar a regularidade no próximo ciclo.',
-  'A referência foi alcançada. Registre o que funcionou melhor para que a execução forte não dependa de um único dia.'
+  'Parabéns pela entrega. Preserve o que gerou resultado e transforme as melhores práticas em rotina.',
+  'Meta ou referência alcançada. Identifique o comportamento decisivo e repita-o com consistência no próximo ciclo.',
+  'Fechamento positivo. Mantenha o padrão que funcionou e escolha um ponto para elevar ainda mais a qualidade da execução.',
+  'Bom resultado no mês. Registre o que funcionou para que a performance forte seja reproduzível, e não ocasional.'
  ],
  stable:[
-  'O resultado ficou em uma faixa intermediária. Pequenos ajustes de rotina podem transformar proximidade em atingimento.',
-  'Há base para evolução. Observe os dias de melhor desempenho e replique o padrão com maior frequência.',
-  'O indicador mostra potencial, mas ainda pede consistência. Escolha uma ação simples para acompanhar semanalmente.',
-  'O resultado é um bom ponto de partida. Defina uma prática objetiva para melhorar a regularidade no próximo mês.'
+  'Você ficou próximo da referência. Pequenos ajustes de rotina podem transformar proximidade em atingimento.',
+  'Há uma base consistente. Observe os dias de melhor desempenho e replique esse padrão com maior frequência.',
+  'O indicador mostra potencial. Escolha uma ação simples e mensurável para acompanhar ao longo do próximo mês.',
+  'O resultado está em uma faixa de construção. Identifique o que funcionou melhor e reduza as oscilações durante o ciclo.'
  ],
  attention:[
-  'O indicador pede atenção. Revise abordagem, rotina e oportunidades perdidas e escolha uma ação concreta para o próximo mês.',
-  'O resultado ficou abaixo da referência. Use o fechamento para identificar a principal causa e transformar a análise em ação.',
-  'Há espaço claro para evolução. Priorize constância, acompanhamento diário e correção rápida quando o ritmo cair.',
-  'O fechamento mostra uma oportunidade importante. Reforce preparação, execução e acompanhamento dos resultados durante o mês.'
+  'O indicador ficou abaixo da referência. Identifique a principal causa e transforme a análise em uma ação prática.',
+  'Há espaço importante para evolução. Separe fatores internos e externos e defina o que está sob seu controle para o próximo mês.',
+  'O fechamento pede correção de rota. Priorize uma mudança objetiva de comportamento e acompanhe-a durante o mês.',
+  'Use este resultado como diagnóstico. Escolha uma causa principal e uma ação concreta para melhorar a execução no próximo ciclo.'
  ]
 };
+var questionBanks={
+ mercantil:{
+  good:[
+   'Parabéns pela meta mercantil. O que mais contribuiu para você entregar esse resultado?',
+   'Sua meta mercantil foi alcançada. Qual prática comercial você considera decisiva para essa entrega?',
+   'Você fechou bem o mercantil. O que funcionou melhor e merece ser repetido no próximo mês?'
+  ],
+  stable:[
+   'Você ficou próximo da meta mercantil. O que faltou para transformar essa proximidade em entrega?',
+   'Quais ações ajudaram seu mercantil e qual ajuste teria maior impacto no próximo mês?',
+   'O resultado ficou perto da meta. Em poucas palavras, onde você vê a principal oportunidade de avanço?'
+  ],
+  attention:[
+   'O mercantil ficou abaixo da meta. Quais fatores internos e externos mais influenciaram esse resultado?',
+   'O que mais dificultou sua entrega mercantil e o que você faria diferente no próximo mês?',
+   'Qual foi a principal causa do resultado mercantil e qual ação está sob seu controle para melhorar?'
+  ]
+ },
+ servicos:{
+  good:[
+   'Parabéns pela meta de serviços. O que você fez melhor para gerar essa entrega?',
+   'Serviços acima da referência. Qual abordagem funcionou melhor com os clientes?',
+   'A meta de serviços foi alcançada. O que vale manter como rotina no próximo mês?'
+  ],
+  stable:[
+   'Você ficou próximo da meta de serviços. O que pode aumentar sua constância nas ofertas?',
+   'Qual ajuste na abordagem de serviços pode transformar esse resultado em meta batida?',
+   'O que funcionou em serviços e onde você percebe a principal oportunidade de evolução?'
+  ],
+  attention:[
+   'Serviços ficaram abaixo da meta. O que mais dificultou sua oferta e conversão neste mês?',
+   'Quais fatores reduziram seu resultado de serviços e o que você pode ajustar na abordagem?',
+   'Em serviços, qual comportamento precisa mudar primeiro para melhorar o próximo ciclo?'
+  ]
+ },
+ conversao:{
+  good:[
+   'Sua conversão ficou acima da referência. O que você fez para transformar mais atendimentos em resultado?',
+   'Boa conversão no mês. Qual comportamento na abordagem você quer preservar?',
+   'Você superou a referência de conversão. O que mais contribuiu para esse desempenho?'
+  ],
+  stable:[
+   'Sua conversão ficou próxima da referência. Qual ajuste pode aumentar a efetividade dos atendimentos?',
+   'O que funcionou na conversão e o que ainda precisa ganhar consistência?',
+   'Qual etapa do atendimento pode ser fortalecida para elevar sua conversão no próximo mês?'
+  ],
+  attention:[
+   'A conversão ficou abaixo da referência. Em qual etapa do atendimento você percebe maior perda de oportunidade?',
+   'O que mais impactou negativamente sua conversão e como pretende corrigir isso?',
+   'Quais fatores internos e externos influenciaram sua conversão e qual ação depende de você?'
+  ]
+ },
+ eficiencia:{
+  good:[
+   'Sua eficiência superou a referência. O que ajudou você a gerar mais serviços sobre as vendas elegíveis?',
+   'Boa eficiência no mês. Qual prática você pretende repetir para manter esse nível?',
+   'Eficiência positiva. O que mais contribuiu para esse indicador ficar acima da referência?'
+  ],
+  stable:[
+   'Sua eficiência ficou próxima da referência. Qual ajuste pode melhorar a qualidade da oferta de serviços?',
+   'O que funcionou na eficiência e o que precisa ganhar mais regularidade?',
+   'Qual comportamento pode elevar sua eficiência no próximo ciclo?'
+  ],
+  attention:[
+   'A eficiência ficou abaixo da referência. O que mais limitou a venda de serviços sobre a base elegível?',
+   'Quais fatores reduziram sua eficiência e qual ação prática você pode adotar no próximo mês?',
+   'Onde você percebe a maior oportunidade para melhorar a eficiência no próximo ciclo?'
+  ]
+ },
+ notas:{stable:[
+   'O que esse volume de notas fiscais revela sobre seu ritmo de atendimento no mês?',
+   'Como você avalia seu volume de notas fiscais e o que pode melhorar no próximo ciclo?'
+  ]},
+ ticket:{stable:[
+   'Como você avalia seu ticket médio e o que pode fazer para ampliar o valor por atendimento?',
+   'O que mais influenciou seu ticket médio neste mês?'
+  ]}
+};
 function status(value,target,neutral){if(neutral)return value>0?'stable':'attention';if(!target)return value>0?'stable':'attention';var rate=value/target;return rate>=1?'good':rate>=.85?'stable':'attention'}
-function systemFeedback(metric,tone,key){var bank=banks[tone]||banks.stable,p=String(key).split('-').map(Number),monthIndex=p[0]*12+p[1],seed=Array.from(norm(sellerName+metric)).reduce(function(a,ch){return a+ch.charCodeAt(0)},0);return bank[(seed+monthIndex)%bank.length]}
-function metrics(prevSeller){var a=aggregate(prevSeller),mg=num(prevSeller.assignedGoal),sg=num(prevSeller.serviceGoal);return[
- {id:'mercantil',icon:'💰',title:'Venda mercantil',value:a.general,display:brl.format(a.general),target:mg,targetText:mg?'Meta: '+brl.format(mg):'Meta não registrada',tone:status(a.general,mg,false)},
- {id:'elegivel',icon:'🛒',title:'Venda elegível',value:a.eligible,display:brl.format(a.eligible),target:0,targetText:'Base utilizada para eficiência',tone:status(a.eligible,0,true)},
- {id:'notas',icon:'🧾',title:'Notas fiscais',value:a.invoiceCount,display:String(Math.round(a.invoiceCount)),target:0,targetText:'Quantidade emitida no período',tone:status(a.invoiceCount,0,true)},
- {id:'ticket',icon:'🎟️',title:'Ticket médio',value:a.ticket,display:brl.format(a.ticket),target:0,targetText:'Venda mercantil ÷ notas fiscais',tone:status(a.ticket,0,true)},
- {id:'servicos',icon:'🛡️',title:'Serviços',value:a.services,display:brl.format(a.services),target:sg,targetText:sg?'Meta: '+brl.format(sg):'Meta não registrada',tone:status(a.services,sg,false)},
- {id:'garantias',icon:'✅',title:'Garantias',value:a.warrantyQty,display:String(Math.round(a.warrantyQty)),target:0,targetText:'Quantidade vendida no período',tone:status(a.warrantyQty,0,true)},
- {id:'conversao',icon:'🎯',title:'Conversão',value:a.conversion,display:pct.format(a.conversion),target:.35,targetText:'Referência: 35,00%',tone:status(a.conversion,.35,false)},
- {id:'eficiencia',icon:'⚡',title:'Eficiência',value:a.efficiency,display:pct.format(a.efficiency),target:.07,targetText:'Referência: 7,00%',tone:status(a.efficiency,.07,false)}
-]}
+function seededIndex(metric,tone,key,size){var p=String(key).split('-').map(Number),monthIndex=p[0]*12+p[1],seed=Array.from(norm(sellerName+metric+tone)).reduce(function(a,ch){return a+ch.charCodeAt(0)},0);return size?(seed+monthIndex)%size:0}
+function systemFeedback(metric,tone,key){var bank=banks[tone]||banks.stable;return bank[seededIndex(metric,tone,key,bank.length)]}
+function questionText(metric,tone,key){var group=questionBanks[metric]||questionBanks.mercantil,bank=group[tone]||group.stable||group.good||group.attention||['Como você avalia este resultado?'];return bank[seededIndex(metric,tone,key,bank.length)]}
+function sellerMonthlyGoals(s,key){var setup=s&&s.goalSetupByMonth&&s.goalSetupByMonth[key];var mg=moneyNum(setup&&setup.mercantile)||moneyNum(s&&s.assignedGoal);var sg=moneyNum(setup&&setup.services)||moneyNum(s&&s.serviceGoal);return{mercantile:mg,services:sg}}
+function metrics(prevSeller,prevKey){
+ var a=aggregate(prevSeller),goals=sellerMonthlyGoals(prevSeller,prevKey),mg=goals.mercantile,sg=goals.services,ecom=moneyNum(prevSeller&&prevSeller.ecommerce),mercTotal=a.general+ecom;
+ var list=[
+  {id:'mercantil',icon:'💰',title:'Venda mercantil',value:mercTotal,display:brl.format(mercTotal),target:mg,targetText:mg?'Meta: '+brl.format(mg):'Meta não registrada',tone:status(mercTotal,mg,false)},
+  {id:'servicos',icon:'🛡️',title:'Serviços',value:a.services,display:brl.format(a.services),target:sg,targetText:sg?'Meta: '+brl.format(sg):'Meta não registrada',tone:status(a.services,sg,false)},
+  {id:'conversao',icon:'🎯',title:'Conversão',value:a.conversion,display:pct.format(a.conversion),target:.35,targetText:'Referência: 35,00%',tone:status(a.conversion,.35,false)},
+  {id:'eficiencia',icon:'⚡',title:'Eficiência',value:a.efficiency,display:pct.format(a.efficiency),target:.07,targetText:'Referência: 7,00%',tone:status(a.efficiency,.07,false)}
+ ];
+ /* Notas fiscais e ticket só aparecem quando realmente há base registrada. */
+ if(a.invoiceCount>0){
+  list.push({id:'notas',icon:'🧾',title:'Notas fiscais',value:a.invoiceCount,display:String(Math.round(a.invoiceCount)),target:0,targetText:'Quantidade emitida no período',tone:'stable'});
+  list.push({id:'ticket',icon:'🎟️',title:'Ticket médio',value:mercTotal/a.invoiceCount,display:brl.format(mercTotal/a.invoiceCount),target:0,targetText:'Venda mercantil ÷ notas fiscais',tone:'stable'});
+ }
+ return list;
+}
 
 function css(){
   if(document.getElementById('monthlyCycleV91Css'))return;
@@ -148,17 +237,17 @@ async function persistNoActivity(prevKey,prevRecord,prevSeller){
   return persistReview(prevKey,review);
 }
 function openCloseout(vault,prevKey,prevRecord,prevSeller){
-  var m=modal(),body=m.querySelector('#monthlyCycleBodyV91'),list=metrics(prevSeller);
+  var m=modal(),body=m.querySelector('#monthlyCycleBodyV91'),list=metrics(prevSeller,prevKey);
   m.querySelector('#monthlyCycleTitleV91').textContent='Fechamento de '+monthLabel(prevKey);
   m.querySelector('#monthlyCycleSubtitleV91').textContent='Antes de iniciar o novo ciclo, revise seus indicadores e registre sua leitura do mês.';
-  body.innerHTML='<div class="monthly-summary">'+list.map(function(x){return '<section class="monthly-metric '+x.tone+'" data-metric="'+x.id+'"><div class="monthly-metric-top"><div class="monthly-metric-title">'+x.icon+' '+x.title+'</div><div class="monthly-metric-value"><strong>'+x.display+'</strong><small>'+x.targetText+'</small></div></div><label>Minha análise do resultado *</label><textarea maxlength="700" placeholder="O que contribuiu para este resultado? O que você faria diferente no próximo mês?"></textarea><div class="platform-feedback"><b>Feedback da plataforma:</b> '+esc(systemFeedback(x.id,x.tone,prevKey))+'</div></section>'}).join('')+'</div><section class="monthly-commitment"><strong>🎯 Meu compromisso para o próximo mês *</strong><div class="monthly-note">Registre uma ação objetiva que você pretende praticar no novo ciclo.</div><textarea id="monthlyCommitmentV91" maxlength="700" placeholder="Ex.: acompanhar diariamente minha conversão e reforçar a oferta de garantia em todos os atendimentos."></textarea></section><div class="monthly-actions"><button class="monthly-primary" id="saveMonthlyCloseoutV91">Salvar fechamento do mês</button></div><div class="monthly-note" id="monthlyFeedbackV91">Todos os campos de autorreflexão são obrigatórios.</div>';
+  body.innerHTML='<div class="monthly-summary">'+list.map(function(x){var q=questionText(x.id,x.tone,prevKey);var badge=x.target?(x.value>=x.target?'Meta/referência alcançada':x.value>=x.target*.85?'Próximo da referência':'Abaixo da referência'):'Indicador complementar';return '<section class="monthly-metric '+x.tone+'" data-metric="'+x.id+'"><div class="monthly-metric-top"><div><div class="monthly-metric-title">'+x.icon+' '+x.title+'</div><span class="monthly-result-badge">'+badge+'</span></div><div class="monthly-metric-value"><strong>'+x.display+'</strong><small>'+x.targetText+'</small></div></div><label>'+esc(q)+' *</label><textarea maxlength="700" placeholder="Responda em poucas palavras, de forma objetiva."></textarea><div class="platform-feedback"><b>Feedback da plataforma:</b> '+esc(systemFeedback(x.id,x.tone,prevKey))+'</div></section>'}).join('')+'</div><section class="monthly-commitment"><strong>🎯 Meu compromisso para o próximo mês *</strong><div class="monthly-note">Defina uma ação objetiva, simples e acompanhável para o novo ciclo.</div><textarea id="monthlyCommitmentV91" maxlength="700" placeholder="Ex.: acompanhar minha conversão diariamente e reforçar a oferta de serviços em todos os atendimentos."></textarea></section><div class="monthly-actions"><button class="monthly-primary" id="saveMonthlyCloseoutV91">Salvar fechamento do mês</button></div><div class="monthly-note" id="monthlyFeedbackV91">Responda cada indicador em poucas palavras e registre seu compromisso.</div>';
   m.hidden=false;document.body.style.overflow='hidden';
   body.querySelector('#saveMonthlyCloseoutV91').onclick=async function(){
     var notes=Array.from(body.querySelectorAll('.monthly-metric textarea')).map(function(t){return t.value.trim()}),commit=body.querySelector('#monthlyCommitmentV91').value.trim(),fb=body.querySelector('#monthlyFeedbackV91'),btn=this;
     if(notes.some(function(t){return t.length<8})||commit.length<8){fb.textContent='Preencha cada análise e o compromisso do próximo mês antes de continuar.';fb.style.color='#b83249';return}
     btn.disabled=true;btn.textContent='Salvando…';
     var review={version:2,month:prevKey,sellerId:sellerKey(prevSeller),sellerName:prevSeller.name||sellerName,branch:prevRecord.branch||branchText,savedAt:new Date().toISOString(),status:'avaliado',automatic:false,metrics:{},commitment:commit};
-    list.forEach(function(x,i){review.metrics[x.id]={title:x.title,value:x.value,display:x.display,target:x.target||0,status:x.tone,selfFeedback:notes[i],systemFeedback:systemFeedback(x.id,x.tone,prevKey)}});
+    list.forEach(function(x,i){review.metrics[x.id]={title:x.title,value:x.value,display:x.display,target:x.target||0,status:x.tone,prompt:questionText(x.id,x.tone,prevKey),selfFeedback:notes[i],systemFeedback:systemFeedback(x.id,x.tone,prevKey)}});
     try{await persistReview(prevKey,review);body.innerHTML='<div class="monthly-success">✅ Fechamento salvo. Sua análise ficou registrada junto à competência encerrada.</div>';setTimeout(function(){m.hidden=true;document.body.style.overflow='';start()},900)}
     catch(e){btn.disabled=false;btn.textContent='Salvar fechamento do mês';fb.textContent='Não foi possível sincronizar agora. Tente novamente antes de iniciar o novo ciclo.';fb.style.color='#b83249'}
   };

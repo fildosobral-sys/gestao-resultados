@@ -1421,7 +1421,7 @@
       const status = sellerDay?.status || branchDay.status;
       if (status === 'off' || status === 'medical' || status === 'justified') continue;
       considered += 1;
-      const has = sellerDay && (sellerDay.status === 'done' || sellerDay.status === 'partial' || hasSellerDayValue(sellerDay));
+      const has = hasSellerRecordedDay(sellerDay);
       if (!has) overdue += 1;
     }
     return { overdue, considered };
@@ -1509,7 +1509,7 @@
     const total = entries.reduce((acc, [, day]) => {
       acc.general += num(day.general); acc.eligible += num(day.eligible); acc.invoiceCount += num(day.invoiceCount);
       acc.nfs += num(day.nfs); acc.warranty += num(day.warranty); acc.warrantyQty += num(day.warrantyQty);
-      acc.other += num(day.other); acc.mixed += num(day.mixed); if (day.status === 'done') acc.days += 1;
+      acc.other += num(day.other); acc.mixed += num(day.mixed); if (hasSellerRecordedDay(day)) acc.days += 1;
       return acc;
     }, { general:0, eligible:0, invoiceCount:0, nfs:0, warranty:0, warrantyQty:0, other:0, mixed:0, days:0 });
     total.services = total.warranty + total.other + total.mixed;
@@ -1525,7 +1525,7 @@
       const services = num(day.warranty)+num(day.other)+num(day.mixed);
       const efficiency = num(day.eligible) ? services/num(day.eligible) : 0;
       const conversion = num(day.nfs) ? num(day.warrantyQty)/num(day.nfs) : 0;
-      return `<tr><td>${new Date(`${key}T12:00:00`).toLocaleDateString('pt-BR')}</td><td>${day.status==='done'?'Lançado':day.status==='off'?'Não trabalha':'Pendente'}</td><td>${brl.format(num(day.general))}</td><td>${brl.format(num(day.eligible))}</td><td>${brl.format(services)}</td><td>${num(day.nfs)}</td><td>${num(day.warrantyQty)}</td><td>${num(day.nfs)?efficiencyPct.format(conversion):'—'}</td><td>${num(day.eligible)?efficiencyPct.format(efficiency):'—'}</td></tr>`;
+      return `<tr><td>${new Date(`${key}T12:00:00`).toLocaleDateString('pt-BR')}</td><td>${hasSellerRecordedDay(day)?'Lançado':day.status==='off'?'Não trabalha':day.status==='medical'?'Atestado':day.status==='justified'?'Justificada':'Pendente'}</td><td>${brl.format(num(day.general))}</td><td>${brl.format(num(day.eligible))}</td><td>${brl.format(services)}</td><td>${num(day.nfs)}</td><td>${num(day.warrantyQty)}</td><td>${num(day.nfs)?efficiencyPct.format(conversion):'—'}</td><td>${num(day.eligible)?efficiencyPct.format(efficiency):'—'}</td></tr>`;
     }).join('');
     panel.innerHTML = `<div class="section-title"><div><h2>Lançamentos diários do vendedor</h2><div class="hint">Dados recebidos pela sincronização do acesso individual. A visão do gestor é somente de acompanhamento.</div></div></div><div class="seller-summary"><div class="metric"><span>Mercantil acumulado</span><strong>${brl.format(total.general)}</strong></div><div class="metric"><span>Serviços acumulados</span><strong>${brl.format(total.services)}</strong></div><div class="metric"><span>Conversão</span><strong>${total.nfs?efficiencyPct.format(total.conversion):'—'}</strong></div><div class="metric"><span>Eficiência</span><strong>${total.eligible?efficiencyPct.format(total.efficiency):'—'}</strong></div></div><div class="table-wrap"><table><thead><tr><th>Dia</th><th>Status</th><th>Mercantil</th><th>Elegível</th><th>Serviços</th><th>Qtd. elegível</th><th>Garantias</th><th>Conversão</th><th>Eficiência</th></tr></thead><tbody>${rows || '<tr><td colspan="9" style="text-align:center">Nenhum lançamento diário recebido ainda.</td></tr>'}</tbody></table></div>`;
   }
@@ -1613,7 +1613,8 @@
     const eff = num(a.eligible) ? services / num(a.eligible) : num(a.efficiency);
     return `<article class="seller-workspace-card seller-period-card"><span>${esc(label)}</span><strong>${brl.format(num(a.general))}</strong><small>Serviços ${brl.format(services)}${num(mercGoal)?` • Mercantil ${pct.format(mercRate)}`:''}${num(serviceGoal)?` • Serviços ${pct.format(servRate)}`:''}</small><div class="seller-period-mini"><b>Conversão ${num(a.nfs)||conv?efficiencyPct.format(conv):'—'}</b><b>Eficiência ${num(a.eligible)||eff?efficiencyPct.format(eff):'—'}</b></div></article>`;
   }
-  function hasSellerDayValue(day){return !!day&&['general','eligible','warranty','other','mixed','nfs','warrantyQty'].some(f=>num(day[f])>0)}
+  function hasSellerDayValue(day){return !!day&&['general','eligible','warranty','other','mixed','invoiceCount','nfs','warrantyQty','commissionMercantile','commissionService'].some(f=>num(day[f])>0)}
+  function hasSellerRecordedDay(day){return !!day&&!['off','medical','justified'].includes(day.status)&&(day.status==='done'||day.status==='partial'||hasSellerDayValue(day)||(day.updatedAt&&Date.parse(day.updatedAt)>86400000))}
   function sellerDashboardPeriodRows(seller, period='month') {
     const all=Object.entries(seller?.daily||{}).sort(([a],[b])=>a.localeCompare(b));
     if(period==='month') return all;
@@ -2032,6 +2033,15 @@
     }
   }
   
+  function sellerCloseoutHistory(seller){
+    const history=sellerProfileHistory(seller);const out=[];
+    history.forEach(entry=>{const box=entry.seller?.monthlyCloseouts||{};Object.entries(box).forEach(([month,review])=>{if(review&&String(month)===String(entry.month))out.push({month,review})})});
+    return out.sort((a,b)=>String(b.month).localeCompare(String(a.month)));
+  }
+  function sellerCloseoutHtml(seller){
+    const rows=sellerCloseoutHistory(seller);if(!rows.length)return '<div class="empty">Nenhum fechamento mensal registrado por este vendedor ainda.</div>';
+    return `<div class="seller-closeout-list">${rows.map(({month,review})=>{const metrics=Object.values(review.metrics||{});return `<article class="seller-closeout-card"><header><div><strong>🧠 Fechamento de ${esc(monthLabel(month))}</strong><small>${review.savedAt?new Date(review.savedAt).toLocaleString('pt-BR'):'Data não informada'}</small></div><span>${review.status==='avaliado'?'Concluído':'Automático'}</span></header>${review.status==='sem_movimento'?`<div class="seller-closeout-empty">${esc(review.reason||'Sem movimento no período')}</div>`:`<div class="seller-closeout-metrics">${metrics.map(m=>`<section><div class="seller-closeout-metric-head"><b>${esc(m.title||'Indicador')}</b><strong>${esc(m.display||'')}</strong></div>${m.prompt?`<small>${esc(m.prompt)}</small>`:''}<p><b>Resposta:</b> ${esc(m.selfFeedback||'—')}</p><p class="platform"><b>Plataforma:</b> ${esc(m.systemFeedback||'—')}</p></section>`).join('')}</div><div class="seller-closeout-commitment"><b>🎯 Compromisso:</b> ${esc(review.commitment||'—')}</div>`}</article>`}).join('')}</div>`;
+  }
   function renderSellerWorkspace(seller) {
     const host=document.getElementById('sellerWorkspace'); if(!host)return;
     if(!seller){ host.innerHTML='<div class="empty">Vendedor não encontrado nesta competência.</div>'; return; }
@@ -2050,9 +2060,9 @@
     const hasToday=!!(todayData&&(todayData.status==='done'||todayData.status==='partial'||hasSellerDayValue(todayData)));
     const todayExcused=!!(todayData&&['off','medical','justified'].includes(todayData.status));
     const pendingToday=String(db.month)===todayKey.slice(0,7)&&!hasToday&&!todayExcused;
-    const launchedDays=days.filter(([,d])=>d.status==='done'||d.status==='partial'||hasSellerDayValue(d)).length; let pendingInfo={overdue:0,considered:0}; try{pendingInfo=sellerPendingInfo(seller)}catch(e){console.error('Falha nas pendências do vendedor:',e)} const overdueDays=pendingInfo.overdue;
+    const launchedDays=days.filter(([,d])=>hasSellerRecordedDay(d)).length; let pendingInfo={overdue:0,considered:0}; try{pendingInfo=sellerPendingInfo(seller)}catch(e){console.error('Falha nas pendências do vendedor:',e)} const overdueDays=pendingInfo.overdue;
     const monthPending=Math.max(0,planned-launchedDays);
-    const tabs=[['overview','🏠 Visão geral'],['daily','📝 Lançamentos'],['weekly','📊 Semanal'],['goals','🎯 Metas'],['dashboard','📊 Dashboard'],['compiled','📈 Compilado']];
+    const tabs=[['overview','🏠 Visão geral'],['daily','📝 Lançamentos'],['weekly','📊 Semanal'],['goals','🎯 Metas'],['dashboard','📊 Dashboard'],['compiled','📈 Compilado'],['closeouts','🧠 Fechamentos']];
     const mercRate=num(seller.assignedGoal)?mercTotal/num(seller.assignedGoal):0, servRate=num(seller.serviceGoal)?total.services/num(seller.serviceGoal):0;
     const statusTone=pendingToday||overdueDays?'attention':hasToday?'ok':'neutral';
     const overview=`<div class="seller-overview-strip"><div><span>📅 LANÇAMENTOS</span><strong>${launchedDays}</strong><small>${monthPending} dia(s) ainda sem lançamento no mês</small></div><div class="${statusTone}"><span>${pendingToday?'⚠️':'✅'} PENDÊNCIAS</span><strong>${monthPending}</strong><small>${pendingToday?'Pendente hoje • ':''}${overdueDays?`${overdueDays} dia(s) vencido(s) • `:''}${monthPending?`${monthPending} pendente(s) na competência`:'nenhuma pendência registrada'}</small></div><div><span>🌐 E-COMMERCE + COMISSÃO</span><strong>${brl.format(ecommerce)}</strong><small>Comissão ${brl.format(num(seller.ecommerceCommission))} • entra no mercantil e nos ganhos</small></div></div>
@@ -2129,7 +2139,7 @@
       console.error('Falha no compilado do vendedor:', compiledError);
       compiled='<div class="empty">O histórico compilado está temporariamente indisponível. Os dados atuais permanecem acessíveis.</div>';
     }
-    const dashboard='<div class="seller-dashboard-target" data-period="month" data-metric="merc" data-compare="prev"></div>'; host.innerHTML=`${tabs.map(([id])=>`<section class="seller-workspace-view ${sellerWorkspaceTab===id?'active':''}" data-seller-workspace-view="${id}">${id==='overview'?overview:id==='daily'?daily:id==='weekly'?weekly:id==='goals'?goals:id==='dashboard'?dashboard:compiled}</section>`).join('')}<nav class="seller-workspace-tabs seller-workspace-tabs-bottom">${tabs.map(([id,label])=>`<button class="seller-workspace-tab ${sellerWorkspaceTab===id?'active':''}" data-seller-workspace-tab="${id}">${label}</button>`).join('')}</nav>`; const dashRoot=host.querySelector('.seller-dashboard-target'); if(dashRoot && sellerWorkspaceTab==='dashboard'){ try{mountSellerDashboard(seller,dashRoot)}catch(e){console.error('Falha no dashboard do vendedor:',e);dashRoot.innerHTML='<div class="empty">Dashboard temporariamente indisponível. As demais informações do vendedor continuam acessíveis.</div>'} }
+    const dashboard='<div class="seller-dashboard-target" data-period="month" data-metric="merc" data-compare="prev"></div>'; host.innerHTML=`${tabs.map(([id])=>`<section class="seller-workspace-view ${sellerWorkspaceTab===id?'active':''}" data-seller-workspace-view="${id}">${id==='overview'?overview:id==='daily'?daily:id==='weekly'?weekly:id==='goals'?goals:id==='dashboard'?dashboard:id==='closeouts'?sellerCloseoutHtml(seller):compiled}</section>`).join('')}<nav class="seller-workspace-tabs seller-workspace-tabs-bottom">${tabs.map(([id,label])=>`<button class="seller-workspace-tab ${sellerWorkspaceTab===id?'active':''}" data-seller-workspace-tab="${id}">${label}</button>`).join('')}</nav>`; const dashRoot=host.querySelector('.seller-dashboard-target'); if(dashRoot && sellerWorkspaceTab==='dashboard'){ try{mountSellerDashboard(seller,dashRoot)}catch(e){console.error('Falha no dashboard do vendedor:',e);dashRoot.innerHTML='<div class="empty">Dashboard temporariamente indisponível. As demais informações do vendedor continuam acessíveis.</div>'} }
     const activeWorkspaceTab=host.querySelector('.seller-workspace-tab.active');
     if(activeWorkspaceTab){try{activeWorkspaceTab.scrollIntoView({inline:'center',block:'nearest'});}catch{}}
     host.querySelectorAll('[data-seller-workspace-tab]').forEach(btn=>btn.addEventListener('click',()=>{sellerWorkspaceTab=btn.dataset.sellerWorkspaceTab;renderSellerWorkspace(seller);const modal=document.querySelector('#sellerProfile>article');if(modal)modal.scrollTo({top:0,behavior:'smooth'});}));
@@ -4334,6 +4344,13 @@
   }`;
   document.head.appendChild(st);
 })();
+
+
+  /* V140 — histórico de fechamentos mensais no cadastro do vendedor */
+  (function applyV140CloseoutHistoryCss(){if(document.getElementById('v140-closeout-history-css'))return;const st=document.createElement('style');st.id='v140-closeout-history-css';st.textContent=`
+    .seller-closeout-list{display:grid;gap:12px}.seller-closeout-card{border:1px solid #dfe7f1;border-radius:18px;background:#fff;padding:15px}.seller-closeout-card>header{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px}.seller-closeout-card>header strong{display:block;font-size:17px;color:#17324d}.seller-closeout-card>header small{display:block;margin-top:3px;color:#7a8798}.seller-closeout-card>header span{padding:6px 9px;border-radius:999px;background:#eaf8f1;color:#087a4b;font-size:10px;font-weight:900}.seller-closeout-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.seller-closeout-metrics section{border:1px solid #e5ebf2;border-radius:14px;background:#f9fbfd;padding:12px}.seller-closeout-metric-head{display:flex;justify-content:space-between;gap:10px;align-items:center}.seller-closeout-metric-head b{color:#17324d}.seller-closeout-metric-head strong{font-size:16px}.seller-closeout-metrics small{display:block;color:#6f8093;margin-top:7px;line-height:1.35}.seller-closeout-metrics p{margin:8px 0 0;line-height:1.4;color:#34495e}.seller-closeout-metrics p.platform{background:#eef4fb;border-radius:10px;padding:8px}.seller-closeout-commitment{margin-top:12px;border-left:4px solid #6049e8;background:#f5f2ff;padding:11px 12px;border-radius:10px;color:#34495e}.seller-closeout-empty{padding:12px;border-radius:12px;background:#f5f7fa;color:#607086}
+    @media(max-width:760px){.seller-closeout-metrics{grid-template-columns:1fr}.seller-closeout-card{padding:12px}}
+  `;document.head.appendChild(st)})();
   initBI();
 
   renderAll();
