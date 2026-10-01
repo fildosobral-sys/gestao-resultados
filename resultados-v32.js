@@ -1095,7 +1095,9 @@
     const ticket = num(seller.invoiceCount) ? num(seller.general) / num(seller.invoiceCount) : 0;
     const conversion = num(seller.nfs) ? num(seller.warrantyQty) / num(seller.nfs) : 0;
     const hasEligible = num(seller.eligible) > 0, efficiency = hasEligible ? services / num(seller.eligible) : 0;
-    const plannedDays = num(seller.plannedDays) || num(db.businessDays);
+    const basePlannedDays = num(seller.plannedDays) || num(db.businessDays);
+    const sellerOffDays = Object.entries(seller.daily || {}).filter(([key, day]) => key.startsWith(`${db.month}-`) && day?.status === 'off').length;
+    const plannedDays = Math.max(0, basePlannedDays - sellerOffDays);
     const projection = num(seller.days) ? (num(seller.general) / num(seller.days)) * plannedDays : 0;
     const serviceProjection = num(seller.days) ? (services / num(seller.days)) * plannedDays : 0;
     const dailyAverage = num(seller.days) ? num(seller.general) / num(seller.days) : 0;
@@ -2040,7 +2042,7 @@
   }
   function sellerCloseoutHtml(seller){
     const rows=sellerCloseoutHistory(seller);if(!rows.length)return '<div class="empty">Nenhum fechamento mensal registrado por este vendedor ainda.</div>';
-    return `<div class="seller-closeout-list">${rows.map(({month,review})=>{const metrics=Object.values(review.metrics||{});return `<article class="seller-closeout-card"><header><div><strong>🧠 Fechamento de ${esc(monthLabel(month))}</strong><small>${review.savedAt?new Date(review.savedAt).toLocaleString('pt-BR'):'Data não informada'}</small></div><span>${review.status==='avaliado'?'Concluído':'Automático'}</span></header>${review.status==='sem_movimento'?`<div class="seller-closeout-empty">${esc(review.reason||'Sem movimento no período')}</div>`:`<div class="seller-closeout-metrics">${metrics.map(m=>`<section><div class="seller-closeout-metric-head"><b>${esc(m.title||'Indicador')}</b><strong>${esc(m.display||'')}</strong></div>${m.prompt?`<small>${esc(m.prompt)}</small>`:''}<p><b>Resposta:</b> ${esc(m.selfFeedback||'—')}</p><p class="platform"><b>Plataforma:</b> ${esc(m.systemFeedback||'—')}</p></section>`).join('')}</div><div class="seller-closeout-commitment"><b>🎯 Compromisso:</b> ${esc(review.commitment||'—')}</div>`}</article>`}).join('')}</div>`;
+    return `<div class="seller-closeout-list">${rows.map(({month,review})=>{const metrics=Object.values(review.metrics||{});return `<article class="seller-closeout-card"><header><div><strong>🧠 Fechamento de ${esc(monthLabel(month))}</strong><small>${review.savedAt?new Date(review.savedAt).toLocaleString('pt-BR'):'Data não informada'}</small></div><span>${review.status==='avaliado'?'Concluído':'Automático'}</span></header>${review.status==='sem_movimento'?`<div class="seller-closeout-empty">${esc(review.reason||'Sem movimento no período')}</div>`:`<div class="seller-closeout-metrics">${metrics.map(m=>{const prompts=Array.isArray(m.prompts)&&m.prompts.length?m.prompts:(m.prompt?[m.prompt]:[]),responses=Array.isArray(m.responses)&&m.responses.length?m.responses:(m.selfFeedback?[m.selfFeedback]:[]);return `<section><div class="seller-closeout-metric-head"><b>${esc(m.title||'Indicador')}</b><strong>${esc(m.display||'')}</strong></div>${prompts.map((q,i)=>`<div class="seller-closeout-qa"><small>${esc(q)}</small><p><b>Resposta:</b> ${esc(responses[i]||'—')}</p></div>`).join('')}<p class="platform"><b>Plataforma:</b> ${esc(m.systemFeedback||'—')}</p></section>`}).join('')}</div><div class="seller-closeout-commitment"><b>🎯 Compromisso:</b> ${esc(review.commitment||'—')}</div>`}</article>`}).join('')}</div>`;
   }
   function renderSellerWorkspace(seller) {
     const host=document.getElementById('sellerWorkspace'); if(!host)return;
@@ -4345,6 +4347,9 @@
   document.head.appendChild(st);
 })();
 
+
+
+  (function addCloseoutQaStyleV141(){if(document.getElementById('sellerCloseoutQaV141'))return;const st=document.createElement('style');st.id='sellerCloseoutQaV141';st.textContent=`.seller-closeout-qa{margin-top:8px;padding:8px 10px;border-radius:10px;background:#f8fafc;border:1px solid #e8eef5}.seller-closeout-qa small{display:block;color:#5f7085;font-weight:800}.seller-closeout-qa p{margin:5px 0 0!important}`;document.head.appendChild(st)})();
 
   /* V140 — histórico de fechamentos mensais no cadastro do vendedor */
   (function applyV140CloseoutHistoryCss(){if(document.getElementById('v140-closeout-history-css'))return;const st=document.createElement('style');st.id='v140-closeout-history-css';st.textContent=`

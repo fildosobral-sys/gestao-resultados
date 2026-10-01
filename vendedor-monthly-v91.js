@@ -97,85 +97,88 @@ var banks={
 var questionBanks={
  mercantil:{
   good:[
-   'Parabéns pela meta mercantil. O que mais contribuiu para você entregar esse resultado?',
-   'Sua meta mercantil foi alcançada. Qual prática comercial você considera decisiva para essa entrega?',
-   'Você fechou bem o mercantil. O que funcionou melhor e merece ser repetido no próximo mês?'
+   'Parabéns pela meta mercantil. O que mais contribuiu para essa entrega?',
+   'Qual atitude ou estratégia sua fez maior diferença no resultado?',
+   'Mesmo com a meta batida, o que você quer melhorar no próximo mês?'
   ],
   stable:[
-   'Você ficou próximo da meta mercantil. O que faltou para transformar essa proximidade em entrega?',
-   'Quais ações ajudaram seu mercantil e qual ajuste teria maior impacto no próximo mês?',
-   'O resultado ficou perto da meta. Em poucas palavras, onde você vê a principal oportunidade de avanço?'
+   'O que mais ajudou você a chegar perto da meta mercantil?',
+   'O que mais limitou a entrega completa neste mês?',
+   'Qual ajuste prático pode fazer a diferença no próximo ciclo?'
   ],
   attention:[
-   'O mercantil ficou abaixo da meta. Quais fatores internos e externos mais influenciaram esse resultado?',
-   'O que mais dificultou sua entrega mercantil e o que você faria diferente no próximo mês?',
-   'Qual foi a principal causa do resultado mercantil e qual ação está sob seu controle para melhorar?'
+   'Quais fatores internos e externos mais impactaram seu mercantil?',
+   'Na sua avaliação, onde ficou a principal perda de oportunidade?',
+   'Qual ação objetiva você pretende mudar no próximo mês?'
   ]
  },
  servicos:{
   good:[
-   'Parabéns pela meta de serviços. O que você fez melhor para gerar essa entrega?',
-   'Serviços acima da referência. Qual abordagem funcionou melhor com os clientes?',
-   'A meta de serviços foi alcançada. O que vale manter como rotina no próximo mês?'
+   'Parabéns pela meta de serviços. O que mais funcionou na sua abordagem?',
+   'Qual comportamento seu ajudou a transformar mais oportunidades em serviços?',
+   'O que você pretende manter e o que ainda pode melhorar no próximo mês?'
   ],
   stable:[
-   'Você ficou próximo da meta de serviços. O que pode aumentar sua constância nas ofertas?',
-   'Qual ajuste na abordagem de serviços pode transformar esse resultado em meta batida?',
-   'O que funcionou em serviços e onde você percebe a principal oportunidade de evolução?'
+   'O que mais contribuiu para você se aproximar da meta de serviços?',
+   'Em que momento da oferta você percebe mais dificuldade?',
+   'Que ajuste simples pode aumentar sua constância no próximo mês?'
   ],
   attention:[
-   'Serviços ficaram abaixo da meta. O que mais dificultou sua oferta e conversão neste mês?',
-   'Quais fatores reduziram seu resultado de serviços e o que você pode ajustar na abordagem?',
-   'Em serviços, qual comportamento precisa mudar primeiro para melhorar o próximo ciclo?'
+   'O que mais dificultou sua entrega de serviços neste mês?',
+   'Quais fatores internos ou externos reduziram suas oportunidades?',
+   'Qual mudança de abordagem você pretende testar no próximo ciclo?'
   ]
  },
  conversao:{
   good:[
-   'Sua conversão ficou acima da referência. O que você fez para transformar mais atendimentos em resultado?',
-   'Boa conversão no mês. Qual comportamento na abordagem você quer preservar?',
-   'Você superou a referência de conversão. O que mais contribuiu para esse desempenho?'
+   'Sua conversão superou a referência. O que mais ajudou nesse resultado?',
+   'Qual etapa do seu atendimento você considera mais forte hoje?',
+   'O que pretende fazer para manter ou elevar essa conversão no próximo mês?'
   ],
   stable:[
-   'Sua conversão ficou próxima da referência. Qual ajuste pode aumentar a efetividade dos atendimentos?',
-   'O que funcionou na conversão e o que ainda precisa ganhar consistência?',
-   'Qual etapa do atendimento pode ser fortalecida para elevar sua conversão no próximo mês?'
+   'O que funcionou melhor na sua conversão neste mês?',
+   'Em qual etapa do atendimento você ainda perde mais oportunidades?',
+   'Qual melhoria prática pode elevar sua conversão no próximo ciclo?'
   ],
   attention:[
-   'A conversão ficou abaixo da referência. Em qual etapa do atendimento você percebe maior perda de oportunidade?',
-   'O que mais impactou negativamente sua conversão e como pretende corrigir isso?',
-   'Quais fatores internos e externos influenciaram sua conversão e qual ação depende de você?'
+   'Na sua visão, o que mais prejudicou sua conversão?',
+   'Quais fatores internos e externos influenciaram esse indicador?',
+   'Qual etapa do atendimento você pretende trabalhar primeiro no próximo mês?'
   ]
  },
  eficiencia:{
   good:[
-   'Sua eficiência superou a referência. O que ajudou você a gerar mais serviços sobre as vendas elegíveis?',
-   'Boa eficiência no mês. Qual prática você pretende repetir para manter esse nível?',
-   'Eficiência positiva. O que mais contribuiu para esse indicador ficar acima da referência?'
+   'Sua eficiência ficou acima da referência. O que mais contribuiu para isso?',
+   'Qual prática de oferta de serviços funcionou melhor para você?',
+   'Como pretende manter esse nível e buscar uma evolução no próximo mês?'
   ],
   stable:[
-   'Sua eficiência ficou próxima da referência. Qual ajuste pode melhorar a qualidade da oferta de serviços?',
-   'O que funcionou na eficiência e o que precisa ganhar mais regularidade?',
-   'Qual comportamento pode elevar sua eficiência no próximo ciclo?'
+   'O que mais ajudou sua eficiência neste mês?',
+   'Onde você percebe maior dificuldade na oferta de serviços elegíveis?',
+   'Qual ação pode tornar sua eficiência mais constante no próximo ciclo?'
   ],
   attention:[
-   'A eficiência ficou abaixo da referência. O que mais limitou a venda de serviços sobre a base elegível?',
-   'Quais fatores reduziram sua eficiência e qual ação prática você pode adotar no próximo mês?',
-   'Onde você percebe a maior oportunidade para melhorar a eficiência no próximo ciclo?'
+   'O que mais limitou sua eficiência neste mês?',
+   'Quais fatores internos e externos afetaram a oferta de serviços?',
+   'Qual comportamento você pretende ajustar primeiro no próximo mês?'
   ]
  },
  notas:{stable:[
-   'O que esse volume de notas fiscais revela sobre seu ritmo de atendimento no mês?',
-   'Como você avalia seu volume de notas fiscais e o que pode melhorar no próximo ciclo?'
-  ]},
+  'Como você avalia seu volume de notas fiscais no mês?',
+  'O que esse volume revela sobre seu ritmo de atendimento?',
+  'O que você pode ajustar para melhorar esse indicador no próximo ciclo?'
+ ]},
  ticket:{stable:[
-   'Como você avalia seu ticket médio e o que pode fazer para ampliar o valor por atendimento?',
-   'O que mais influenciou seu ticket médio neste mês?'
-  ]}
+  'Como você avalia seu ticket médio neste mês?',
+  'O que mais influenciou o valor médio por atendimento?',
+  'Qual ação pode elevar seu ticket médio no próximo ciclo?'
+ ]}
 };
 function status(value,target,neutral){if(neutral)return value>0?'stable':'attention';if(!target)return value>0?'stable':'attention';var rate=value/target;return rate>=1?'good':rate>=.85?'stable':'attention'}
 function seededIndex(metric,tone,key,size){var p=String(key).split('-').map(Number),monthIndex=p[0]*12+p[1],seed=Array.from(norm(sellerName+metric+tone)).reduce(function(a,ch){return a+ch.charCodeAt(0)},0);return size?(seed+monthIndex)%size:0}
 function systemFeedback(metric,tone,key){var bank=banks[tone]||banks.stable;return bank[seededIndex(metric,tone,key,bank.length)]}
 function questionText(metric,tone,key){var group=questionBanks[metric]||questionBanks.mercantil,bank=group[tone]||group.stable||group.good||group.attention||['Como você avalia este resultado?'];return bank[seededIndex(metric,tone,key,bank.length)]}
+function questionSet(metric,tone,key){var group=questionBanks[metric]||questionBanks.mercantil,bank=(group[tone]||group.stable||group.good||group.attention||['Como você avalia este resultado?']).slice();if(!bank.length)return[];var start=seededIndex(metric,tone,key,bank.length),ordered=[];for(var i=0;i<bank.length;i++)ordered.push(bank[(start+i)%bank.length]);return ordered.slice(0,Math.min(3,ordered.length))}
 function sellerMonthlyGoals(s,key){var setup=s&&s.goalSetupByMonth&&s.goalSetupByMonth[key];var mg=moneyNum(setup&&setup.mercantile)||moneyNum(s&&s.assignedGoal);var sg=moneyNum(setup&&setup.services)||moneyNum(s&&s.serviceGoal);return{mercantile:mg,services:sg}}
 function metrics(prevSeller,prevKey){
  var a=aggregate(prevSeller),goals=sellerMonthlyGoals(prevSeller,prevKey),mg=goals.mercantile,sg=goals.services,ecom=moneyNum(prevSeller&&prevSeller.ecommerce),mercTotal=a.general+ecom;
@@ -204,7 +207,7 @@ function css(){
   .monthly-cycle-body{padding:20px 22px 24px}.monthly-summary{display:grid;gap:14px}.monthly-metric{border:1px solid #dfe8f2;border-left:5px solid #3988dd;border-radius:18px;background:#fff;padding:15px}
   .monthly-metric.good{border-left-color:#1f9d6a}.monthly-metric.stable{border-left-color:#e6a21a}.monthly-metric.attention{border-left-color:#d84b60}.monthly-metric-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
   .monthly-metric-title{font-weight:850;color:#17324d;font-size:1rem}.monthly-metric-value{text-align:right}.monthly-metric-value strong{display:block;font-size:1.3rem;color:#102a43}.monthly-metric-value small{color:#7c8998}
-  .monthly-metric label{display:block;margin-top:12px;font-size:.78rem;font-weight:850;color:#53677b}.monthly-metric textarea{box-sizing:border-box;width:100%;min-height:84px;margin-top:6px;border:1px solid #d5dfeb;border-radius:14px;padding:11px 12px;font:inherit;resize:vertical;background:#fbfdff;color:#17324d}
+  .monthly-metric label{display:block;margin-top:12px;font-size:.78rem;font-weight:850;color:#53677b}.monthly-metric textarea{box-sizing:border-box;width:100%;min-height:72px;margin-top:6px;border:1px solid #d5dfeb;border-radius:14px;padding:11px 12px;font:inherit;resize:vertical;background:#fbfdff;color:#17324d}.monthly-guided-questions{display:grid;gap:9px;margin-top:10px}.monthly-guided-question{padding:9px 10px;border-radius:13px;background:#f8fbfe;border:1px solid #e7eef6}.monthly-guided-question label{margin-top:0!important;line-height:1.35}.monthly-guided-question textarea{min-height:64px!important}
   .platform-feedback{margin-top:9px;padding:10px 12px;border-radius:13px;background:#f2f7fc;color:#53677b;font-size:.78rem;line-height:1.45}.platform-feedback b{color:#17324d}
   .monthly-commitment{margin-top:16px;border:1px solid #dfe8f2;border-left:5px solid #6a55e8;border-radius:18px;background:#fff;padding:15px}.monthly-commitment textarea{box-sizing:border-box;width:100%;min-height:90px;margin-top:7px;border:1px solid #d5dfeb;border-radius:14px;padding:11px 12px;font:inherit}
   .monthly-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}.monthly-primary{border:0;border-radius:14px;padding:13px 18px;background:linear-gradient(135deg,#0879e8,#6049e8);color:#fff;font-weight:850;font-size:.95rem}.monthly-primary:disabled{opacity:.55}
@@ -240,14 +243,14 @@ function openCloseout(vault,prevKey,prevRecord,prevSeller){
   var m=modal(),body=m.querySelector('#monthlyCycleBodyV91'),list=metrics(prevSeller,prevKey);
   m.querySelector('#monthlyCycleTitleV91').textContent='Fechamento de '+monthLabel(prevKey);
   m.querySelector('#monthlyCycleSubtitleV91').textContent='Antes de iniciar o novo ciclo, revise seus indicadores e registre sua leitura do mês.';
-  body.innerHTML='<div class="monthly-summary">'+list.map(function(x){var q=questionText(x.id,x.tone,prevKey);var badge=x.target?(x.value>=x.target?'Meta/referência alcançada':x.value>=x.target*.85?'Próximo da referência':'Abaixo da referência'):'Indicador complementar';return '<section class="monthly-metric '+x.tone+'" data-metric="'+x.id+'"><div class="monthly-metric-top"><div><div class="monthly-metric-title">'+x.icon+' '+x.title+'</div><span class="monthly-result-badge">'+badge+'</span></div><div class="monthly-metric-value"><strong>'+x.display+'</strong><small>'+x.targetText+'</small></div></div><label>'+esc(q)+' *</label><textarea maxlength="700" placeholder="Responda em poucas palavras, de forma objetiva."></textarea><div class="platform-feedback"><b>Feedback da plataforma:</b> '+esc(systemFeedback(x.id,x.tone,prevKey))+'</div></section>'}).join('')+'</div><section class="monthly-commitment"><strong>🎯 Meu compromisso para o próximo mês *</strong><div class="monthly-note">Defina uma ação objetiva, simples e acompanhável para o novo ciclo.</div><textarea id="monthlyCommitmentV91" maxlength="700" placeholder="Ex.: acompanhar minha conversão diariamente e reforçar a oferta de serviços em todos os atendimentos."></textarea></section><div class="monthly-actions"><button class="monthly-primary" id="saveMonthlyCloseoutV91">Salvar fechamento do mês</button></div><div class="monthly-note" id="monthlyFeedbackV91">Responda cada indicador em poucas palavras e registre seu compromisso.</div>';
+  body.innerHTML='<div class="monthly-summary">'+list.map(function(x){var qs=questionSet(x.id,x.tone,prevKey);var badge=x.target?(x.value>=x.target?'Meta/referência alcançada':x.value>=x.target*.85?'Próximo da referência':'Abaixo da referência'):'Indicador complementar';return '<section class="monthly-metric '+x.tone+'" data-metric="'+x.id+'"><div class="monthly-metric-top"><div><div class="monthly-metric-title">'+x.icon+' '+x.title+'</div><span class="monthly-result-badge">'+badge+'</span></div><div class="monthly-metric-value"><strong>'+x.display+'</strong><small>'+x.targetText+'</small></div></div><div class="monthly-guided-questions">'+qs.map(function(q,qi){return '<div class="monthly-guided-question"><label>'+(qi+1)+'. '+esc(q)+' *</label><textarea data-question-index="'+qi+'" maxlength="420" placeholder="Responda em poucas palavras, de forma objetiva."></textarea></div>'}).join('')+'</div><div class="platform-feedback"><b>Feedback da plataforma:</b> '+esc(systemFeedback(x.id,x.tone,prevKey))+'</div></section>'}).join('')+'</div><section class="monthly-commitment"><strong>🎯 Meu compromisso para o próximo mês *</strong><div class="monthly-note">Defina uma ação objetiva, simples e acompanhável para o novo ciclo.</div><textarea id="monthlyCommitmentV91" maxlength="700" placeholder="Ex.: acompanhar minha conversão diariamente e reforçar a oferta de serviços em todos os atendimentos."></textarea></section><div class="monthly-actions"><button class="monthly-primary" id="saveMonthlyCloseoutV91">Salvar fechamento do mês</button></div><div class="monthly-note" id="monthlyFeedbackV91">Responda as perguntas de cada indicador em poucas palavras e registre seu compromisso.</div>';
   m.hidden=false;document.body.style.overflow='hidden';
   body.querySelector('#saveMonthlyCloseoutV91').onclick=async function(){
-    var notes=Array.from(body.querySelectorAll('.monthly-metric textarea')).map(function(t){return t.value.trim()}),commit=body.querySelector('#monthlyCommitmentV91').value.trim(),fb=body.querySelector('#monthlyFeedbackV91'),btn=this;
-    if(notes.some(function(t){return t.length<8})||commit.length<8){fb.textContent='Preencha cada análise e o compromisso do próximo mês antes de continuar.';fb.style.color='#b83249';return}
+    var sections=Array.from(body.querySelectorAll('.monthly-metric')),answers=sections.map(function(sec){return Array.from(sec.querySelectorAll('textarea')).map(function(t){return t.value.trim()})}),commit=body.querySelector('#monthlyCommitmentV91').value.trim(),fb=body.querySelector('#monthlyFeedbackV91'),btn=this;
+    if(answers.some(function(group){return group.some(function(t){return t.length<4})})||commit.length<8){fb.textContent='Responda todas as perguntas de forma objetiva e registre o compromisso do próximo mês.';fb.style.color='#b83249';return}
     btn.disabled=true;btn.textContent='Salvando…';
-    var review={version:2,month:prevKey,sellerId:sellerKey(prevSeller),sellerName:prevSeller.name||sellerName,branch:prevRecord.branch||branchText,savedAt:new Date().toISOString(),status:'avaliado',automatic:false,metrics:{},commitment:commit};
-    list.forEach(function(x,i){review.metrics[x.id]={title:x.title,value:x.value,display:x.display,target:x.target||0,status:x.tone,prompt:questionText(x.id,x.tone,prevKey),selfFeedback:notes[i],systemFeedback:systemFeedback(x.id,x.tone,prevKey)}});
+    var review={version:3,month:prevKey,sellerId:sellerKey(prevSeller),sellerName:prevSeller.name||sellerName,branch:prevRecord.branch||branchText,savedAt:new Date().toISOString(),status:'avaliado',automatic:false,metrics:{},commitment:commit};
+    list.forEach(function(x,i){var prompts=questionSet(x.id,x.tone,prevKey),responses=answers[i]||[];review.metrics[x.id]={title:x.title,value:x.value,display:x.display,target:x.target||0,status:x.tone,prompts:prompts,responses:responses,prompt:prompts[0]||'',selfFeedback:responses[0]||'',systemFeedback:systemFeedback(x.id,x.tone,prevKey)}});
     try{await persistReview(prevKey,review);body.innerHTML='<div class="monthly-success">✅ Fechamento salvo. Sua análise ficou registrada junto à competência encerrada.</div>';setTimeout(function(){m.hidden=true;document.body.style.overflow='';start()},900)}
     catch(e){btn.disabled=false;btn.textContent='Salvar fechamento do mês';fb.textContent='Não foi possível sincronizar agora. Tente novamente antes de iniciar o novo ciclo.';fb.style.color='#b83249'}
   };
