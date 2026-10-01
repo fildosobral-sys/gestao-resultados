@@ -22,10 +22,19 @@
   }
   function clearAuth() { ['fs_filial','fs_nome','fs_cargo','fs_whatsapp','fs_genero','fs_access_token','fs_pode_compartilhar','fsAuthGlobal','fs_access_persisted','fs_access_verified_at','fs_access_verified_fingerprint'].forEach(key => localStorage.removeItem(key)); }
   async function validate(data) {
-    const url = `${API}?acao=validarAcesso&filial=${encodeURIComponent(branch(data.filial))}&nome=${encodeURIComponent(upper(data.nome))}&cargo=${encodeURIComponent(role(data.cargo))}&whatsapp=${encodeURIComponent(digits(data.whatsapp))}&token=${encodeURIComponent(data.token || '')}&device_id=${encodeURIComponent(deviceId())}&_=${Date.now()}`;
-    const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 16000);
-    try { const response = await fetch(url, { cache: 'no-store', signal: controller.signal, redirect: 'follow' }); const text = await response.text(); if (!response.ok) throw new Error(`HTTP ${response.status}`); try { return JSON.parse(text); } catch (_) { throw new Error('Resposta inválida do servidor de acesso'); } }
-    finally { clearTimeout(timeout); }
+    const makeUrl=()=>`${API}?acao=validarAcesso&filial=${encodeURIComponent(branch(data.filial))}&nome=${encodeURIComponent(upper(data.nome))}&cargo=${encodeURIComponent(role(data.cargo))}&whatsapp=${encodeURIComponent(digits(data.whatsapp))}&token=${encodeURIComponent(data.token || '')}&device_id=${encodeURIComponent(deviceId())}&_=${Date.now()}`;
+    let lastError=null;
+    for(let attempt=0;attempt<3;attempt++){
+      const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),12000);
+      try{
+        const response=await fetch(makeUrl(),{cache:'no-store',signal:controller.signal,redirect:'follow'});
+        const text=await response.text();
+        if(!response.ok)throw new Error(`HTTP ${response.status}`);
+        try{return JSON.parse(text)}catch(_){throw new Error('Resposta inválida do servidor de acesso')}
+      }catch(error){lastError=error;if(attempt<2)await new Promise(r=>setTimeout(r,600*(attempt+1)))}
+      finally{clearTimeout(timeout)}
+    }
+    throw lastError||new Error('Falha de comunicação com o banco de acesso');
   }
   async function transfer(data) { const response = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ acao: 'transferirAcesso', filial: branch(data.filial), nome: upper(data.nome), cargo: role(data.cargo), whatsapp: digits(data.whatsapp), token: data.token || '', device_id: deviceId(), master_multi: ['GERENTE','DESENVOLVEDOR_MASTER'].includes(role(data.cargo)) }) }); const text=await response.text(); if(!response.ok) throw new Error(`HTTP ${response.status}`); try{return JSON.parse(text)}catch(_){throw new Error('Resposta inválida do servidor de acesso')} }
   const conflict = json => { const code = upper(json?.codigo); const message = upper(json?.mensagem); return code === 'DEVICE_CONFLICT' || code === 'APARELHO_DIFERENTE' || message.includes('OUTRO APARELHO') || message.includes('OUTRO DISPOSITIVO'); };
@@ -48,7 +57,7 @@
   function fill(data = {}) { $('filial').value = branch(data.filial); $('nome').value = upper(data.nome); $('cargo').value = role(data.cargo); $('whatsapp').value = digits(data.whatsapp); $('genero').value = upper(data.genero || 'AUTOMATICO'); }
   function inviteFromUrl() { const params = new URLSearchParams(location.search); const data = { filial: params.get('filial'), nome: params.get('nome'), cargo: params.get('cargo'), whatsapp: params.get('whatsapp'), genero: params.get('genero'), token: params.get('token') || '' }; window.__inviteToken = data.token; return data; }
 
-  $('accessForm').addEventListener('submit', event => { event.preventDefault(); const data = readForm(); if (!complete(data)) { setMessage('Informe filial, nome completo, cargo e WhatsApp com DDD.', 'error'); return; } authorize(data, false); });
+  $('accessForm').addEventListener('submit', event => { event.preventDefault(); const data = readForm(); if (!complete(data)) { setMessage('Informe filial, nome completo, cargo e WhatsApp com DDD.', 'error'); return; } authorize(data, true); });
   $('clearBtn').addEventListener('click', () => { clearAuth(); fill({}); setMessage('Dados locais removidos. Informe novamente para acessar.', 'info'); $('filial').focus(); });
   ['filial','nome','cargo'].forEach(id => $(id).addEventListener('input', event => { const position = event.target.selectionStart; event.target.value = upper(event.target.value); try { event.target.setSelectionRange(position, position); } catch (_) {} }));
   $('whatsapp').addEventListener('input', event => { event.target.value = digits(event.target.value); });

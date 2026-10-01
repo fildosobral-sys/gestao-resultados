@@ -131,7 +131,9 @@
 
   let vault = loadVault();
   if (!Array.isArray(vault.historyEntries)) vault.historyEntries = [];
-  let db = normalizeRecord(vault.records[vault.currentKey] || Object.values(vault.records)[0] || baseRecord());
+  const currentMonthRecord = Object.values(vault.records||{}).find(r=>r?.month===monthDefault && String(r?.branch||'').trim());
+  let db = normalizeRecord(currentMonthRecord || vault.records[vault.currentKey] || Object.values(vault.records)[0] || baseRecord());
+  if(currentMonthRecord) vault.currentKey=recordKey(currentMonthRecord.branch,currentMonthRecord.month);
   let activeScope = 'branch';
   let activeSellerProfileId = null;
   let openSellerIndex = null;
@@ -3197,7 +3199,8 @@
       vault = incoming;
       if (!Array.isArray(vault.historyEntries)) vault.historyEntries = [];
       const key = recordKey(db.branch, db.month);
-      db = normalizeRecord(vault.records[key] || vault.records[vault.currentKey] || Object.values(vault.records)[0] || db);
+      const freshRecord = vault.records[key] || Object.values(vault.records).find(r=>recordKey(r.branch,r.month)===key);
+      if (freshRecord) db = normalizeRecord(freshRecord);
       renderAll();
       if (document.getElementById(activeId)) showView(activeId, { keepScroll: true });
       requestAnimationFrame(() => window.scrollTo({ top: scrollY, behavior: 'auto' }));

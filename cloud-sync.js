@@ -42,15 +42,19 @@
   function mergeVaults(remote, local) {
     if (!remote) return local;
     if (!local) return remote;
-    const merged = JSON.parse(JSON.stringify(parseStamp(local?._cloudUpdatedAt) >= parseStamp(remote?._cloudUpdatedAt) ? local : remote));
+    // A nuvem é a fonte principal para dados gerais da filial.
+    // Alterações locais pendentes são tratadas antes do pull, portanto aqui evitamos
+    // que uma cópia antiga do aparelho recoloque números antigos sobre a nuvem.
+    const merged = JSON.parse(JSON.stringify(remote));
     merged.records = merged.records || {};
     const keys = new Set([...Object.keys(remote.records || {}), ...Object.keys(local.records || {})]);
     keys.forEach(key => {
       const rr = remote.records?.[key], lr = local.records?.[key];
       if (!rr) { merged.records[key] = JSON.parse(JSON.stringify(lr)); return; }
       if (!lr) { merged.records[key] = JSON.parse(JSON.stringify(rr)); return; }
-      const base = parseStamp(lr.updatedAt) >= parseStamp(rr.updatedAt) ? lr : rr;
-      const out = JSON.parse(JSON.stringify(base));
+      const out = JSON.parse(JSON.stringify(rr));
+      // Se o registro local inteiro for inequivocamente mais novo, mantém os campos gerais locais.
+      if (parseStamp(lr.updatedAt) > parseStamp(rr.updatedAt)) Object.assign(out, JSON.parse(JSON.stringify(lr)));
       const deleted = {};
       const absorbDeleted = source => {
         Object.entries(source?.deletedSellers || {}).forEach(([id, tomb]) => {
@@ -63,7 +67,7 @@
       (rr.sellers || []).forEach((seller, index) => map.set(sellerKey(seller,index), JSON.parse(JSON.stringify(seller))));
       (lr.sellers || []).forEach((seller, index) => {
         const k = sellerKey(seller,index), prior = map.get(k);
-        if (!prior || parseStamp(seller.updatedAt) >= parseStamp(prior.updatedAt)) map.set(k, JSON.parse(JSON.stringify(seller)));
+        if (!prior || parseStamp(seller.updatedAt) > parseStamp(prior.updatedAt)) map.set(k, JSON.parse(JSON.stringify(seller)));
       });
       for (const [id, seller] of [...map.entries()]) {
         const tomb = deleted[id];
@@ -73,8 +77,8 @@
       out.sellers = [...map.values()];
       merged.records[key] = out;
     });
-    const latestCloudStamp = Math.max(parseStamp(local?._cloudUpdatedAt), parseStamp(remote?._cloudUpdatedAt));
-    merged._cloudUpdatedAt = latestCloudStamp ? new Date(latestCloudStamp).toISOString() : new Date().toISOString();
+    merged.currentKey = remote.currentKey || local.currentKey || merged.currentKey;
+    merged._cloudUpdatedAt = remote._cloudUpdatedAt || new Date().toISOString();
     return merged;
   }
   function loadRemote() {
@@ -165,7 +169,8 @@
         const reconciled = mergeVaults(remote, local);
         const localJson = JSON.stringify(local || null), reconciledJson = JSON.stringify(reconciled || null);
         localStorage.setItem(STORE, reconciledJson);
-        if (localJson !== reconciledJson) {
+        const localNewer = newestStamp(local) > newestStamp(remote);
+        if (localJson !== reconciledJson && localNewer) {
           pending = reconciled;
           clearTimeout(timer);
           timer = setTimeout(pushNow, 300);
