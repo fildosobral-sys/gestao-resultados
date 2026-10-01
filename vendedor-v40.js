@@ -447,32 +447,27 @@ function dashPrint(){
   .report-feedback-block{grid-column:1/-1;border:1px solid #dfe8f2;border-left:4px solid #6049e8;border-radius:10px;background:#f8fbff;padding:7px 9px;break-inside:avoid!important;page-break-inside:avoid!important}.report-feedback-title{font-size:9px;font-weight:900;color:#17324d;margin-bottom:5px}.report-feedback-qa{display:grid;gap:2px;padding:4px 0;border-top:1px solid #e7edf4}.report-feedback-qa:first-of-type{border-top:0}.report-feedback-qa b{font-size:7.2px;color:#42566d;line-height:1.25}.report-feedback-qa span{font-size:8px;color:#17324d;line-height:1.3}.report-platform-feedback{margin-top:5px;padding:6px 7px;border-radius:8px;background:#eef4fb;font-size:7.3px;line-height:1.3;color:#40566d}.report-commitment{grid-column:1/-1;display:grid;gap:3px;padding:7px 9px;border-radius:10px;border-left:4px solid #24a66d;background:#f0faf5;font-size:7.6px;line-height:1.3;break-inside:avoid!important;page-break-inside:avoid!important}.report-commitment b{color:#176c49}.report-commitment span{color:#17324d}
   .report-foot{position:fixed;left:8mm;right:8mm;bottom:3mm;display:flex;justify-content:space-between;gap:12px;padding-top:3px;border-top:1px solid #dce5f0;color:#7b8794;font-size:6.4px;background:#fff}
   @media print{.dash-controls,.dash-report,.dash-custom-range,.dash-chart-expand{display:none!important}}
-  </style></head><body><div class="report-head"><div class="report-brand"><small>FS Soluções • Gestão de Resultados</small><h1>Relatório de qualidade do vendedor</h1><small class="report-version">Modelo V146</small><p>${esc(name)} • ${esc(branch)}</p></div><div class="report-meta"><div><b>Período:</b> ${esc(periodLabel)}</div><div><b>Comparação:</b> ${esc(compareLabel)}</div><div><b>Competência:</b> ${esc(record?.month||month)}</div><div><b>Gerado em:</b> ${esc(generated)}</div></div></div><div class="report-note">Relatório consolidado de qualidade, desempenho, indicadores, tendências e gráficos. Quando houver fechamento mensal registrado, as perguntas e respostas do vendedor aparecem abaixo do respectivo indicador.</div>${printRoot.innerHTML}<div class="report-foot"><span>Developed by Fildo Sobral • FS Soluções</span><span>${esc(name)} • ${esc(branch)}</span></div></body></html>`);
+  </style></head><body><div class="report-head"><div class="report-brand"><small>FS Soluções • Gestão de Resultados</small><h1>Relatório de qualidade do vendedor</h1><small class="report-version">Modelo V147</small><p>${esc(name)} • ${esc(branch)}</p></div><div class="report-meta"><div><b>Período:</b> ${esc(periodLabel)}</div><div><b>Comparação:</b> ${esc(compareLabel)}</div><div><b>Competência:</b> ${esc(record?.month||month)}</div><div><b>Gerado em:</b> ${esc(generated)}</div></div></div><div class="report-note">Relatório consolidado de qualidade, desempenho, indicadores, tendências e gráficos. Quando houver fechamento mensal registrado, as perguntas e respostas do vendedor aparecem abaixo do respectivo indicador.</div>${printRoot.innerHTML}<div class="report-foot"><span>Developed by Fildo Sobral • FS Soluções</span><span>${esc(name)} • ${esc(branch)}</span></div></body></html>`);
   w.document.close();
-  let cleaned=false;
-  const cleanup=()=>{
-    if(cleaned)return;
-    cleaned=true;
-    sellerReportPrinting=false;
-    try{w.onafterprint=null}catch{}
-    setTimeout(()=>{try{frame.remove()}catch{}},1800);
-  };
-  try{w.onafterprint=cleanup}catch{}
-  window.addEventListener('focus',()=>setTimeout(cleanup,1500),{once:true});
-  const forceCleanupTimer=setTimeout(cleanup,10*60*1000);
+  // V147: no Android/Samsung/Chrome o evento afterprint/focus pode disparar
+  // ao ABRIR a prévia, antes de o usuário tocar em "Salvar como PDF".
+  // Se o iframe for removido nesse momento, a prévia fica correta, mas o arquivo
+  // final pode ser gerado a partir de uma página antiga/cacheada. Por isso o
+  // documento de impressão permanece vivo até a próxima geração de relatório
+  // (quando será substituído no início desta função) ou até a página ser fechada.
+  const releasePrintingFlag=()=>{sellerReportPrinting=false};
   const runPrint=()=>{
     try{
       w.focus();
       w.print();
-      clearTimeout(forceCleanupTimer);
-      setTimeout(cleanup,2*60*1000);
+      // Libera apenas a trava do botão; NÃO remove o iframe de origem.
+      setTimeout(releasePrintingFlag,2500);
     }catch(e){
-      clearTimeout(forceCleanupTimer);
-      cleanup();
+      releasePrintingFlag();
       alert('Não foi possível abrir a impressão do relatório.');
     }
   };
-  if(w.document.fonts&&w.document.fonts.ready){w.document.fonts.ready.then(()=>setTimeout(runPrint,450)).catch(()=>setTimeout(runPrint,650))}else setTimeout(runPrint,750);
+  if(w.document.fonts&&w.document.fonts.ready){w.document.fonts.ready.then(()=>setTimeout(runPrint,700)).catch(()=>setTimeout(runPrint,900))}else setTimeout(runPrint,1000);
 }
 
 
