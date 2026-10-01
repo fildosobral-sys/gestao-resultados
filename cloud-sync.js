@@ -4,10 +4,13 @@
   const STORE = 'fs_gestao_resultados_v2';
   const ENDPOINT = 'https://script.google.com/macros/s/AKfycbx9pLFWtpngXQemQLORPiY16pGlxKTU7Hw10cSZSzieoiMmn-CStDKfo5oUENimSwzv/exec';
   const TOKEN = '2c97791424feb4029ae889e3ab094596b158d2f4c680172b';
-  const POLL_MS = 12000;
+  const POLL_MS = 5000;
   let timer = null;
   let sending = false;
   let pending = null;
+  let pulling = false;
+  let channel = null;
+  try { channel = 'BroadcastChannel' in window ? new BroadcastChannel('fs_resultados_cloud_v142') : null; } catch (_) {}
 
   const enabled = () => /^https:\/\/script\.google\.com\/macros\/s\//.test(ENDPOINT);
   const status = (text, tone = 'ok') => {
@@ -136,10 +139,19 @@
   }
 
   function pull() {
-    if (!enabled() || pending || sending) return;
-    const callback = `__resultsCloud_${Date.now()}`;
+    if (!enabled() || pending || sending || pulling) return;
+    pulling = true;
+    const callback = `__resultsCloud_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
     const script = document.createElement('script');
-    const cleanup = () => { delete window[callback]; script.remove(); };
+    let finished = false, timeout = null;
+    const cleanup = () => {
+      if (finished) return;
+      finished = true;
+      pulling = false;
+      if (timeout) clearTimeout(timeout);
+      try { delete window[callback]; } catch (_) {}
+      script.remove();
+    };
     window[callback] = response => {
       try {
         if (!response?.ok) throw new Error(response?.error || 'Falha na sincronização');
@@ -159,30 +171,34 @@
           timer = setTimeout(pushNow, 300);
         }
         status('↓ Nova atualização recebida da nuvem', 'busy');
-        try {
-          window.dispatchEvent(new CustomEvent('results-cloud-updated', { detail: { vault: reconciled } }));
-        } catch (_) {}
+        try { window.dispatchEvent(new CustomEvent('results-cloud-updated', { detail: { vault: reconciled } })); } catch (_) {}
+        try { channel?.postMessage({type:'cloud-updated',at:Date.now()}); } catch (_) {}
         setTimeout(() => status('✓ Sincronizado com a nuvem'), 650);
       } catch (error) {
         status('⚠ Salvo neste aparelho; sem conexão com a nuvem', 'error');
       } finally { cleanup(); }
     };
     script.onerror = () => { cleanup(); status('⚠ Salvo neste aparelho; sem conexão com a nuvem', 'error'); };
+    timeout = setTimeout(() => { cleanup(); status('⚠ Conexão com a nuvem demorou; nova tentativa automática', 'error'); }, 10000);
     script.src = `${ENDPOINT}?action=load&token=${encodeURIComponent(TOKEN)}&callback=${callback}&_=${Date.now()}`;
     document.head.appendChild(script);
   }
 
-  window.ResultsCloudSync = { queue, pull, enabled };
+  window.ResultsCloudSync = { queue, pull, refresh: pull, enabled };
   window.addEventListener('DOMContentLoaded', () => {
     if (!enabled()) { status('✓ Dados salvos neste aparelho'); return; }
     status('⟳ Conectando à nuvem…', 'busy');
-    setTimeout(pull, 400);
+    setTimeout(pull, 250);
     setInterval(pull, POLL_MS);
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) pull(); });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(pull,80); });
+    window.addEventListener('focus', () => setTimeout(pull,80));
+    window.addEventListener('pageshow', () => setTimeout(pull,120));
     window.addEventListener('online', () => {
-      if (pending) { clearTimeout(timer); timer = setTimeout(pushNow, 180); }
-      else setTimeout(pull, 220);
+      if (pending) { clearTimeout(timer); timer = setTimeout(pushNow, 120); }
+      else setTimeout(pull, 120);
     });
+    window.addEventListener('storage', event => { if(event.key===STORE && !pending && !sending) setTimeout(pull,80); });
+    if(channel) channel.onmessage = event => { if(event?.data?.type==='cloud-updated' && !pending && !sending) setTimeout(pull,100); };
     window.addEventListener('offline', () => status('✓ Dados salvos neste aparelho • sincronização em segundo plano', 'error'));
   });
 })();
