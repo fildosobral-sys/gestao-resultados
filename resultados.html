@@ -9,6 +9,7 @@
   <meta name="theme-color" content="#0879e8">
 <link rel="apple-touch-icon" href="./icon-192.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Resultados">
   <link rel="manifest" href="./manifest.webmanifest">
@@ -1877,7 +1878,16 @@ body.seller-modal-open{overflow:hidden}
     let wrap=null;
     try{
       if(!window.html2canvas){
-        await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
+        const sources=[
+          'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js',
+          'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+          'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js'
+        ];
+        let loaded=false,lastErr=null;
+        for(const src of sources){
+          try{ await loadScript(src); if(window.html2canvas){loaded=true;break;} }catch(e){ lastErr=e; }
+        }
+        if(!loaded) throw lastErr||new Error('html2canvas indisponível');
       }
       const {iso}=getDateParts();
       wrap=buildExportStage();
@@ -1891,16 +1901,40 @@ body.seller-modal-open{overflow:hidden}
       await new Promise(r=>setTimeout(r,160));
       await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
 
-      const canvas=await window.html2canvas(wrap,{
+      const sanitizeClone=(doc)=>{
+        const root=doc.querySelector('.team-export-stage');
+        if(!root) return;
+        root.querySelectorAll('canvas').forEach(c=>{
+          const r=c.getBoundingClientRect();
+          if(!c.width||!c.height||r.width<1||r.height<1) c.remove();
+        });
+        root.querySelectorAll('*').forEach(el=>{
+          const r=el.getBoundingClientRect();
+          if(r.width<1||r.height<1){
+            // Evita o bug createPattern(canvas 0x0) do html2canvas em elementos vazios/ocultos.
+            el.style.backgroundImage='none';
+          }
+        });
+      };
+      const opts={
         scale:2,
         backgroundColor:'#edf5ff',
         useCORS:true,
+        allowTaint:false,
         logging:false,
         windowWidth:1820,
-        imageTimeout:30000,
+        imageTimeout:15000,
         scrollX:0,
-        scrollY:0
-      });
+        scrollY:0,
+        onclone:sanitizeClone
+      };
+      let canvas;
+      try{
+        canvas=await window.html2canvas(wrap,opts);
+      }catch(firstErr){
+        console.warn('Renderização padrão falhou; tentando modo alternativo.',firstErr);
+        canvas=await window.html2canvas(wrap,{...opts,foreignObjectRendering:true});
+      }
       const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png',1));
       if(!blob) throw new Error('Falha ao gerar PNG');
       const url=URL.createObjectURL(blob);
@@ -1911,7 +1945,7 @@ body.seller-modal-open{overflow:hidden}
       setTimeout(()=>URL.revokeObjectURL(url),1500);
     }catch(err){
       console.error(err);
-      alert('Não foi possível gerar a imagem agora. Tente novamente com internet ativa.');
+      alert('Não foi possível gerar a imagem agora. Atualize a página e tente novamente.');
     }finally{
       if(wrap) wrap.remove();
     }

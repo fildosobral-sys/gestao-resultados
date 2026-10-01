@@ -630,7 +630,12 @@
   async function downloadComposite(){
     const partial=document.querySelector('.team-partial-panel'); if(!partial) return;
     try{
-      if(!window.html2canvas) await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js','html2canvas');
+      if(!window.html2canvas){
+        const sources=['https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js','https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js','https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js'];
+        let ok=false;
+        for(const src of sources){ try{ await loadScript(src,'html2canvas'); if(window.html2canvas){ok=true;break;} }catch(_){} }
+        if(!ok) throw new Error('html2canvas indisponível');
+      }
       const scope=scopeInfo(); const date=scope.start;
       const wrap=document.createElement('div');
       wrap.className='team-export-stage team-export-ranking export-cards-only';
@@ -645,14 +650,16 @@
 
       if(document.fonts?.ready){ try { await document.fonts.ready; } catch(_) {} }
       await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
-      const canvas=await html2canvas(wrap,{scale:2.2,backgroundColor:'#edf5ff',useCORS:true,logging:false,windowWidth:1440,imageTimeout:30000,scrollX:0,scrollY:0});
+      const onclone=(doc)=>{const root=doc.querySelector('.team-export-stage');if(!root)return;root.querySelectorAll('canvas').forEach(c=>{const r=c.getBoundingClientRect();if(!c.width||!c.height||r.width<1||r.height<1)c.remove()});root.querySelectorAll('*').forEach(el=>{const r=el.getBoundingClientRect();if(r.width<1||r.height<1)el.style.backgroundImage='none'})};
+      const opts={scale:2.2,backgroundColor:'#edf5ff',useCORS:true,allowTaint:false,logging:false,windowWidth:1440,imageTimeout:15000,scrollX:0,scrollY:0,onclone};
+      let canvas;try{canvas=await html2canvas(wrap,opts)}catch(firstErr){console.warn('Renderização padrão falhou; tentando modo alternativo.',firstErr);canvas=await html2canvas(wrap,{...opts,foreignObjectRendering:true})}
       wrap.remove();
       const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png',1));
       if(!blob) throw new Error('Falha ao gerar PNG');
       const url=URL.createObjectURL(blob);
       const a=document.createElement('a'); a.download=`resultado-parcial-equipe-${date}.png`; a.href=url; a.click();
       setTimeout(()=>URL.revokeObjectURL(url),1500);
-    }catch(e){ alert('Não foi possível gerar o acompanhamento neste aparelho. Tente novamente com internet ativa.'); }
+    }catch(e){ alert('Não foi possível gerar o acompanhamento agora. Atualize a página e tente novamente.'); }
   }
 
   function bind(){
