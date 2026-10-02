@@ -68,7 +68,7 @@
     const services=parseNum(seller.warranty)+parseNum(seller.other)+parseNum(seller.mixed);
     return {merc:parseNum(seller.general)+parseNum(seller.ecommerce),services,conversion:parseNum(seller.nfs)?parseNum(seller.warrantyQty)/parseNum(seller.nfs)*100:0,efficiency:parseNum(seller.eligible)?services/parseNum(seller.eligible)*100:0};
   }
-  function emptyMonth(){return {merc:0,mercGoal:0,services:0,serviceGoal:0,conversion:0,efficiency:0};}
+  function emptyMonth(){return {merc:0,mercGoal:0,services:0,serviceGoal:0,conversion:0,efficiency:0,_entered:{}};}
   function ensureYear(report,year){
     report.years=report.years||{};
     report.years[year]=report.years[year]||{};
@@ -104,13 +104,13 @@
         const rec=monthRecord(vault,branch,year,i), s=findSellerInRecord(rec,seller), row=report.years[year][i];
         if(!s)continue;
         const a=aggregateSeller(s), goals=storedMonthlyGoals(s,mk);
-        let touched=false;
-        if(!parseNum(row.merc)&&a.merc){row.merc=a.merc;touched=true}
-        if(!parseNum(row.services)&&a.services){row.services=a.services;touched=true}
-        if(!parseNum(row.conversion)&&a.conversion){row.conversion=a.conversion;touched=true}
-        if(!parseNum(row.efficiency)&&a.efficiency){row.efficiency=a.efficiency;touched=true}
-        if(!parseNum(row.mercGoal)&&goals.merc){row.mercGoal=goals.merc;touched=true}
-        if(!parseNum(row.serviceGoal)&&goals.services){row.serviceGoal=goals.services;touched=true}
+        row._entered=row._entered||{};let touched=false;
+        if(!parseNum(row.merc)&&a.merc){row.merc=a.merc;row._entered.merc=true;touched=true}
+        if(!parseNum(row.services)&&a.services){row.services=a.services;row._entered.services=true;touched=true}
+        if(!parseNum(row.conversion)&&a.conversion){row.conversion=a.conversion;row._entered.conversion=true;touched=true}
+        if(!parseNum(row.efficiency)&&a.efficiency){row.efficiency=a.efficiency;row._entered.efficiency=true;touched=true}
+        if(!parseNum(row.mercGoal)&&goals.merc){row.mercGoal=goals.merc;row._entered.mercGoal=true;touched=true}
+        if(!parseNum(row.serviceGoal)&&goals.services){row.serviceGoal=goals.services;row._entered.serviceGoal=true;touched=true}
         if(touched)imported++;
       }
     });
@@ -127,8 +127,8 @@
         const rec=monthRecord(vault,branch,year,i), s=findSellerInRecord(rec,seller), row=report.years[year][i];
         if(!s)continue;
         const mk=`${year}-${String(i+1).padStart(2,'0')}`,g=storedMonthlyGoals(s,mk);
-        if(!parseNum(row.mercGoal)&&g.merc)row.mercGoal=g.merc;
-        if(!parseNum(row.serviceGoal)&&g.services)row.serviceGoal=g.services;
+        row._entered=row._entered||{};if(!parseNum(row.mercGoal)&&g.merc){row.mercGoal=g.merc;row._entered.mercGoal=true}
+        if(!parseNum(row.serviceGoal)&&g.services){row.serviceGoal=g.services;row._entered.serviceGoal=true}
       }
     });
   }
@@ -153,7 +153,7 @@
     .hr-entry-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.hr-year-panel{background:#fff;border:1px solid #dfe7f0;border-radius:18px;overflow:hidden}.hr-year-title{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:#f5f8fc;border-bottom:1px solid #e1e8f0}.hr-year-title strong{font-size:18px}.hr-year-title small{color:#708197}.hr-entry-table{width:100%;border-collapse:collapse}.hr-entry-table th{position:sticky;top:0;background:#f8fbff;z-index:1;font-size:8px;text-transform:uppercase;color:#64758a;padding:7px 5px;border-bottom:1px solid #e1e8f0}.hr-entry-table td{padding:5px;border-bottom:1px solid #edf1f5}.hr-entry-table td:first-child{font-weight:900;color:#17324d;width:64px}.hr-entry-table input{width:100%;min-width:76px;border:1px solid #dbe4ed;border-radius:8px;padding:7px 7px;font-size:10px;font-weight:750;color:#18334e;background:#fff}.hr-entry-table input.hr-goal{background:#fffaf0;border-color:#f0dfb0}.hr-year-actions{display:flex;gap:8px;padding:10px 12px;background:#fbfcfe}.hr-year-actions button{font-size:10px}
     .hr-dashboard{display:grid;gap:14px}.hr-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.hr-overview-card{background:#fff;border:1px solid #dfe7f0;border-radius:16px;padding:12px}.hr-overview-card span{display:block;font-size:9px;font-weight:900;color:#718096;text-transform:uppercase}.hr-overview-card strong{display:block;margin-top:5px;font-size:20px;color:#17324d}.hr-overview-card small{display:block;margin-top:4px;color:#687a8f}
     .hr-indicator{background:#fff;border:1px solid #dfe7f0;border-radius:20px;padding:14px;break-inside:avoid}.hr-indicator-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;padding:11px 13px;border-radius:14px;background:#f7fbff;margin-bottom:10px}.hr-indicator-head h3{margin:0;font-size:19px}.hr-indicator-head p{margin:3px 0 0;color:#718096;font-size:10px}.hr-indicator-summary{display:flex;gap:10px;flex-wrap:wrap}.hr-summary-chip{padding:7px 9px;border:1px solid #dfe6ef;border-radius:10px;background:#fff;min-width:125px}.hr-summary-chip span{display:block;font-size:8px;color:#718096;font-weight:900;text-transform:uppercase}.hr-summary-chip strong{display:block;margin-top:3px;font-size:14px}.hr-chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.hr-chart-card{border:1px solid #e1e8f0;border-radius:14px;padding:10px;overflow:auto}.hr-chart-card h4{margin:0 0 3px;font-size:14px}.hr-chart-card p{margin:0 0 6px;color:#718096;font-size:9px}.hr-chart-svg{display:block;width:100%;min-width:720px;height:auto}.hr-goal-hit-list{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}.hr-goal-badge{padding:5px 8px;border-radius:999px;background:#e9f8ef;color:#138450;font-size:9px;font-weight:900}.hr-goal-none{font-size:9px;color:#8996a5}
-    .hr-empty{padding:30px;text-align:center;color:#75869a;background:#fff;border:1px dashed #ccd7e3;border-radius:16px}
+    .hr-vacation-note{padding:9px 11px;border-radius:12px;background:#fff8e7;border:1px solid #f1dfad;color:#715a17;font-size:10px;line-height:1.35}.hr-empty{padding:30px;text-align:center;color:#75869a;background:#fff;border:1px dashed #ccd7e3;border-radius:16px}
     .hr-print-only{display:none}
     @media(max-width:1100px){.hr-toolbar{grid-template-columns:1fr 1fr 1fr}.hr-toolbar .btn{width:100%}.hr-entry-grid{grid-template-columns:1fr}.hr-chart-grid{grid-template-columns:1fr}.hr-overview{grid-template-columns:1fr 1fr}}
     @media(max-width:700px){.hr-modal{padding:0}.hr-dialog{width:100vw;height:100dvh;border-radius:0}.hr-toolbar{grid-template-columns:1fr 1fr}.hr-toolbar>div:first-child{grid-column:1/-1}.hr-tabs{overflow-x:auto}.hr-body{padding:12px}.hr-overview{grid-template-columns:1fr}.hr-entry-table{min-width:760px}.hr-year-panel{overflow:auto}.hr-head h2{font-size:19px}}
@@ -167,10 +167,13 @@
   }
 
   let state={vault:null,branch:'',sellers:[],seller:null,yearA:nowYear-1,yearB:nowYear,key:'',report:null,tab:'entry'};
-  function formatField(field,v){return field==='conversion'||field==='efficiency'?pctInputValue(v):moneyInputValue(v)}
+  function fieldPresent(row,field){return !!row?._entered?.[field] || parseNum(row?.[field])>0}
+  function formatField(field,v,present=true){if(!present)return '';return field==='conversion'||field==='efficiency'?`${DEC.format(parseNum(v))}%`:MONEY.format(parseNum(v))}
+  function editFieldValue(field,v){return DEC.format(parseNum(v))}
   function inputFor(year,month,field,row){
-    const goal=field==='mercGoal'||field==='serviceGoal';
-    return `<input class="${goal?'hr-goal':''}" data-hr-year="${year}" data-hr-month="${month}" data-hr-field="${field}" inputmode="decimal" value="${esc(formatField(field,row[field]))}" placeholder="${field==='conversion'||field==='efficiency'?'0,00':'0,00'}">`;
+    const goal=field==='mercGoal'||field==='serviceGoal',present=fieldPresent(row,field);
+    const kind=field==='conversion'||field==='efficiency'?'percent':'money';
+    return `<input class="${goal?'hr-goal':''}" data-hr-year="${year}" data-hr-month="${month}" data-hr-field="${field}" data-hr-kind="${kind}" inputmode="decimal" value="${esc(formatField(field,row[field],present))}" placeholder="${kind==='percent'?'0,00%':'R$ 0,00'}">`;
   }
   function yearTable(year){
     ensureYear(state.report,year);
@@ -180,16 +183,16 @@
   function renderEntry(){const host=document.getElementById('hrEntry');if(!host)return;host.innerHTML=`<div class="hr-entry-grid">${yearTable(state.yearA)}${yearTable(state.yearB)}</div>`}
   function syncInputsToReport(){
     document.querySelectorAll('#historicalReportModal [data-hr-year][data-hr-month][data-hr-field]').forEach(input=>{
-      const y=String(input.dataset.hrYear),m=Number(input.dataset.hrMonth),f=input.dataset.hrField;ensureYear(state.report,y);state.report.years[y][m][f]=parseNum(input.value);
+      const y=String(input.dataset.hrYear),m=Number(input.dataset.hrMonth),f=input.dataset.hrField;ensureYear(state.report,y);const row=state.report.years[y][m];row._entered=row._entered||{};const present=String(input.value||'').trim()!=='';row._entered[f]=present;row[f]=present?parseNum(input.value):0;
     });
   }
   function importYear(year,includeValues=true,includeGoals=true){
     const vault=state.vault;ensureYear(state.report,year);let count=0;
     for(let i=0;i<12;i++){
       const rec=monthRecord(vault,state.branch,year,i),s=findSellerInRecord(rec,state.seller);if(!s)continue;
-      const row=state.report.years[year][i],a=aggregateSeller(s);
-      if(includeValues){ if(!parseNum(row.merc)&&a.merc)row.merc=a.merc;if(!parseNum(row.services)&&a.services)row.services=a.services;if(!parseNum(row.conversion)&&a.conversion)row.conversion=a.conversion;if(!parseNum(row.efficiency)&&a.efficiency)row.efficiency=a.efficiency; }
-      if(includeGoals){ const mk=`${year}-${String(i+1).padStart(2,'0')}`,g=storedMonthlyGoals(s,mk);if(!parseNum(row.mercGoal)&&g.merc)row.mercGoal=g.merc;if(!parseNum(row.serviceGoal)&&g.services)row.serviceGoal=g.services; }
+      const row=state.report.years[year][i],a=aggregateSeller(s);row._entered=row._entered||{};
+      if(includeValues){ if(!parseNum(row.merc)&&a.merc){row.merc=a.merc;row._entered.merc=true}if(!parseNum(row.services)&&a.services){row.services=a.services;row._entered.services=true}if(!parseNum(row.conversion)&&a.conversion){row.conversion=a.conversion;row._entered.conversion=true}if(!parseNum(row.efficiency)&&a.efficiency){row.efficiency=a.efficiency;row._entered.efficiency=true} }
+      if(includeGoals){ const mk=`${year}-${String(i+1).padStart(2,'0')}`,g=storedMonthlyGoals(s,mk);if(!parseNum(row.mercGoal)&&g.merc){row.mercGoal=g.merc;row._entered.mercGoal=true}if(!parseNum(row.serviceGoal)&&g.services){row.serviceGoal=g.services;row._entered.serviceGoal=true} }
       count++;
     }
     renderEntry();return count;
@@ -201,7 +204,7 @@
     if(metric==='conversion')return {title:'🎯 Conversão',desc:'Comparativo mensal da taxa de conversão. Meta 35%.',percent:true,goal:()=>35,value:r=>parseNum(r.conversion)};
     return {title:'⚡ Eficiência',desc:'Comparativo mensal da eficiência. Meta 7%.',percent:true,goal:()=>7,value:r=>parseNum(r.efficiency)};
   }
-  function hasData(row,metric){const c=metricConfig(metric);return c.value(row)>0 || (metric==='merc'&&c.goal(row)>0)||(metric==='services'&&c.goal(row)>0)}
+  function hasData(row,metric){const c=metricConfig(metric),field=metric==='merc'?'merc':metric==='services'?'services':metric;return !!row?._entered?.[field] || c.value(row)>0}
   function fmtMetric(v,c,compact=false){
     if(c.money){if(compact){const a=Math.abs(v);return a>=1e6?`R$ ${(v/1e6).toFixed(1).replace('.',',')} mi`:a>=1e3?`R$ ${(v/1e3).toFixed(0).replace('.',',')} mil`:MONEY.format(v)}return MONEY.format(v)}
     return `${DEC.format(v)}%`;
@@ -240,7 +243,7 @@
     const metrics=['merc','services','conversion','efficiency'];
     const any=metrics.some(m=>yearSeries(state.yearA,m).some(x=>x.has)||yearSeries(state.yearB,m).some(x=>x.has));
     if(!any){host.innerHTML='<div class="hr-empty">Preencha ao menos um mês na aba <b>Dados mensais</b> para gerar o dashboard histórico.</div>';return}
-    host.innerHTML=`<div class="hr-overview"><div class="hr-overview-card"><span>Colaborador</span><strong>${esc(state.seller?.name||'—')}</strong><small>${esc(state.branch||'—')}</small></div><div class="hr-overview-card"><span>Comparação</span><strong>${state.yearA} × ${state.yearB}</strong><small>Totais mensais consolidados</small></div><div class="hr-overview-card"><span>Conversão</span><strong>Meta 35%</strong><small>Referência fixa</small></div><div class="hr-overview-card"><span>Eficiência</span><strong>Meta 7%</strong><small>Referência fixa</small></div></div>${metrics.map(indicatorHtml).join('')}`;
+    host.innerHTML=`<div class="hr-vacation-note">ℹ️ Mês sem resultado informado é tratado como <b>férias/fora do período</b> e não entra nos gráficos nem nas médias.</div><div class="hr-overview"><div class="hr-overview-card"><span>Colaborador</span><strong>${esc(state.seller?.name||'—')}</strong><small>${esc(state.branch||'—')}</small></div><div class="hr-overview-card"><span>Comparação</span><strong>${state.yearA} × ${state.yearB}</strong><small>Totais mensais consolidados</small></div><div class="hr-overview-card"><span>Conversão</span><strong>Meta 35%</strong><small>Referência fixa</small></div><div class="hr-overview-card"><span>Eficiência</span><strong>Meta 7%</strong><small>Referência fixa</small></div></div>${metrics.map(indicatorHtml).join('')}`;
   }
 
   function printReport(){
@@ -287,6 +290,8 @@
     ['hrYearA','hrYearB'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{saveCurrent(false);rerenderAll()}));
     document.getElementById('hrSave').addEventListener('click',()=>saveCurrent(true));document.getElementById('hrPrint').addEventListener('click',printReport);
     m.addEventListener('change',e=>{if(e.target.matches('[data-hr-year][data-hr-month][data-hr-field]'))syncInputsToReport()});
+    m.addEventListener('focusin',e=>{const input=e.target.closest?.('[data-hr-year][data-hr-month][data-hr-field]');if(!input||!String(input.value||'').trim())return;const f=input.dataset.hrField;input.value=editFieldValue(f,input.value);setTimeout(()=>{try{input.select()}catch{}},0)});
+    m.addEventListener('focusout',e=>{const input=e.target.closest?.('[data-hr-year][data-hr-month][data-hr-field]');if(!input)return;syncInputsToReport();const y=String(input.dataset.hrYear),mo=Number(input.dataset.hrMonth),f=input.dataset.hrField,row=state.report?.years?.[y]?.[mo];input.value=formatField(f,row?.[f],fieldPresent(row,f));});
     m.addEventListener('click',e=>{const imp=e.target.closest('[data-hr-import]');if(imp){syncInputsToReport();const c=importYear(String(imp.dataset.hrImport),true,true);alert(c?`${c} mês(es) encontrados na plataforma foram aproveitados sem sobrescrever valores já digitados.`:'Nenhum mês existente foi encontrado para este vendedor nesse ano.');return}const goals=e.target.closest('[data-hr-goals]');if(goals){syncInputsToReport();const c=importYear(String(goals.dataset.hrGoals),false,true);alert(c?`Metas localizadas em ${c} competência(s).`:'Nenhuma meta salva foi localizada nesse ano.')}});
     document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!m.hidden)close()});
   }
