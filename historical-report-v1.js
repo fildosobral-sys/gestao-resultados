@@ -1,7 +1,7 @@
 (() => {
   'use strict';
-  if (window.__fsHistoricalReportV14) return;
-  window.__fsHistoricalReportV14 = true;
+  if (window.__fsHistoricalReportV15) return;
+  window.__fsHistoricalReportV15 = true;
 
   const STORE = 'fs_gestao_resultados_v2';
   const CONTEXT_STORE = 'fs_historical_report_context_v2';
@@ -205,8 +205,8 @@
   }
 
   function addStyles(){
-    if(document.getElementById('historicalReportCssV14'))return;
-    const st=document.createElement('style');st.id='historicalReportCssV14';st.textContent=`
+    if(document.getElementById('historicalReportCssV15'))return;
+    const st=document.createElement('style');st.id='historicalReportCssV15';st.textContent=`
     .historical-report-launch{white-space:nowrap}
     .hr-modal[hidden]{display:none!important}.hr-modal{position:fixed;inset:0;z-index:100200;background:rgba(8,24,42,.62);display:grid;place-items:center;padding:18px}
     .hr-dialog{width:min(1720px,97vw);height:min(94vh,980px);background:#f7faff;border-radius:24px;box-shadow:0 30px 100px rgba(5,20,40,.38);overflow:hidden;display:flex;flex-direction:column}
@@ -276,7 +276,21 @@
   function batchBestSeller(line,sellers){const ln=norm(line);let best=null,score=0;for(const s of sellers){const full=norm(s.name);if(full&&ln.includes(full))return s;const parts=full.split(' ').filter(x=>x.length>2),found=parts.filter(p=>ln.includes(p)).length,sc=parts.length?found/parts.length:0;if(sc>score){score=sc;best=s}}return score>=.5?best:null}
   function batchMoneyTokens(line){return [...String(line||'').matchAll(/R\$?\s*([\d.]+,\d{2})/gi)].map(m=>parseNum(m[1]))}
   function batchPercentTokens(line){return [...String(line||'').matchAll(/(-?\d{1,3}(?:[.,]\d{1,2})?)\s*%/g)].map(m=>parseNum(m[1]))}
-  function batchStructuredFallback(line,sellers,month){const seller=batchBestSeller(line,sellers);if(!seller||month==null)return null;const money=batchMoneyTokens(line),perc=batchPercentTokens(line);if(money.length<2)return null;let merc=money[0]||0,services=0;if(money.length>=5)services=(money[2]||0)+(money[3]||0)+(money[4]||0);else services=money[1]||0;return {seller,month,merc,services,conversion:perc[0]||0,efficiency:perc[1]||0,fields:['merc','services',...(perc.length?['conversion']:[]),...(perc.length>1?['efficiency']:[])]}}
+  function batchStructuredFallback(line,sellers,month){
+    const seller=batchBestSeller(line,sellers);if(!seller||month==null)return null;
+    const money=batchMoneyTokens(line),perc=batchPercentTokens(line);if(money.length<2)return null;
+    let merc=money[0]||0,services=0;
+    if(money.length>=5)services=(money[2]||0)+(money[3]||0)+(money[4]||0);else services=money[1]||0;
+    const conversion=perc[0]||0;
+    let efficiency=perc[1]||0;
+    // No relatório copiado da empresa, a eficiência costuma vir como o último número
+    // da linha, sem o símbolo %. Ex.: "... 26 18,06% 3,43".
+    if(!efficiency){
+      const afterPercent=String(line||'').match(/%\s*(-?\d{1,3}(?:[.,]\d{1,2})?)\s*$/);
+      if(afterPercent) efficiency=parseNum(afterPercent[1]);
+    }
+    return {seller,month,merc,services,conversion,efficiency,fields:['merc','services',...(conversion>0?['conversion']:[]),...(efficiency>0?['efficiency']:[])]};
+  }
   function batchSplit(line){if(line.includes('\t'))return line.split('\t').map(x=>x.trim());if(line.includes(';'))return line.split(';').map(x=>x.trim());return line.trim().split(/\s{2,}/).map(x=>x.trim()).filter(Boolean)}
   function batchHeaderMap(cells){
     const aliases={
