@@ -394,6 +394,20 @@ function dashPrint(){
   const printRoot=root.cloneNode(true);
   printRoot.querySelectorAll('.dash-controls,.dash-report,.dash-custom-range,.dash-chart-expand').forEach(el=>el.remove());
 
+  // V150: no PDF, regenera os gráficos comuns em modo expandido para exibir
+  // todos os dias considerados do mês no eixo X, aproveitando a largura do A4 paisagem.
+  printRoot.querySelectorAll('.dash-card[data-chart-values][data-chart-labels]').forEach(card=>{
+    try{
+      const vals=String(card.dataset.chartValues||'').split(',').filter(v=>v!=='' ).map(Number);
+      const labs=String(card.dataset.chartLabels||'').split(',');
+      const metric=card.dataset.chartMetric||'merc';
+      const type=card.dataset.chartType||'bar';
+      const states=String(card.dataset.chartStatus||'').split(',');
+      const oldSvg=card.querySelector('.dash-svg');
+      if(oldSvg&&vals.length){oldSvg.outerHTML=dashSvg(vals,labs,type,metric,true,states)}
+    }catch{}
+  });
+
   // Relatório mensal inteligente: só mostra NF/Ticket quando houver base real.
   const reportRows=dashRows('month');
   const reportAgg=aggregate({daily:Object.fromEntries(reportRows)});
@@ -411,6 +425,16 @@ function dashPrint(){
     serviceSection.appendChild(composition);
   }
 
+  // V150: Ganhos usa a mesma base financeira da Visão Geral, incluindo DSR e acumulado.
+  try{
+    const fin=financialProjection();
+    const gainSection=printRoot.querySelector('#dash-gain');
+    if(gainSection){
+      const ecommerceCard=fin.ecommerceCommission>0?`<div class="report-finance-kpi"><span>Comissão e-commerce</span><strong>${brl.format(fin.ecommerceCommission)}</strong></div>`:'';
+      gainSection.querySelector('.dash-kpis')?.insertAdjacentHTML('afterend',`<div class="report-finance-summary"><div class="report-finance-kpi"><span>Comissão mercantil</span><strong>${brl.format(fin.mercCommission)}</strong></div><div class="report-finance-kpi"><span>Comissão serviços</span><strong>${brl.format(fin.serviceCommission)}</strong></div>${ecommerceCard}<div class="report-finance-kpi"><span>Subtotal comissões</span><strong>${brl.format(fin.currentSubtotal)}</strong></div><div class="report-finance-kpi"><span>DSR acumulado</span><strong>${brl.format(fin.actualDsr)}</strong><small>${fin.sundays} domingo(s) + ${fin.justified} ausência(s) considerada(s)</small></div><div class="report-finance-kpi highlight"><span>Ganho acumulado</span><strong>${brl.format(fin.estimatedCurrentTotal)}</strong><small>Comissões + DSR</small></div></div>`);
+    }
+  }catch{}
+
   // Insere as respostas do fechamento mensal abaixo de cada indicador correspondente.
   const review=sellerMonthlyReviewForReport();
   const map=[['merc','#dash-merc'],['services','#dash-services'],['conversion','#dash-conversion'],['efficiency','#dash-efficiency'],['ticket','#dash-ticket'],['invoice','#dash-invoice'],['gain','#dash-gain']];
@@ -423,11 +447,11 @@ function dashPrint(){
 
   [...printRoot.querySelectorAll('.dashboard-shell > .dash-section')].forEach(sec=>sec.classList.add('print-page-section'));
   w.document.write(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Relatório de qualidade - ${esc(name)}</title><style>
-  @page{size:A4 portrait;margin:8mm 8mm 11mm}
+  @page{size:A4 landscape;margin:7mm 8mm 10mm}
   *{box-sizing:border-box}
   html,body{margin:0!important;padding:0!important;width:100%!important;min-height:0!important}
   body{font-family:Arial,Helvetica,sans-serif;color:#17324d;background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;font-size:10px;overflow:visible!important}
-  .report-head{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(190px,.65fr);gap:10px;align-items:stretch;margin:0 0 7px}
+  .report-head{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(220px,.6fr);gap:10px;align-items:stretch;margin:0 0 7px}
   .report-brand{padding:11px 15px;border-radius:13px;background:linear-gradient(135deg,#0879e8,#6049e8);color:#fff}
   .report-brand small{font-size:7.5px;letter-spacing:.07em;text-transform:uppercase;opacity:.86}
   .report-brand h1{margin:3px 0 2px;font-size:18px;line-height:1.08}.report-brand p{margin:0;font-size:9.5px;opacity:.92}
@@ -441,13 +465,14 @@ function dashPrint(){
   .dash-section-head h3{margin:0 0 2px!important;font-size:13.5px!important;line-height:1.15!important}.dash-section-head p,.dash-section-head small{margin:0!important;color:#718096!important;font-size:7px!important;line-height:1.25!important}.dash-section-head>strong{font-size:13.5px!important;line-height:1.15!important;white-space:nowrap!important}
   .dash-kpis{grid-column:1/-1!important;display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:5px!important;margin:0!important;padding:0!important;height:auto!important;min-height:0!important}
   .dash-kpi{display:block!important;border:1px solid #e2e8f0!important;border-radius:9px!important;padding:6px!important;min-height:48px!important;height:auto!important;background:#fff!important;overflow:hidden!important}.dash-kpi span{display:block!important;color:#718096!important;font-size:6.7px!important;font-weight:700!important;text-transform:uppercase!important;line-height:1.1!important}.dash-kpi strong{display:block!important;margin-top:3px!important;font-size:11px!important;line-height:1.15!important;white-space:normal!important}.dash-kpi small{display:block!important;margin-top:2px!important;font-size:6.4px!important;color:#718096!important;line-height:1.15!important}
-  .dash-card{grid-column:1/-1!important;position:relative!important;width:100%!important;max-width:none!important;height:auto!important;min-height:0!important;margin:0!important;padding:6px 7px 4px!important;border:1px solid #e2e8f0!important;border-radius:9px!important;background:#fff!important;overflow:hidden!important;break-inside:avoid!important;page-break-inside:avoid!important}.dash-card h3{font-size:10px!important;line-height:1.1!important;margin:0 0 1px!important}.dash-card .hint{font-size:6.4px!important;line-height:1.15!important;color:#718096!important;margin:0 0 2px!important}.dash-svg{display:block!important;width:100%!important;height:245px!important;max-height:245px!important;min-height:245px!important;margin:0 auto!important;overflow:visible!important}.dual-chart-scroll{width:100%!important;overflow:hidden!important}.dual-compare-svg,.dual-trend-svg{width:100%!important;min-width:0!important;max-width:100%!important;margin-left:auto!important;margin-right:auto!important}
+  .dash-card{grid-column:1/-1!important;position:relative!important;width:100%!important;max-width:none!important;height:auto!important;min-height:0!important;margin:0!important;padding:6px 7px 4px!important;border:1px solid #e2e8f0!important;border-radius:9px!important;background:#fff!important;overflow:hidden!important;break-inside:avoid!important;page-break-inside:avoid!important}.dash-card h3{font-size:10px!important;line-height:1.1!important;margin:0 0 1px!important}.dash-card .hint{font-size:6.4px!important;line-height:1.15!important;color:#718096!important;margin:0 0 2px!important}.dash-svg{display:block!important;width:100%!important;height:220px!important;max-height:220px!important;min-height:220px!important;margin:0 auto!important;overflow:visible!important}.dual-chart-scroll{width:100%!important;overflow:hidden!important}.dual-compare-svg,.dual-trend-svg{width:100%!important;min-width:0!important;max-width:100%!important;margin-left:auto!important;margin-right:auto!important}
   .print-composition{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:5px!important;margin:1px 0 0!important;padding:6px!important;border:1px dashed #cfdbe8!important;border-radius:9px!important;background:#fbfdff!important;break-inside:avoid!important;page-break-inside:avoid!important}.print-composition .dash-section-head{padding:5px 7px!important}.print-composition .dash-pie-wrap{display:grid!important;grid-template-columns:88px 1fr!important;gap:9px!important;align-items:center!important;padding:3px 6px!important;margin:0!important;min-height:0!important}.dash-pie{position:relative!important;width:84px!important;height:84px!important;border-radius:50%!important}.dash-pie-label{position:absolute!important;transform:translate(-50%,-50%)!important;font-size:7.5px!important;font-weight:800!important;color:#17324d!important}
-  .dash-theme-mercservices .dash-card{grid-column:1/-1!important}.dash-theme-mercservices .dash-svg{height:255px!important;max-height:255px!important;min-height:255px!important}.dash-theme-merc>.dash-section-head{background:#edf6ff!important}.dash-theme-services>.dash-section-head,.dash-theme-gain>.dash-section-head{background:#effaf3!important}.dash-theme-conversion>.dash-section-head{background:#fff1f4!important}.dash-theme-efficiency>.dash-section-head{background:#fff9e9!important}.dash-theme-ticket>.dash-section-head{background:#f2f8fb!important}.dash-trend-up{color:#1c8b56!important}.dash-trend-down{color:#c9354d!important}.dash-trend-flat{color:#65758b!important}
+  .dash-theme-mercservices .dash-card{grid-column:1/-1!important}.dash-theme-mercservices .dash-svg{height:225px!important;max-height:225px!important;min-height:225px!important}.dash-theme-merc>.dash-section-head{background:#edf6ff!important}.dash-theme-services>.dash-section-head,.dash-theme-gain>.dash-section-head{background:#effaf3!important}.dash-theme-conversion>.dash-section-head{background:#fff1f4!important}.dash-theme-efficiency>.dash-section-head{background:#fff9e9!important}.dash-theme-ticket>.dash-section-head{background:#f2f8fb!important}.dash-trend-up{color:#1c8b56!important}.dash-trend-down{color:#c9354d!important}.dash-trend-flat{color:#65758b!important}
+  .report-finance-summary{grid-column:1/-1;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin:0;padding:0}.report-finance-kpi{border:1px solid #dce8df;border-radius:9px;background:#f7fff9;padding:7px 8px;min-height:52px}.report-finance-kpi span{display:block;font-size:6.8px;font-weight:800;text-transform:uppercase;color:#668071}.report-finance-kpi strong{display:block;margin-top:4px;font-size:11.5px;color:#176c45;line-height:1.15}.report-finance-kpi small{display:block;margin-top:3px;font-size:6.2px;color:#718096;line-height:1.15}.report-finance-kpi.highlight{background:#eaf8f0;border-color:#9edbc1}.report-finance-kpi.highlight strong{font-size:13px;color:#087a4b}
   .report-feedback-block{grid-column:1/-1;border:1px solid #dfe8f2;border-left:4px solid #6049e8;border-radius:10px;background:#f8fbff;padding:7px 9px;break-inside:avoid!important;page-break-inside:avoid!important}.report-feedback-title{font-size:9px;font-weight:900;color:#17324d;margin-bottom:5px}.report-feedback-qa{display:grid;gap:2px;padding:4px 0;border-top:1px solid #e7edf4}.report-feedback-qa:first-of-type{border-top:0}.report-feedback-qa b{font-size:7.2px;color:#42566d;line-height:1.25}.report-feedback-qa span{font-size:8px;color:#17324d;line-height:1.3}.report-platform-feedback{margin-top:5px;padding:6px 7px;border-radius:8px;background:#eef4fb;font-size:7.3px;line-height:1.3;color:#40566d}.report-commitment{grid-column:1/-1;display:grid;gap:3px;padding:7px 9px;border-radius:10px;border-left:4px solid #24a66d;background:#f0faf5;font-size:7.6px;line-height:1.3;break-inside:avoid!important;page-break-inside:avoid!important}.report-commitment b{color:#176c49}.report-commitment span{color:#17324d}
   .report-foot{position:fixed;left:8mm;right:8mm;bottom:3mm;display:flex;justify-content:space-between;gap:12px;padding-top:3px;border-top:1px solid #dce5f0;color:#7b8794;font-size:6.4px;background:#fff}
   @media print{.dash-controls,.dash-report,.dash-custom-range,.dash-chart-expand{display:none!important}}
-  </style></head><body><div class="report-head"><div class="report-brand"><small>FS Soluções • Gestão de Resultados</small><h1>Relatório de qualidade do vendedor</h1><small class="report-version">Modelo V149</small><p>${esc(name)} • ${esc(branch)}</p></div><div class="report-meta"><div><b>Período:</b> ${esc(periodLabel)}</div><div><b>Comparação:</b> ${esc(compareLabel)}</div><div><b>Competência:</b> ${esc(record?.month||month)}</div><div><b>Gerado em:</b> ${esc(generated)}</div></div></div><div class="report-note">Relatório consolidado de qualidade, desempenho, indicadores, tendências e gráficos. Quando houver fechamento mensal registrado, as perguntas e respostas do vendedor aparecem abaixo do respectivo indicador.</div>${printRoot.innerHTML}<div class="report-foot"><span>Developed by Fildo Sobral • FS Soluções</span><span>${esc(name)} • ${esc(branch)}</span></div></body></html>`);
+  </style></head><body><div class="report-head"><div class="report-brand"><small>FS Soluções • Gestão de Resultados</small><h1>Relatório de qualidade do vendedor</h1><small class="report-version">Modelo V150</small><p>${esc(name)} • ${esc(branch)}</p></div><div class="report-meta"><div><b>Período:</b> ${esc(periodLabel)}</div><div><b>Comparação:</b> ${esc(compareLabel)}</div><div><b>Competência:</b> ${esc(record?.month||month)}</div><div><b>Gerado em:</b> ${esc(generated)}</div></div></div><div class="report-note">Relatório consolidado de qualidade, desempenho, indicadores, tendências e gráficos. Quando houver fechamento mensal registrado, as perguntas e respostas do vendedor aparecem abaixo do respectivo indicador.</div>${printRoot.innerHTML}<div class="report-foot"><span>Developed by Fildo Sobral • FS Soluções</span><span>${esc(name)} • ${esc(branch)}</span></div></body></html>`);
   w.document.close();
   // V147: no Android/Samsung/Chrome o evento afterprint/focus pode disparar
   // ao ABRIR a prévia, antes de o usuário tocar em "Salvar como PDF".

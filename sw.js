@@ -1,4 +1,4 @@
-const CACHE='fs-resultados-v145-fix-geral-relatorio';
+const CACHE='fs-resultados-v150-relatorio-paisagem';
 const FILES=[
   './','./index.html','./resultados.html','./vendedor.html','./vendedor-v40.js','./resultados-v32.js',
   './resultados-parcial-v5.js','./vendedor-monthly-v91.js','./resultados-modal-v91.js','./resultados-ranking-v92.js',
