@@ -1,4 +1,4 @@
-const CACHE='fs-resultados-v158-historico-layout-final';
+const CACHE='fs-resultados-v159-colunas-historico';
 const FILES=[
   './','./index.html','./resultados.html','./vendedor.html','./vendedor-v40.js','./resultados-v32.js','./historical-report-v1.js',
   './resultados-parcial-v5.js','./vendedor-monthly-v91.js','./resultados-modal-v91.js','./resultados-ranking-v92.js',
