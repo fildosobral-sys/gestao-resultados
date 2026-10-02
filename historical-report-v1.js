@@ -1,9 +1,10 @@
 (() => {
   'use strict';
-  if (window.__fsHistoricalReportV1) return;
-  window.__fsHistoricalReportV1 = true;
+  if (window.__fsHistoricalReportV2) return;
+  window.__fsHistoricalReportV2 = true;
 
   const STORE = 'fs_gestao_resultados_v2';
+  const CONTEXT_STORE = 'fs_historical_report_context_v2';
   const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   const MONTH_NAMES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   const MONEY = new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
@@ -21,7 +22,8 @@
   const moneyInputValue = v => v ? Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) : '';
   const pctInputValue = v => v || v === 0 ? Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) : '';
   const sellerKey = s => String(s?.id || norm(s?.name));
-  const reportKey = (branch,seller) => `${norm(branch)}|${sellerKey(seller)}`;
+  const sellerIdentity = s => norm(s?.name) || String(s?.id||'');
+  const reportKey = (branch,seller) => `${norm(branch)}|NAME:${sellerIdentity(seller)}`;
   const nowYear = new Date().getFullYear();
 
   function loadVault(){
@@ -35,11 +37,15 @@
   function allSellers(vault,branch){
     const map=new Map();
     Object.values(vault.records||{}).filter(r=>norm(r?.branch)===norm(branch)).forEach(r=>(r.sellers||[]).forEach((s,i)=>{
-      const key=sellerKey(s)||`seller-${i}`;
+      // O mesmo vendedor pode ter IDs diferentes em competências antigas. Para a lista
+      // de relatórios, o nome normalizado é a identidade principal e elimina duplicações
+      // como Eduardo/EDUARDO ou Darlan/DARLAN.
+      const key=sellerIdentity(s)||`seller-${i}`;
       const prior=map.get(key);
-      if(!prior || Date.parse(s.updatedAt||0)>Date.parse(prior.updatedAt||0)) map.set(key,{...s,__key:key});
+      const priorTs=Date.parse(prior?.updatedAt||0)||0, currentTs=Date.parse(s?.updatedAt||0)||0;
+      if(!prior || currentTs>=priorTs) map.set(key,{...s,__identity:key});
     }));
-    return [...map.values()].sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'pt-BR'));
+    return [...map.values()].sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'pt-BR',{sensitivity:'base'}));
   }
   function findSellerInRecord(record,target){
     if(!record||!target)return null;
@@ -70,11 +76,49 @@
   }
   function getReport(vault,branch,seller,yearA,yearB){
     vault.historicalReports=vault.historicalReports||{};
-    const key=reportKey(branch,seller);
-    const report=vault.historicalReports[key]||{branch,sellerId:sellerKey(seller),sellerName:seller.name||'',updatedAt:new Date(0).toISOString(),years:{}};
-    report.branch=branch;report.sellerId=sellerKey(seller);report.sellerName=seller.name||report.sellerName;
+    const key=reportKey(branch,seller), identity=sellerIdentity(seller), id=sellerKey(seller);
+    let report=vault.historicalReports[key];
+    // Migra automaticamente relatórios que tenham sido salvos na V151 com chave por ID.
+    if(!report){
+      const priorEntry=Object.entries(vault.historicalReports).find(([,r])=>norm(r?.branch)===norm(branch)&&(sellerIdentity({name:r?.sellerName})===identity||String(r?.sellerId||'')===id));
+      if(priorEntry){ report=priorEntry[1]; if(priorEntry[0]!==key) delete vault.historicalReports[priorEntry[0]]; }
+    }
+    report=report||{branch,sellerId:id,sellerName:seller.name||'',updatedAt:new Date(0).toISOString(),years:{}};
+    report.branch=branch;report.sellerId=id;report.sellerName=seller.name||report.sellerName;
     ensureYear(report,yearA);ensureYear(report,yearB);
+    vault.historicalReports[key]=report;
     return {key,report};
+  }
+  function storedMonthlyGoals(s,monthKey){
+    const g=s?.goalSetupByMonth?.[monthKey]||s?.goalsByMonth?.[monthKey]||null;
+    const merc=parseNum(g?.mercantile ?? g?.mercantil ?? g?.merc ?? s?.assignedGoal);
+    const services=parseNum(g?.services ?? g?.servicos ?? g?.service ?? s?.serviceGoal);
+    return {merc,services};
+  }
+  function hydrateAvailableFromPlatform(vault,report,branch,seller,years){
+    let imported=0;
+    years.forEach(year=>{
+      ensureYear(report,year);
+      for(let i=0;i<12;i++){
+        const mk=`${year}-${String(i+1).padStart(2,'0')}`;
+        const rec=monthRecord(vault,branch,year,i), s=findSellerInRecord(rec,seller), row=report.years[year][i];
+        if(!s)continue;
+        const a=aggregateSeller(s), goals=storedMonthlyGoals(s,mk);
+        let touched=false;
+        if(!parseNum(row.merc)&&a.merc){row.merc=a.merc;touched=true}
+        if(!parseNum(row.services)&&a.services){row.services=a.services;touched=true}
+        if(!parseNum(row.conversion)&&a.conversion){row.conversion=a.conversion;touched=true}
+        if(!parseNum(row.efficiency)&&a.efficiency){row.efficiency=a.efficiency;touched=true}
+        if(!parseNum(row.mercGoal)&&goals.merc){row.mercGoal=goals.merc;touched=true}
+        if(!parseNum(row.serviceGoal)&&goals.services){row.serviceGoal=goals.services;touched=true}
+        if(touched)imported++;
+      }
+    });
+    return imported;
+  }
+  function loadContext(){try{return JSON.parse(localStorage.getItem(CONTEXT_STORE)||'{}')||{}}catch{return {}}}
+  function saveContext(){
+    try{localStorage.setItem(CONTEXT_STORE,JSON.stringify({branch:state.branch,sellerIdentity:sellerIdentity(state.seller),sellerId:sellerKey(state.seller),yearA:state.yearA,yearB:state.yearB,tab:state.tab,updatedAt:new Date().toISOString()}))}catch{}
   }
   function hydrateGoalsFromPlatform(vault,report,branch,seller,years){
     years.forEach(year=>{
@@ -82,8 +126,9 @@
       for(let i=0;i<12;i++){
         const rec=monthRecord(vault,branch,year,i), s=findSellerInRecord(rec,seller), row=report.years[year][i];
         if(!s)continue;
-        if(!parseNum(row.mercGoal)&&parseNum(s.assignedGoal))row.mercGoal=parseNum(s.assignedGoal);
-        if(!parseNum(row.serviceGoal)&&parseNum(s.serviceGoal))row.serviceGoal=parseNum(s.serviceGoal);
+        const mk=`${year}-${String(i+1).padStart(2,'0')}`,g=storedMonthlyGoals(s,mk);
+        if(!parseNum(row.mercGoal)&&g.merc)row.mercGoal=g.merc;
+        if(!parseNum(row.serviceGoal)&&g.services)row.serviceGoal=g.services;
       }
     });
   }
@@ -96,8 +141,8 @@
   }
 
   function addStyles(){
-    if(document.getElementById('historicalReportCssV1'))return;
-    const st=document.createElement('style');st.id='historicalReportCssV1';st.textContent=`
+    if(document.getElementById('historicalReportCssV2'))return;
+    const st=document.createElement('style');st.id='historicalReportCssV2';st.textContent=`
     .historical-report-launch{white-space:nowrap}
     .hr-modal[hidden]{display:none!important}.hr-modal{position:fixed;inset:0;z-index:100200;background:rgba(8,24,42,.62);display:grid;place-items:center;padding:18px}
     .hr-dialog{width:min(1720px,97vw);height:min(94vh,980px);background:#f7faff;border-radius:24px;box-shadow:0 30px 100px rgba(5,20,40,.38);overflow:hidden;display:flex;flex-direction:column}
@@ -144,7 +189,7 @@
       const rec=monthRecord(vault,state.branch,year,i),s=findSellerInRecord(rec,state.seller);if(!s)continue;
       const row=state.report.years[year][i],a=aggregateSeller(s);
       if(includeValues){ if(!parseNum(row.merc)&&a.merc)row.merc=a.merc;if(!parseNum(row.services)&&a.services)row.services=a.services;if(!parseNum(row.conversion)&&a.conversion)row.conversion=a.conversion;if(!parseNum(row.efficiency)&&a.efficiency)row.efficiency=a.efficiency; }
-      if(includeGoals){ if(!parseNum(row.mercGoal)&&parseNum(s.assignedGoal))row.mercGoal=parseNum(s.assignedGoal);if(!parseNum(row.serviceGoal)&&parseNum(s.serviceGoal))row.serviceGoal=parseNum(s.serviceGoal); }
+      if(includeGoals){ const mk=`${year}-${String(i+1).padStart(2,'0')}`,g=storedMonthlyGoals(s,mk);if(!parseNum(row.mercGoal)&&g.merc)row.mercGoal=g.merc;if(!parseNum(row.serviceGoal)&&g.services)row.serviceGoal=g.services; }
       count++;
     }
     renderEntry();return count;
@@ -207,22 +252,26 @@
   }
 
   function saveCurrent(notify=true){
-    if(!state.report||!state.key)return;syncInputsToReport();saveVault(state.vault,state.key,state.report);if(notify){const b=document.getElementById('hrSave');if(b){const old=b.textContent;b.textContent='✓ Salvo';setTimeout(()=>b.textContent=old,1200)}}
+    if(!state.report||!state.key)return;syncInputsToReport();saveVault(state.vault,state.key,state.report);saveContext();if(notify){const b=document.getElementById('hrSave');if(b){const old=b.textContent;b.textContent='✓ Salvo';setTimeout(()=>b.textContent=old,1200)}}
   }
   function loadSelection(){
-    const sellerSel=document.getElementById('hrSeller'),yA=document.getElementById('hrYearA'),yB=document.getElementById('hrYearB');
+    const sellerSel=document.getElementById('hrSeller'),yA=document.getElementById('hrYearA'),yB=document.getElementById('hrYearB'),ctx=loadContext();
     state.vault=loadVault();state.branch=currentBranch(state.vault);state.sellers=allSellers(state.vault,state.branch);
-    const selectedKey=sellerSel?.value||sellerKey(state.seller)||sellerKey(state.sellers[0]);state.seller=state.sellers.find(s=>sellerKey(s)===selectedKey)||state.sellers[0]||null;
-    state.yearA=Math.max(2000,Number(yA?.value)||state.yearA||nowYear-1);state.yearB=Math.max(2000,Number(yB?.value)||state.yearB||nowYear);
+    const selectedIdentity=sellerSel?.value||sellerIdentity(state.seller)||ctx.sellerIdentity||sellerIdentity(state.sellers[0]);
+    state.seller=state.sellers.find(s=>sellerIdentity(s)===selectedIdentity)||state.sellers.find(s=>String(sellerKey(s))===String(ctx.sellerId||''))||state.sellers[0]||null;
+    state.yearA=Math.max(2000,Number(yA?.value)||Number(ctx.yearA)||state.yearA||nowYear-1);state.yearB=Math.max(2000,Number(yB?.value)||Number(ctx.yearB)||state.yearB||nowYear);
     if(!state.seller){state.report=null;state.key='';return}
-    const got=getReport(state.vault,state.branch,state.seller,String(state.yearA),String(state.yearB));state.key=got.key;state.report=got.report;hydrateGoalsFromPlatform(state.vault,state.report,state.branch,state.seller,[String(state.yearA),String(state.yearB)]);
+    const got=getReport(state.vault,state.branch,state.seller,String(state.yearA),String(state.yearB));state.key=got.key;state.report=got.report;
+    // Tudo que já existir na plataforma entra automaticamente, sem sobrescrever valores manuais.
+    hydrateAvailableFromPlatform(state.vault,state.report,state.branch,state.seller,[String(state.yearA),String(state.yearB)]);
+    saveContext();
   }
   function renderSetupOptions(){
-    const sel=document.getElementById('hrSeller');if(!sel)return;const chosen=sellerKey(state.seller);sel.innerHTML=state.sellers.map(s=>`<option value="${esc(sellerKey(s))}" ${sellerKey(s)===chosen?'selected':''}>${esc(s.name||'Sem nome')}</option>`).join('');document.getElementById('hrYearA').value=state.yearA;document.getElementById('hrYearB').value=state.yearB;
+    const sel=document.getElementById('hrSeller');if(!sel)return;const chosen=sellerIdentity(state.seller);sel.innerHTML=state.sellers.map(s=>`<option value="${esc(sellerIdentity(s))}" ${sellerIdentity(s)===chosen?'selected':''}>${esc(s.name||'Sem nome')}</option>`).join('');document.getElementById('hrYearA').value=state.yearA;document.getElementById('hrYearB').value=state.yearB;
   }
   function rerenderAll(){loadSelection();renderSetupOptions();if(!state.seller){document.getElementById('hrEntry').innerHTML='<div class="hr-empty">Nenhum vendedor encontrado nesta filial.</div>';document.getElementById('hrDashboard').innerHTML='';return}renderEntry();renderDashboard()}
-  function setTab(tab){state.tab=tab;document.querySelectorAll('#historicalReportModal .hr-tab').forEach(b=>b.classList.toggle('active',b.dataset.hrTab===tab));document.querySelectorAll('#historicalReportModal .hr-pane').forEach(p=>p.classList.toggle('active',p.dataset.hrPane===tab));if(tab==='dashboard')renderDashboard()}
-  function open(){addStyles();const modal=createModal();state.vault=loadVault();state.branch=currentBranch(state.vault);state.sellers=allSellers(state.vault,state.branch);state.seller=state.sellers[0]||null;state.yearA=nowYear-1;state.yearB=nowYear;renderSetupOptions();rerenderAll();modal.hidden=false;document.body.style.overflow='hidden'}
+  function setTab(tab){state.tab=tab;saveContext();document.querySelectorAll('#historicalReportModal .hr-tab').forEach(b=>b.classList.toggle('active',b.dataset.hrTab===tab));document.querySelectorAll('#historicalReportModal .hr-pane').forEach(p=>p.classList.toggle('active',p.dataset.hrPane===tab));if(tab==='dashboard')renderDashboard()}
+  function open(){addStyles();const modal=createModal(),ctx=loadContext();state.vault=loadVault();state.branch=currentBranch(state.vault);state.sellers=allSellers(state.vault,state.branch);state.seller=state.sellers.find(s=>sellerIdentity(s)===ctx.sellerIdentity)||state.sellers[0]||null;state.yearA=Number(ctx.yearA)||nowYear-1;state.yearB=Number(ctx.yearB)||nowYear;state.tab=ctx.tab==='dashboard'?'dashboard':'entry';renderSetupOptions();rerenderAll();setTab(state.tab);modal.hidden=false;document.body.style.overflow='hidden'}
   function close(){const m=document.getElementById('historicalReportModal');if(m)m.hidden=true;document.body.style.overflow=''}
   function wire(){
     addStyles();const nav=document.querySelector('nav.tabs');if(nav&&!document.getElementById('historicalReportLaunch')){const btn=document.createElement('button');btn.id='historicalReportLaunch';btn.type='button';btn.className='tab historical-report-launch';btn.textContent='📑 Relatórios';nav.appendChild(btn);btn.addEventListener('click',open)}
