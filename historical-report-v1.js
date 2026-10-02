@@ -1,7 +1,7 @@
 (() => {
   'use strict';
-  if (window.__fsHistoricalReportV7) return;
-  window.__fsHistoricalReportV7 = true;
+  if (window.__fsHistoricalReportV8) return;
+  window.__fsHistoricalReportV8 = true;
 
   const STORE = 'fs_gestao_resultados_v2';
   const CONTEXT_STORE = 'fs_historical_report_context_v2';
@@ -138,6 +138,16 @@
     const mercCommission=parseNum(row.merc)*rates.mercRate,serviceCommission=parseNum(row.services)*rates.serviceRate,subtotal=mercCommission+serviceCommission,dsr=worked?subtotal/worked*dsrDays:0;
     return {mercCommission,serviceCommission,worked,dsrDays,subtotal,dsr,total:subtotal+dsr,mercRate:rates.mercRate,serviceRate:rates.serviceRate,referenceMonths:rates.months,source:'estimated'};
   }
+
+  function sameYearMode(){ return String(state.yearA)===String(state.yearB); }
+  function goalRowFinance(year,monthIndex,row){
+    const rec=monthRecord(state.vault,state.branch,year,monthIndex),s=findSellerInRecord(rec,state.seller);
+    const actual=sellerFinanceForMonth(s,year,monthIndex);
+    const rates=financeReferenceRates(state.vault,state.branch,state.seller);
+    const worked=parseNum(row.workedDays)||(actual?.worked)||0,dsrDays=parseNum(row.dsrDays)||(actual?.dsrDays)||0;
+    const mercCommission=parseNum(row.mercGoal)*rates.mercRate,serviceCommission=parseNum(row.serviceGoal)*rates.serviceRate,subtotal=mercCommission+serviceCommission,dsr=worked?subtotal/worked*dsrDays:0;
+    return {mercCommission,serviceCommission,worked,dsrDays,subtotal,dsr,total:subtotal+dsr,mercRate:rates.mercRate,serviceRate:rates.serviceRate,referenceMonths:rates.months,source:'goal'};
+  }
   function hydrateAvailableFromPlatform(vault,report,branch,seller,years){
     let imported=0;
     years.forEach(year=>{
@@ -186,8 +196,8 @@
   }
 
   function addStyles(){
-    if(document.getElementById('historicalReportCssV7'))return;
-    const st=document.createElement('style');st.id='historicalReportCssV7';st.textContent=`
+    if(document.getElementById('historicalReportCssV8'))return;
+    const st=document.createElement('style');st.id='historicalReportCssV8';st.textContent=`
     .historical-report-launch{white-space:nowrap}
     .hr-modal[hidden]{display:none!important}.hr-modal{position:fixed;inset:0;z-index:100200;background:rgba(8,24,42,.62);display:grid;place-items:center;padding:18px}
     .hr-dialog{width:min(1720px,97vw);height:min(94vh,980px);background:#f7faff;border-radius:24px;box-shadow:0 30px 100px rgba(5,20,40,.38);overflow:hidden;display:flex;flex-direction:column}
@@ -250,42 +260,56 @@
     if(metric==='efficiency')return {title:'⚡ Eficiência',desc:'Comparativo mensal da eficiência. Meta 7%.',percent:true,goal:()=>7,value:r=>parseNum(r.efficiency)};
     return {title:'💵 Evolução de ganhos',desc:'Cada valor mensal já representa o ganho total do mês: comissão mercantil + comissão de serviços + DSR. Meses com diário usam os dados reais da plataforma; históricos são estimados pelas taxas médias do próprio colaborador.',money:true,goal:()=>0,value:()=>0};
   }
-  function hasData(row,metric){if(metric==='gain')return !!(row?._entered?.merc||row?._entered?.services||row?._entered?.workedDays||parseNum(row?.merc)||parseNum(row?.services));const c=metricConfig(metric),field=metric==='merc'?'merc':metric==='services'?'services':metric;return !!row?._entered?.[field] || c.value(row)>0}
+  function hasData(row,metric){if(metric==='gain')return !!(row?._entered?.merc||row?._entered?.services||row?._entered?.workedDays||row?._entered?.mercGoal||row?._entered?.serviceGoal||parseNum(row?.merc)||parseNum(row?.services)||parseNum(row?.mercGoal)||parseNum(row?.serviceGoal));const c=metricConfig(metric),field=metric==='merc'?'merc':metric==='services'?'services':metric;return !!row?._entered?.[field] || c.value(row)>0}
   function fmtMetric(v,c,compact=false){
     if(c.money) return MONEY.format(v);
     return `${DEC.format(v)}%`;
   }
   function yearSeries(year,metric){ensureYear(state.report,year);const c=metricConfig(metric);return MONTHS.map((m,i)=>{const row=state.report.years[year][i];if(metric==='gain'){const f=rowFinance(year,i,row);return {month:m,value:f.total,goal:0,has:hasData(row,metric),hit:false,finance:f}}const value=c.value(row),goal=c.goal(row);return {month:m,value,goal,has:hasData(row,metric),hit:goal>0&&value>=goal}})}
+  function goalSeries(year,metric){ensureYear(state.report,year);return MONTHS.map((m,i)=>{const row=state.report.years[year][i];let value=0,has=false;if(metric==='merc'){value=parseNum(row.mercGoal);has=!!row?._entered?.mercGoal||value>0||hasData(row,'merc')}else if(metric==='services'){value=parseNum(row.serviceGoal);has=!!row?._entered?.serviceGoal||value>0||hasData(row,'services')}else if(metric==='conversion'){value=35;has=hasData(row,'conversion')}else if(metric==='efficiency'){value=7;has=hasData(row,'efficiency')}else if(metric==='gain'){value=goalRowFinance(year,i,row).total;has=hasData(row,'gain')||!!row?._entered?.mercGoal||!!row?._entered?.serviceGoal||parseNum(row.mercGoal)>0||parseNum(row.serviceGoal)>0}return {month:m,value,goal:value,has,hit:false,isGoal:true}})}
   function summaryFor(series,c){const rows=series.filter(x=>x.has);if(!rows.length)return 0;return c.money?rows.reduce((s,x)=>s+x.value,0):rows.reduce((s,x)=>s+x.value,0)/rows.length}
   function chartSvg(metric,type){
-    const c=metricConfig(metric),a=yearSeries(state.yearA,metric),b=yearSeries(state.yearB,metric),all=[...a,...b].filter(x=>x.has).map(x=>Math.max(x.value,x.goal||0));let max=Math.max(1,...all);if(c.percent){max=Math.max(max,metric==='conversion'?40:10)}max*=1.12;
+    const c=metricConfig(metric),same=sameYearMode(),actualA=yearSeries(state.yearA,metric),actualB=yearSeries(state.yearB,metric),goalA=goalSeries(state.yearA,metric);
+    const a=same?goalA:actualA,b=same?actualA:actualB;
+    const labelA=same?`Meta ${state.yearA}`:String(state.yearA),labelB=same?`Realizado ${state.yearB}`:String(state.yearB);
+    const all=[...a,...b].filter(x=>x.has).map(x=>Math.max(x.value,x.goal||0));let max=Math.max(1,...all);if(c.percent){max=Math.max(max,metric==='conversion'?40:10)}max*=1.12;
     const W=1100,H=330,L=62,R=24,T=24,B=46,plotW=W-L-R,plotH=H-T-B,step=plotW/12;
     const y=v=>T+plotH-(Math.max(0,v)/max*plotH), fmt=v=>fmtMetric(v,c,true);
     let grid='';for(let i=0;i<=4;i++){const val=max*(4-i)/4,yy=T+plotH*i/4;grid+=`<line x1="${L}" y1="${yy}" x2="${W-R}" y2="${yy}" stroke="#e6edf5"/><text x="${L-8}" y="${yy+4}" text-anchor="end" font-size="10" fill="#7a899a">${esc(fmt(val))}</text>`}
     const labels=MONTHS.map((m,i)=>`<text x="${L+step*(i+.5)}" y="${H-16}" text-anchor="middle" font-size="11" fill="#63758b">${m}</text>`).join('');
     let marks='';
-    const colors=['#1688ec','#6a55d8'];
+    const seriesDefs=same
+      ? [{rows:a,label:labelA,color:'#94aeea',text:'#5c7195',opacity:.45,dashed:true,goalSeries:true},{rows:b,label:labelB,color:'#5e4fd6',text:'#334b66',opacity:.96,dashed:false,goalSeries:false}]
+      : [{rows:a,label:labelA,color:'#1688ec',text:'#41556d',opacity:.92,dashed:false,goalSeries:false},{rows:b,label:labelB,color:'#f08a24',text:'#6b4e2e',opacity:.92,dashed:false,goalSeries:false}];
     if(type==='bar'){
       const bw=Math.min(26,step*.28);
-      [a,b].forEach((s,si)=>s.forEach((p,i)=>{if(!p.has)return;const cx=L+step*(i+.5)+(si===0?-bw*.58:bw*.58),yy=y(p.value),h=T+plotH-yy;marks+=`<rect x="${cx-bw/2}" y="${yy}" width="${bw}" height="${Math.max(1,h)}" rx="5" fill="${colors[si]}" opacity=".92"/><text x="${cx}" y="${Math.max(T+9,yy-5)}" text-anchor="middle" font-size="8.5" font-weight="800" fill="#41556d">${esc(fmtMetric(p.value,c,true))}</text>${p.hit?`<circle cx="${cx}" cy="${Math.max(T+12,yy-18)}" r="7" fill="#16a36b"/><text x="${cx}" y="${Math.max(T+15,yy-15)}" text-anchor="middle" font-size="9" font-weight="900" fill="#fff">✓</text>`:''}`;}));
+      seriesDefs.forEach((cfg,si)=>cfg.rows.forEach((p,i)=>{if(!p.has)return;const cx=L+step*(i+.5)+(si===0?-bw*.58:bw*.58),yy=y(p.value),h=T+plotH-yy;marks+=`<rect x="${cx-bw/2}" y="${yy}" width="${bw}" height="${Math.max(1,h)}" rx="5" fill="${cfg.color}" opacity="${cfg.opacity}"/><text x="${cx}" y="${Math.max(T+9,yy-5)}" text-anchor="middle" font-size="8.5" font-weight="800" fill="${cfg.text}">${esc(fmtMetric(p.value,c,true))}</text>${(!cfg.goalSeries&&p.hit)?`<circle cx="${cx}" cy="${Math.max(T+12,yy-18)}" r="7" fill="#16a36b"/><text x="${cx}" y="${Math.max(T+15,yy-15)}" text-anchor="middle" font-size="9" font-weight="900" fill="#fff">✓</text>`:''}`;}));
     }else{
-      [a,b].forEach((s,si)=>{let seg=[];const flush=()=>{if(seg.length>1)marks+=`<path d="${seg.map((p,j)=>`${j?'L':'M'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')}" fill="none" stroke="${colors[si]}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`;seg=[]};s.forEach((p,i)=>{if(!p.has){flush();return}const pt={x:L+step*(i+.5),y:y(p.value),p};seg.push(pt);marks+=`<circle cx="${pt.x}" cy="${pt.y}" r="4.5" fill="${colors[si]}" stroke="${p.hit?'#16a36b':'#fff'}" stroke-width="${p.hit?4:2}"/><text x="${pt.x}" y="${Math.max(T+10,pt.y-9)}" text-anchor="middle" font-size="8.5" font-weight="800" fill="#41556d">${esc(fmtMetric(p.value,c,true))}</text>`});flush();});
+      seriesDefs.forEach((cfg)=>{let seg=[];const flush=()=>{if(seg.length>1)marks+=`<path d="${seg.map((p,j)=>`${j?'L':'M'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')}" fill="none" stroke="${cfg.color}" stroke-opacity="${cfg.opacity}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" ${cfg.dashed?'stroke-dasharray="8 7"':''}/>`;seg=[]};cfg.rows.forEach((p,i)=>{if(!p.has){flush();return}const pt={x:L+step*(i+.5),y:y(p.value),p};seg.push(pt);marks+=`<circle cx="${pt.x}" cy="${pt.y}" r="4.5" fill="${cfg.color}" fill-opacity="${cfg.opacity}" stroke="${(!cfg.goalSeries&&p.hit)?'#16a36b':'#fff'}" stroke-width="${(!cfg.goalSeries&&p.hit)?4:2}"/><text x="${pt.x}" y="${Math.max(T+10,pt.y-9)}" text-anchor="middle" font-size="8.5" font-weight="800" fill="${cfg.text}">${esc(fmtMetric(p.value,c,true))}</text>`});flush();});
     }
-    const legend=metric==='gain'?`<g><circle cx="${L+8}" cy="10" r="5" fill="${colors[0]}"/><text x="${L+18}" y="14" font-size="11" font-weight="800" fill="#41556d">${state.yearA}</text><circle cx="${L+92}" cy="10" r="5" fill="${colors[1]}"/><text x="${L+102}" y="14" font-size="11" font-weight="800" fill="#41556d">${state.yearB}</text></g>`:`<g><circle cx="${L+8}" cy="10" r="5" fill="${colors[0]}"/><text x="${L+18}" y="14" font-size="11" font-weight="800" fill="#41556d">${state.yearA}</text><circle cx="${L+92}" cy="10" r="5" fill="${colors[1]}"/><text x="${L+102}" y="14" font-size="11" font-weight="800" fill="#41556d">${state.yearB}</text><circle cx="${L+185}" cy="10" r="5" fill="#16a36b"/><text x="${L+195}" y="14" font-size="10" fill="#587086">meta batida</text></g>`;
+    const legendItems=seriesDefs.map((cfg,idx)=>`<circle cx="${L+8+(idx*140)}" cy="10" r="5" fill="${cfg.color}" fill-opacity="${cfg.opacity}"/><text x="${L+18+(idx*140)}" y="14" font-size="11" font-weight="800" fill="#41556d">${esc(cfg.label)}</text>`).join('');
+    const hitLegend=!same?`<circle cx="${L+8+(seriesDefs.length*140)}" cy="10" r="5" fill="#16a36b"/><text x="${L+18+(seriesDefs.length*140)}" y="14" font-size="10" fill="#587086">meta batida</text>`:`<circle cx="${L+8+(seriesDefs.length*140)}" cy="10" r="5" fill="#16a36b"/><text x="${L+18+(seriesDefs.length*140)}" y="14" font-size="10" fill="#587086">meta batida</text>`;
+    const legend=`<g>${legendItems}${hitLegend}</g>`;
     return `<svg class="hr-chart-svg svg-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(c.title)} ${type==='bar'?'barras':'tendência'}">${legend}${grid}${labels}${marks}</svg>`;
   }
   function hitBadges(metric){
     if(metric==='gain')return '';
-    const a=yearSeries(state.yearA,metric).filter(x=>x.hit).map(x=>`${x.month}/${String(state.yearA).slice(-2)}`),b=yearSeries(state.yearB,metric).filter(x=>x.hit).map(x=>`${x.month}/${String(state.yearB).slice(-2)}`),all=[...a,...b];
+    const same=sameYearMode();
+    const a=yearSeries(state.yearA,metric).filter(x=>x.hit).map(x=>`${x.month}/${String(state.yearA).slice(-2)}`),b=same?[]:yearSeries(state.yearB,metric).filter(x=>x.hit).map(x=>`${x.month}/${String(state.yearB).slice(-2)}`),all=[...a,...b];
     return all.length?`<div class="hr-goal-hit-list"><span class="hr-goal-none">Meta batida:</span>${all.map(x=>`<span class="hr-goal-badge">✓ ${x}</span>`).join('')}</div>`:`<div class="hr-goal-hit-list"><span class="hr-goal-none">Nenhum mês com meta identificada/batida nos dados informados.</span></div>`;
   }
   function indicatorHtml(metric){
-    const c=metricConfig(metric),a=yearSeries(state.yearA,metric),b=yearSeries(state.yearB,metric),countA=a.filter(x=>x.has).length,countB=b.filter(x=>x.has).length;
-    const totalA=summaryFor(a,c),totalB=summaryFor(b,c),sa=metric==='gain'?(countA?totalA/countA:0):totalA,sb=metric==='gain'?(countB?totalB/countB:0):totalB,delta=c.money?(sa?((sb-sa)/sa*100):0):(sb-sa);
+    const c=metricConfig(metric),same=sameYearMode(),a=yearSeries(state.yearA,metric),b=yearSeries(state.yearB,metric),goalA=goalSeries(state.yearA,metric),countA=a.filter(x=>x.has).length,countB=b.filter(x=>x.has).length,goalCount=goalA.filter(x=>x.has).length;
+    const totalA=summaryFor(a,c),totalB=summaryFor(b,c),goalTotal=summaryFor(goalA,c);
+    const leftValue=metric==='gain'?(same?(goalCount?goalTotal/goalCount:0):(countA?totalA/countA:0)):(same?goalTotal:totalA),rightValue=metric==='gain'?(countB?totalB/countB:0):totalB,leftCount=same?goalCount:countA,rightCount=countB;
+    const delta=c.money?(leftValue?((rightValue-leftValue)/leftValue*100):0):(rightValue-leftValue);
     const deltaText=c.money?`${delta>=0?'▲':'▼'} ${DEC.format(Math.abs(delta))}%`:`${delta>=0?'▲':'▼'} ${DEC.format(Math.abs(delta))} p.p.`;
-    const financeNote=metric==='gain'?(()=>{const rates=financeReferenceRates(state.vault,state.branch,state.seller);return `<div class="hr-finance-note"><b>Critério financeiro:</b> meses que possuem lançamentos diários usam as comissões registradas e o DSR calculado pela mesma lógica de “Meus ganhos”. Nos meses históricos sem diário, a estimativa usa a taxa média do colaborador: <b>mercantil ${DEC.format(rates.mercRate*100)}%</b> e <b>serviços ${DEC.format(rates.serviceRate*100)}%</b>, aplicada aos dias trabalhados e dias considerados no DSR informados. Os valores em destaque abaixo representam a <b>média mensal de ganho</b> de cada ano.</div>`})():'';
-    const summaryLabel=metric==='gain'?'Média ':'';
-    return `<section class="hr-indicator" data-hr-metric="${metric}"><div class="hr-indicator-head"><div><h3>${c.title}</h3><p>${c.desc}</p></div><div class="hr-indicator-summary"><div class="hr-summary-chip"><span>${summaryLabel}${state.yearA}</span><strong>${fmtMetric(sa,c)}</strong><small>${countA} mês(es)</small></div><div class="hr-summary-chip"><span>${summaryLabel}${state.yearB}</span><strong>${fmtMetric(sb,c)}</strong><small>${countB} mês(es)</small></div><div class="hr-summary-chip"><span>Variação</span><strong class="${delta>=0?'positive':'negative'}">${deltaText}</strong></div></div></div>${financeNote}<div class="hr-chart-grid"><div class="hr-chart-card dashboard-card" data-chart-metric="hr-${metric}" data-chart-type="historical-bar"><button class="dashboard-chart-expand" type="button" data-chart-expand aria-label="Ampliar gráfico">⛶</button><h4>Comparativo mês a mês</h4><p>${metric==='gain'?'Cada barra mostra o ganho total do mês, já com DSR.':`Barras lado a lado: ${state.yearA} × ${state.yearB}.`}</p>${chartSvg(metric,'bar')}</div><div class="hr-chart-card dashboard-card" data-chart-metric="hr-${metric}" data-chart-type="historical-line"><button class="dashboard-chart-expand" type="button" data-chart-expand aria-label="Ampliar gráfico">⛶</button><h4>Linha de tendência</h4><p>${metric==='gain'?'Cada ponto mostra o ganho total do mês, já com DSR.':'Evolução mensal de cada ano.'}</p>${chartSvg(metric,'line')}</div></div>${hitBadges(metric)}</section>`;
+    const financeNote=metric==='gain'?(()=>{const rates=financeReferenceRates(state.vault,state.branch,state.seller);return `<div class="hr-finance-note"><b>Critério financeiro:</b> meses que possuem lançamentos diários usam as comissões registradas e o DSR calculado pela mesma lógica de “Meus ganhos”. Nos meses históricos sem diário, a estimativa usa a taxa média do colaborador: <b>mercantil ${DEC.format(rates.mercRate*100)}%</b> e <b>serviços ${DEC.format(rates.serviceRate*100)}%</b>, aplicada aos dias trabalhados e dias considerados no DSR informados. ${same?`No modo de mesmo ano, o gráfico compara <b>meta × realizado</b> dentro de ${state.yearA}.`:'Os valores em destaque abaixo representam a <b>média mensal de ganho</b> de cada ano.'}</div>`})():'';
+    const leftLabel=same?`Meta ${state.yearA}`:`${metric==='gain'?'Média ':''}${state.yearA}`;
+    const rightLabel=same?`Realizado ${state.yearB}`:`${metric==='gain'?'Média ':''}${state.yearB}`;
+    const barHint=same?(metric==='gain'?'Meta financeira estimada × ganho realizado do mês, já com DSR.':'Meta × realizado no mesmo ano.'):(metric==='gain'?'Cada barra mostra o ganho total do mês, já com DSR.':`Barras lado a lado: ${state.yearA} × ${state.yearB}.`);
+    const lineHint=same?(metric==='gain'?'Meta financeira estimada × ganho realizado no mesmo ano.':'Evolução mensal de meta × realizado.'):(metric==='gain'?'Cada ponto mostra o ganho total do mês, já com DSR.':'Evolução mensal de cada ano.');
+    return `<section class="hr-indicator" data-hr-metric="${metric}"><div class="hr-indicator-head"><div><h3>${c.title}</h3><p>${c.desc}${same?' Comparação interna de meta × realizado.':''}</p></div><div class="hr-indicator-summary"><div class="hr-summary-chip"><span>${leftLabel}</span><strong>${fmtMetric(leftValue,c)}</strong><small>${leftCount} mês(es)</small></div><div class="hr-summary-chip"><span>${rightLabel}</span><strong>${fmtMetric(rightValue,c)}</strong><small>${rightCount} mês(es)</small></div><div class="hr-summary-chip"><span>${same?'Desvio':'Variação'}</span><strong class="${delta>=0?'positive':'negative'}">${deltaText}</strong></div></div></div>${financeNote}<div class="hr-chart-grid"><div class="hr-chart-card dashboard-card" data-chart-metric="hr-${metric}" data-chart-type="historical-bar"><button class="dashboard-chart-expand" type="button" data-chart-expand aria-label="Ampliar gráfico">⛶</button><h4>Comparativo mês a mês</h4><p>${barHint}</p>${chartSvg(metric,'bar')}</div><div class="hr-chart-card dashboard-card" data-chart-metric="hr-${metric}" data-chart-type="historical-line"><button class="dashboard-chart-expand" type="button" data-chart-expand aria-label="Ampliar gráfico">⛶</button><h4>Linha de tendência</h4><p>${lineHint}</p>${chartSvg(metric,'line')}</div></div>${hitBadges(metric)}</section>`;
   }
   function renderDashboard(){
     const host=document.getElementById('hrDashboard');if(!host)return;
@@ -293,7 +317,7 @@
     const metrics=['merc','services','conversion','efficiency','gain'];
     const any=metrics.some(m=>yearSeries(state.yearA,m).some(x=>x.has)||yearSeries(state.yearB,m).some(x=>x.has));
     if(!any){host.innerHTML='<div class="hr-empty">Preencha ao menos um mês na aba <b>Dados mensais</b> para gerar o dashboard histórico.</div>';return}
-    host.innerHTML=`<div class="hr-vacation-note">ℹ️ Mês sem resultado informado é tratado como <b>férias/fora do período</b> e não entra nos gráficos nem nas médias.</div><div class="hr-overview"><div class="hr-overview-card"><span>Colaborador</span><strong>${esc(state.seller?.name||'—')}</strong><small>${esc(state.branch||'—')}</small></div><div class="hr-overview-card"><span>Comparação</span><strong>${state.yearA} × ${state.yearB}</strong><small>Totais mensais consolidados</small></div><div class="hr-overview-card"><span>Conversão</span><strong>Meta 35%</strong><small>Referência fixa</small></div><div class="hr-overview-card"><span>Eficiência</span><strong>Meta 7%</strong><small>Referência fixa</small></div></div>${metrics.map(indicatorHtml).join('')}`;
+    host.innerHTML=`<div class="hr-vacation-note">ℹ️ Mês sem resultado informado é tratado como <b>férias/fora do período</b> e não entra nos gráficos nem nas médias.</div><div class="hr-overview"><div class="hr-overview-card"><span>Colaborador</span><strong>${esc(state.seller?.name||'—')}</strong><small>${esc(state.branch||'—')}</small></div><div class="hr-overview-card"><span>Comparação</span><strong>${sameYearMode()?`${state.yearA} • Meta × Realizado`:`${state.yearA} × ${state.yearB}`}</strong><small>${sameYearMode()?'Leitura interna do mesmo ano':'Totais mensais consolidados'}</small></div><div class="hr-overview-card"><span>Conversão</span><strong>Meta 35%</strong><small>Referência fixa</small></div><div class="hr-overview-card"><span>Eficiência</span><strong>Meta 7%</strong><small>Referência fixa</small></div></div>${metrics.map(indicatorHtml).join('')}`;
   }
 
   function printReport(){
