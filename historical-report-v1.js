@@ -1,7 +1,7 @@
 (() => {
   'use strict';
-  if (window.__fsHistoricalReportV12) return;
-  window.__fsHistoricalReportV12 = true;
+  if (window.__fsHistoricalReportV13) return;
+  window.__fsHistoricalReportV13 = true;
 
   const STORE = 'fs_gestao_resultados_v2';
   const CONTEXT_STORE = 'fs_historical_report_context_v2';
@@ -205,8 +205,8 @@
   }
 
   function addStyles(){
-    if(document.getElementById('historicalReportCssV12'))return;
-    const st=document.createElement('style');st.id='historicalReportCssV12';st.textContent=`
+    if(document.getElementById('historicalReportCssV13'))return;
+    const st=document.createElement('style');st.id='historicalReportCssV13';st.textContent=`
     .historical-report-launch{white-space:nowrap}
     .hr-modal[hidden]{display:none!important}.hr-modal{position:fixed;inset:0;z-index:100200;background:rgba(8,24,42,.62);display:grid;place-items:center;padding:18px}
     .hr-dialog{width:min(1720px,97vw);height:min(94vh,980px);background:#f7faff;border-radius:24px;box-shadow:0 30px 100px rgba(5,20,40,.38);overflow:hidden;display:flex;flex-direction:column}
@@ -375,6 +375,14 @@
   function yearSeries(year,metric){ensureYear(state.report,year);const c=metricConfig(metric);return MONTHS.map((m,i)=>{const row=state.report.years[year][i];if(metric==='gain'){const f=rowFinance(year,i,row),closed=isMonthClosed(year,i);return {month:m,value:f.total,goal:0,has:closed&&hasData(row,metric),hit:false,finance:f,closed}}const value=c.value(row),goal=c.goal(row);return {month:m,value,goal,has:hasData(row,metric),hit:goal>0&&value>=goal}})}
   function goalSeries(year,metric){ensureYear(state.report,year);return MONTHS.map((m,i)=>{const row=state.report.years[year][i];let value=0,has=false;if(metric==='merc'){value=parseNum(row.mercGoal);has=!!row?._entered?.mercGoal||value>0||hasData(row,'merc')}else if(metric==='services'){value=parseNum(row.serviceGoal);has=!!row?._entered?.serviceGoal||value>0||hasData(row,'services')}else if(metric==='conversion'){value=35;has=hasData(row,'conversion')}else if(metric==='efficiency'){value=7;has=hasData(row,'efficiency')}else if(metric==='gain'){value=goalRowFinance(year,i,row).total;has=isMonthClosed(year,i)&&(hasData(row,'gain')||!!row?._entered?.mercGoal||!!row?._entered?.serviceGoal||parseNum(row.mercGoal)>0||parseNum(row.serviceGoal)>0)}return {month:m,value,goal:value,has,hit:false,isGoal:true}})}
   function summaryFor(series,c){const rows=series.filter(x=>x.has);if(!rows.length)return 0;return c.money?rows.reduce((s,x)=>s+x.value,0):rows.reduce((s,x)=>s+x.value,0)/rows.length}
+  function achievementVisual(real,goal,c){
+    const r=parseNum(real),g=parseNum(goal);
+    if(!(g>0)) return {status:'neutral',color:'#5e4fd6',text:'#334b66'};
+    const tol=c?.money?0.01:0.005;
+    if(Math.abs(r-g)<=tol) return {status:'equal',color:'#e7ad16',text:'#6f5200'};
+    if(r<g) return {status:'below',color:'#df3d55',text:'#842538'};
+    return {status:'above',color:'#16a36b',text:'#0b6b45'};
+  }
   function chartSvg(metric,type){
     const c=metricConfig(metric),same=sameYearMode(),actualA=yearSeries(state.yearA,metric),actualB=yearSeries(state.yearB,metric),goalA=goalSeries(state.yearA,metric);
     const a=same?goalA:actualA,b=same?actualA:actualB;
@@ -390,13 +398,34 @@
       : [{rows:a,label:labelA,color:'#1688ec',text:'#41556d',opacity:.92,dashed:false,goalSeries:false},{rows:b,label:labelB,color:'#f08a24',text:'#6b4e2e',opacity:.92,dashed:false,goalSeries:false}];
     if(type==='bar'){
       const bw=Math.min(26,step*.28);
-      seriesDefs.forEach((cfg,si)=>cfg.rows.forEach((p,i)=>{if(!p.has)return;const cx=L+step*(i+.5)+(si===0?-bw*.58:bw*.58),yy=y(p.value),h=Math.max(1,T+plotH-yy),cy=yy+(h/2),fontSize=Math.max(5.2,Math.min(9.8,h/7.2));marks+=`<rect x="${cx-bw/2}" y="${yy}" width="${bw}" height="${h}" rx="5" fill="${cfg.color}" opacity="${cfg.opacity}"/><text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 ${cx} ${cy})" font-size="${fontSize.toFixed(1)}" font-weight="900" fill="#172b45" style="paint-order:stroke;stroke:rgba(255,255,255,.68);stroke-width:1.2px">${esc(fmtMetric(p.value,c,true))}</text>${(!cfg.goalSeries&&p.hit)?`<circle cx="${cx}" cy="${Math.max(T+12,yy-18)}" r="7" fill="#16a36b"/><text x="${cx}" y="${Math.max(T+15,yy-15)}" text-anchor="middle" font-size="9" font-weight="900" fill="#fff">✓</text>`:''}`;}));
+      seriesDefs.forEach((cfg,si)=>cfg.rows.forEach((p,i)=>{
+        if(!p.has)return;
+        const goalPoint=same&&!cfg.goalSeries?a[i]:null;
+        const visual=goalPoint?achievementVisual(p.value,goalPoint.value,c):{color:cfg.color,text:cfg.text,status:'neutral'};
+        const fill=visual.color,textColor=cfg.goalSeries?'#172b45':'#172b45';
+        const cx=L+step*(i+.5)+(si===0?-bw*.58:bw*.58),yy=y(p.value),h=Math.max(1,T+plotH-yy),cy=yy+(h/2),fontSize=Math.max(5.2,Math.min(9.8,h/7.2));
+        marks+=`<rect x="${cx-bw/2}" y="${yy}" width="${bw}" height="${h}" rx="5" fill="${fill}" opacity="${cfg.opacity}"/><text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 ${cx} ${cy})" font-size="${fontSize.toFixed(1)}" font-weight="900" fill="${textColor}" style="paint-order:stroke;stroke:rgba(255,255,255,.72);stroke-width:1.2px">${esc(fmtMetric(p.value,c,true))}</text>${(!cfg.goalSeries&&same&&visual.status==='above')?`<circle cx="${cx}" cy="${Math.max(T+12,yy-18)}" r="7" fill="#16a36b"/><text x="${cx}" y="${Math.max(T+15,yy-15)}" text-anchor="middle" font-size="9" font-weight="900" fill="#fff">✓</text>`:''}`;
+      }));
     }else{
-      seriesDefs.forEach((cfg)=>{let seg=[];const flush=()=>{if(seg.length>1)marks+=`<path d="${seg.map((p,j)=>`${j?'L':'M'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')}" fill="none" stroke="${cfg.color}" stroke-opacity="${cfg.opacity}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" ${cfg.dashed?'stroke-dasharray="8 7"':''}/>`;seg=[]};cfg.rows.forEach((p,i)=>{if(!p.has){flush();return}const pt={x:L+step*(i+.5),y:y(p.value),p};seg.push(pt);marks+=`<circle cx="${pt.x}" cy="${pt.y}" r="4.5" fill="${cfg.color}" fill-opacity="${cfg.opacity}" stroke="${(!cfg.goalSeries&&p.hit)?'#16a36b':'#fff'}" stroke-width="${(!cfg.goalSeries&&p.hit)?4:2}"/><text x="${pt.x}" y="${Math.max(T+10,pt.y-9)}" text-anchor="middle" font-size="8.5" font-weight="800" fill="${cfg.text}">${esc(fmtMetric(p.value,c,true))}</text>`});flush();});
+      seriesDefs.forEach((cfg)=>{
+        if(same&&!cfg.goalSeries){
+          let prev=null;
+          cfg.rows.forEach((p,i)=>{
+            if(!p.has){prev=null;return}
+            const pt={x:L+step*(i+.5),y:y(p.value),p},goalPoint=a[i],visual=achievementVisual(p.value,goalPoint?.value,c);
+            if(prev){marks+=`<path d="M${prev.x.toFixed(1)},${prev.y.toFixed(1)} L${pt.x.toFixed(1)},${pt.y.toFixed(1)}" fill="none" stroke="${visual.color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`}
+            marks+=`<circle cx="${pt.x}" cy="${pt.y}" r="5" fill="${visual.color}" stroke="#fff" stroke-width="2"/><text x="${pt.x}" y="${Math.max(T+10,pt.y-9)}" text-anchor="middle" font-size="8.5" font-weight="800" fill="${visual.text}">${esc(fmtMetric(p.value,c,true))}</text>${visual.status==='above'?`<circle cx="${pt.x}" cy="${Math.max(T+12,pt.y-20)}" r="6.5" fill="#16a36b"/><text x="${pt.x}" y="${Math.max(T+15,pt.y-17)}" text-anchor="middle" font-size="8" font-weight="900" fill="#fff">✓</text>`:''}`;
+            prev=pt;
+          });
+        }else{
+          let seg=[];const flush=()=>{if(seg.length>1)marks+=`<path d="${seg.map((p,j)=>`${j?'L':'M'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')}" fill="none" stroke="${cfg.color}" stroke-opacity="${cfg.opacity}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" ${cfg.dashed?'stroke-dasharray="8 7"':''}/>`;seg=[]};
+          cfg.rows.forEach((p,i)=>{if(!p.has){flush();return}const pt={x:L+step*(i+.5),y:y(p.value),p};seg.push(pt);marks+=`<circle cx="${pt.x}" cy="${pt.y}" r="4.5" fill="${cfg.color}" fill-opacity="${cfg.opacity}" stroke="${(!cfg.goalSeries&&p.hit)?'#16a36b':'#fff'}" stroke-width="${(!cfg.goalSeries&&p.hit)?4:2}"/><text x="${pt.x}" y="${Math.max(T+10,pt.y-9)}" text-anchor="middle" font-size="8.5" font-weight="800" fill="${cfg.text}">${esc(fmtMetric(p.value,c,true))}</text>`});flush();
+        }
+      });
     }
     const legendItems=seriesDefs.map((cfg,idx)=>`<circle cx="${L+8+(idx*140)}" cy="10" r="5" fill="${cfg.color}" fill-opacity="${cfg.opacity}"/><text x="${L+18+(idx*140)}" y="14" font-size="11" font-weight="800" fill="#41556d">${esc(cfg.label)}</text>`).join('');
-    const hitLegend=!same?`<circle cx="${L+8+(seriesDefs.length*140)}" cy="10" r="5" fill="#16a36b"/><text x="${L+18+(seriesDefs.length*140)}" y="14" font-size="10" fill="#587086">meta batida</text>`:`<circle cx="${L+8+(seriesDefs.length*140)}" cy="10" r="5" fill="#16a36b"/><text x="${L+18+(seriesDefs.length*140)}" y="14" font-size="10" fill="#587086">meta batida</text>`;
-    const legend=`<g>${legendItems}${hitLegend}</g>`;
+    const statusLegend=same?`<circle cx="${L+8+(seriesDefs.length*140)}" cy="10" r="5" fill="#df3d55"/><text x="${L+18+(seriesDefs.length*140)}" y="14" font-size="9" fill="#587086">abaixo</text><circle cx="${L+78+(seriesDefs.length*140)}" cy="10" r="5" fill="#e7ad16"/><text x="${L+88+(seriesDefs.length*140)}" y="14" font-size="9" fill="#587086">igual</text><circle cx="${L+138+(seriesDefs.length*140)}" cy="10" r="5" fill="#16a36b"/><text x="${L+148+(seriesDefs.length*140)}" y="14" font-size="9" fill="#587086">acima</text>`:`<circle cx="${L+8+(seriesDefs.length*140)}" cy="10" r="5" fill="#16a36b"/><text x="${L+18+(seriesDefs.length*140)}" y="14" font-size="10" fill="#587086">meta batida</text>`;
+    const legend=`<g>${legendItems}${statusLegend}</g>`;
     return `<svg class="hr-chart-svg svg-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(c.title)} ${type==='bar'?'barras':'tendência'}">${legend}${grid}${labels}${marks}</svg>`;
   }
   function hitBadges(metric){
@@ -409,8 +438,8 @@
   function chartAverageHtml(metric){
     const c=metricConfig(metric),same=sameYearMode();
     if(same){
-      const goals=goalSeries(state.yearA,metric),actual=yearSeries(state.yearA,metric),avgGoal=averageSeriesValue(goals),avgActual=averageSeriesValue(actual);
-      return `<div class="hr-chart-average"><span class="avg-goal">Média meta ${state.yearA}: <b>${fmtMetric(avgGoal,c)}</b></span><span class="avg-realized">Média realizado ${state.yearA}: <b>${fmtMetric(avgActual,c)}</b></span></div>`;
+      const goals=goalSeries(state.yearA,metric),actual=yearSeries(state.yearA,metric),avgGoal=averageSeriesValue(goals),avgActual=averageSeriesValue(actual),avgVisual=achievementVisual(avgActual,avgGoal,c);
+      return `<div class="hr-chart-average"><span class="avg-goal">Média meta ${state.yearA}: <b>${fmtMetric(avgGoal,c)}</b></span><span class="avg-realized" style="border-color:${avgVisual.color}55;background:${avgVisual.color}14;color:${avgVisual.color}">Média realizado ${state.yearA}: <b style="color:${avgVisual.color}">${fmtMetric(avgActual,c)}</b></span></div>`;
     }
     const a=yearSeries(state.yearA,metric),b=yearSeries(state.yearB,metric),avgA=averageSeriesValue(a),avgB=averageSeriesValue(b);
     return `<div class="hr-chart-average"><span class="avg-year-a">Média ${state.yearA}: <b>${fmtMetric(avgA,c)}</b></span><span class="avg-year-b">Média ${state.yearB}: <b>${fmtMetric(avgB,c)}</b></span></div>`;
