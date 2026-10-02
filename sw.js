@@ -1,6 +1,6 @@
-const CACHE='fs-resultados-v150-relatorio-paisagem';
+const CACHE='fs-resultados-v151-relatorio-historico';
 const FILES=[
-  './','./index.html','./resultados.html','./vendedor.html','./vendedor-v40.js','./resultados-v32.js',
+  './','./index.html','./resultados.html','./vendedor.html','./vendedor-v40.js','./resultados-v32.js','./historical-report-v1.js',
   './resultados-parcial-v5.js','./vendedor-monthly-v91.js','./resultados-modal-v91.js','./resultados-ranking-v92.js',
   './auth.js','./access-guard.js','./cloud-sync.js','./portal-context.js','./mobile-polish-v11.css','./mobile-polish-v11.js',
   './access-admin-v1.css','./access-admin-v1.js','./home-transition.js','./pwa-update.js','./manifest.webmanifest',

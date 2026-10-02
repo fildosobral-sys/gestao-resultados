@@ -77,6 +77,17 @@
       out.sellers = [...map.values()];
       merged.records[key] = out;
     });
+    // Relatórios históricos manuais são independentes dos lançamentos diários,
+    // mas precisam acompanhar a mesma nuvem da filial. Faz merge pelo updatedAt
+    // para não perder um relatório criado/ajustado em outro aparelho.
+    merged.historicalReports = merged.historicalReports || {};
+    const reportKeys = new Set([...Object.keys(remote.historicalReports || {}), ...Object.keys(local.historicalReports || {})]);
+    reportKeys.forEach(key => {
+      const rr = remote.historicalReports?.[key], lr = local.historicalReports?.[key];
+      if (!rr) { merged.historicalReports[key] = JSON.parse(JSON.stringify(lr)); return; }
+      if (!lr) { merged.historicalReports[key] = JSON.parse(JSON.stringify(rr)); return; }
+      merged.historicalReports[key] = parseStamp(lr.updatedAt) > parseStamp(rr.updatedAt) ? JSON.parse(JSON.stringify(lr)) : JSON.parse(JSON.stringify(rr));
+    });
     merged.currentKey = remote.currentKey || local.currentKey || merged.currentKey;
     merged._cloudUpdatedAt = remote._cloudUpdatedAt || new Date().toISOString();
     return merged;
