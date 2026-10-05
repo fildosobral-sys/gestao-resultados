@@ -12,7 +12,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Resultados">
-  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="manifest" href="./manifest.webmanifest?v=181">
   <link rel="icon" href="./icon-192.png" type="image/png">
   <title>Gestão de Resultados</title>
   <style>
@@ -841,6 +841,20 @@ body.seller-modal-open{overflow:hidden}
 </style>
 
 <meta name="build" content="V121-seller-dashboard-parity-real">
+
+<style id="results-branding-v181">
+/* Identidade visual Gestão de Resultados no card principal */
+#overview .branch-band-hero{isolation:isolate;padding-right:clamp(220px,25vw,350px)}
+#overview .branch-band-hero>.eyebrow,#overview .branch-band-hero>.hero-value,#overview .branch-band-hero>.hero-meta{position:relative;z-index:4}
+#overview .hero-branding{position:absolute;z-index:3;right:20px;top:50%;transform:translateY(-50%);width:clamp(170px,21vw,270px);height:88%;display:flex;align-items:center;justify-content:center;pointer-events:none}
+#overview .hero-branding img{display:block;width:min(94%,238px);height:auto;max-height:96%;object-fit:contain;filter:drop-shadow(0 10px 16px rgba(2,31,72,.24))}
+#overview .hero-brand-bars{position:absolute;inset:18% 4% 12% 4%;display:flex;align-items:flex-end;justify-content:center;gap:7%;opacity:.13;transform:skewX(-7deg);z-index:-1}
+#overview .hero-brand-bars i{display:block;width:13%;border-radius:9px 9px 2px 2px;background:linear-gradient(180deg,#fff,rgba(255,255,255,.35));box-shadow:0 0 24px rgba(255,255,255,.18)}
+#overview .hero-brand-bars i:nth-child(1){height:24%}#overview .hero-brand-bars i:nth-child(2){height:43%}#overview .hero-brand-bars i:nth-child(3){height:64%}#overview .hero-brand-bars i:nth-child(4){height:88%}
+@media(max-width:980px){#overview .branch-band-hero{padding-right:clamp(190px,32vw,290px)}#overview .hero-branding{right:14px;width:clamp(160px,29vw,245px)}}
+@media(max-width:620px){#overview .branch-band-hero{min-height:170px;padding-right:112px!important}#overview .hero-branding{right:7px;top:52%;width:108px;height:82%}#overview .hero-branding img{width:106px;filter:drop-shadow(0 6px 10px rgba(2,31,72,.22))}#overview .hero-brand-bars{inset:24% 1% 16%;gap:5%;opacity:.10}#overview .branch-band-hero .hero-value{font-size:clamp(29px,9.2vw,42px)}}
+@media(max-width:390px){#overview .branch-band-hero{padding-right:92px!important}#overview .hero-branding{right:3px;width:88px}#overview .hero-branding img{width:88px}#overview .branch-band-hero .hero-meta{gap:10px;font-size:11px}#overview .branch-band-hero .hero-meta strong{font-size:14px}}
+</style>
 </head>
 <body>
 <main class="app">
@@ -869,7 +883,7 @@ body.seller-modal-open{overflow:hidden}
 
   <section class="view active" id="overview">
     <div class="hero">
-      <article class="hero-main overview-band branch-band-hero"><div class="eyebrow" id="heroEyebrow">Venda mercantil total da filial</div><div class="hero-value" id="revenueHero">R$ 0,00</div><div class="hero-meta"><span><strong id="workedHero">0</strong><br>dias trabalhados</span><span><strong id="remainingHero">0</strong><br>dias restantes</span><span><strong id="dailyHero">R$ 0,00</strong><br>média por dia</span></div></article>
+      <article class="hero-main overview-band branch-band-hero"><div class="hero-branding" aria-hidden="true"><div class="hero-brand-bars"><i></i><i></i><i></i><i></i></div><img src="./gestao-resultados-logo.png" alt=""></div><div class="eyebrow" id="heroEyebrow">Venda mercantil total da filial</div><div class="hero-value" id="revenueHero">R$ 0,00</div><div class="hero-meta"><span><strong id="workedHero">0</strong><br>dias trabalhados</span><span><strong id="remainingHero">0</strong><br>dias restantes</span><span><strong id="dailyHero">R$ 0,00</strong><br>média por dia</span></div></article>
       <article class="panel projection overview-band branch-band-projection"><div class="eyebrow muted">Projeção de fechamento</div><div class="projection-value" id="projectionHero">R$ 0,00</div><div class="muted" id="projectionText">Preencha os resultados diários para calcular.</div><div class="bar"><span id="projectionBar"></span></div></article>
     </div>
     <div class="kpis">
